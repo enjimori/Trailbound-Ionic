@@ -1,0 +1,57 @@
+<ion-content [fullscreen]="true" class="login-content">
+  <div class="login-wrap">
+    <div class="brand">
+      <img class="brand-logo" src="assets/logo/walato.png" alt="TrailBound logo" />
+      <p>Your trail community awaits</p>
+    </div>
+
+    <form class="form-block" [formGroup]="form" (ngSubmit)="signIn()" novalidate>
+      <div class="field-group">
+        <ion-input
+          formControlName="email"
+          type="email"
+          inputmode="email"
+          autocomplete="email"
+          placeholder="Email address"
+          class="login-input"
+          fill="outline"
+        ></ion-input>
+        <p class="err" *ngIf="err('email') as msg">{{ msg }}</p>
+      </div>
+
+      <div class="field-group">
+        <ion-input
+          formControlName="password"
+          [type]="showPw ? 'text' : 'password'"
+          autocomplete="current-password"
+          placeholder="Password"
+          class="login-input"
+          fill="outline"
+        >
+          <ion-icon
+            slot="end"
+            class="eye"
+            [name]="showPw ? 'eye-off-outline' : 'eye-outline'"
+            (click)="showPw = !showPw"
+          ></ion-icon>
+        </ion-input>
+        <p class="err" *ngIf="err('password') as msg">{{ msg }}</p>
+      </div>
+
+      <p class="err form-err" *ngIf="loginError">{{ loginError }}</p>
+
+      <button type="submit" class="signin-btn" [disabled]="loading">
+        {{ loading ? 'Signing in…' : 'Sign In' }}
+      </button>
+
+      <p class="hint">Sign in to continue exploring trails.</p>
+
+      <div class="switch-row">
+        <span>New to TrailBound?</span>
+        <button type="button" class="link-btn" (click)="goSignUp()">Sign Up</button>
+      </div>
+
+      <button type="button" class="guest-btn" (click)="continueAsGuest()">Continue as guest</button>
+    </form>
+  </div>
+</ion-content>

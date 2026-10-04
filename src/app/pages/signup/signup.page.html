@@ -1,0 +1,95 @@
+<ion-header class="ion-no-border">
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-button (click)="goLogin()">
+        <ion-icon name="arrow-back-outline" slot="icon-only"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+    <ion-buttons slot="end">
+      <ion-button class="nav-login" (click)="goLogin()">Log In</ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content [fullscreen]="true" class="login-content">
+  <div class="signup-wrap">
+    <div class="brand">
+      <img class="brand-logo" src="assets/logo/walato.png" alt="TrailBound logo" />
+      <p>Create your trail profile</p>
+    </div>
+
+    <form class="form-block" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+      <p class="group-label">Personal Information</p>
+
+      <div class="field-group">
+        <label class="lbl">Full Name</label>
+        <ion-input formControlName="name" autocomplete="name" placeholder="Full name" class="login-input" fill="outline"></ion-input>
+        <p class="err" *ngIf="err('name') as msg">{{ msg }}</p>
+      </div>
+
+      <div class="field-group">
+        <label class="lbl">Email Address</label>
+        <ion-input formControlName="email" type="email" inputmode="email" autocomplete="email" placeholder="you@example.com" class="login-input" fill="outline"></ion-input>
+        <p class="err" *ngIf="err('email') as msg">{{ msg }}</p>
+      </div>
+
+      <div class="field-group">
+        <label class="lbl">Phone Number</label>
+        <ion-input formControlName="phone" type="tel" autocomplete="tel" placeholder="+63 900 000 0000" class="login-input" fill="outline"></ion-input>
+        <p class="err" *ngIf="err('phone') as msg">{{ msg }}</p>
+      </div>
+
+      <div class="field-group">
+        <label class="lbl">Date of Birth</label>
+        <ion-input formControlName="dob" type="date" [max]="today" class="login-input" fill="outline"></ion-input>
+        <p class="err" *ngIf="err('dob') as msg">{{ msg }}</p>
+      </div>
+
+      <div class="field-group">
+        <label class="lbl">Gender</label>
+        <div class="chips">
+          <button
+            type="button"
+            class="chip"
+            *ngFor="let g of genders"
+            [class.active]="form.controls.gender.value === g"
+            (click)="setGender(g)"
+          >{{ g }}</button>
+        </div>
+        <p class="err" *ngIf="err('gender') as msg">{{ msg }}</p>
+      </div>
+
+      <p class="group-label">Security</p>
+
+      <div class="field-group">
+        <label class="lbl">Password</label>
+        <ion-input formControlName="password" [type]="showPw ? 'text' : 'password'" autocomplete="new-password" placeholder="Create a password" class="login-input" fill="outline">
+          <ion-icon slot="end" class="eye" [name]="showPw ? 'eye-off-outline' : 'eye-outline'" (click)="showPw = !showPw"></ion-icon>
+        </ion-input>
+        <ul class="pw-rules">
+          <li [class.ok]="pwRules.length">8+ characters</li>
+          <li [class.ok]="pwRules.letter">A letter</li>
+          <li [class.ok]="pwRules.number">A number</li>
+        </ul>
+        <p class="err" *ngIf="err('password') as msg">{{ msg }}</p>
+      </div>
+
+      <div class="field-group">
+        <label class="lbl">Confirm Password</label>
+        <ion-input formControlName="confirmPassword" [type]="showPw2 ? 'text' : 'password'" autocomplete="new-password" placeholder="Re-enter password" class="login-input" fill="outline">
+          <ion-icon slot="end" class="eye" [name]="showPw2 ? 'eye-off-outline' : 'eye-outline'" (click)="showPw2 = !showPw2"></ion-icon>
+        </ion-input>
+        <p class="err" *ngIf="err('confirmPassword') as msg">{{ msg }}</p>
+      </div>
+
+      <button type="submit" class="signin-btn" [disabled]="loading">
+        {{ loading ? 'Creating account…' : 'Create Account' }}
+      </button>
+
+      <div class="switch-row">
+        <span>Already have an account?</span>
+        <button type="button" class="link-btn" (click)="goLogin()">Log In</button>
+      </div>
+    </form>
+  </div>
+</ion-content>

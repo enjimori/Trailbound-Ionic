@@ -1,0 +1,477 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   TRAIL DETAIL
+
+   Touch targets follow Fitts's Law — T = a + b · log₂(2D / W). Two levers:
+   grow the target (W) and shorten the reach (D).
+
+   All three controls now sit in one bar at the bottom edge. That band is the
+   only region a left thumb and a right thumb reach equally well; every corner
+   favours one hand, and the top-left corner — where Back used to live — is
+   the single hardest point to reach one-handed on a tall phone.
+   ═════════════════════════════════════════════════════════════════════════ */
+
+.hero {
+  height: 320px;
+  background-size: cover;
+  background-position: center;
+  position: relative;
+}
+
+.hero-gradient {
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: 90px;
+  background: linear-gradient(transparent, var(--ion-background-color));
+}
+
+.sheet {
+  background: var(--ion-background-color);
+  margin-top: -20px;
+  border-radius: 24px 24px 0 0;
+  position: relative;
+  z-index: 1;
+  /* Bottom padding clears the fixed action bar, so the last review is never
+     trapped underneath it. */
+  padding: 20px 20px 120px;
+}
+
+.title-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 18px;
+
+  h1 {
+    margin: 0 0 4px;
+    font-size: 21px;
+    font-weight: 800;
+    color: var(--app-text);
+  }
+
+  .region {
+    margin: 0;
+    font-size: 12.5px;
+    color: var(--app-text-dim);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+}
+
+.rating {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--app-card-bg);
+  padding: 6px 10px;
+  border-radius: 12px;
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--app-text);
+  flex-shrink: 0;
+
+  ion-icon { color: #ffd257; }
+}
+
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  margin-bottom: 22px;
+}
+
+.stat-box {
+  background: var(--app-card-bg);
+  border-radius: 14px;
+  padding: 12px 6px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+
+  ion-icon {
+    color: var(--app-green);
+    font-size: 18px;
+  }
+
+  .v {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--app-text);
+  }
+
+  .l {
+    font-size: 9.5px;
+    color: var(--app-text-dim);
+  }
+}
+
+.section-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--app-text);
+  margin: 0 0 8px;
+}
+
+.description {
+  font-size: 13.5px;
+  line-height: 1.6;
+  color: var(--app-text-dim);
+  margin: 0 0 24px;
+}
+
+.start-btn {
+  width: 100%;
+  background: var(--app-green);
+  color: #08110a;
+  border: none;
+  font-weight: 800;
+  font-size: 15px;
+  padding: 16px;
+  border-radius: 18px;
+}
+
+/* Outlined, not filled. It is a sideways move to another view, not a
+   commitment, so it should not compete with Start Hike above it or with
+   Book Now in the bar. */
+.map-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  margin-top: 10px;
+  padding: 15px;
+  border: 1px solid var(--app-border);
+  border-radius: 18px;
+  background: transparent;
+  color: var(--app-text);
+  font-size: 14px;
+  font-weight: 700;
+
+  ion-icon {
+    font-size: 17px;
+    color: var(--app-green);
+  }
+}
+
+.not-found {
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--app-text-dim);
+}
+
+/* ── Story sections ─────────────────────────────────────────────────────── */
+
+.tagline {
+  font-size: 13px;
+  font-style: italic;
+  color: var(--app-green);
+  margin: -14px 0 22px;
+}
+
+.why-list {
+  margin: 0 0 24px;
+  padding-left: 18px;
+
+  li {
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--app-text-dim);
+    margin-bottom: 6px;
+  }
+}
+
+.story-text {
+  font-size: 13.5px;
+  line-height: 1.7;
+  color: var(--app-text-dim);
+  white-space: pre-line;
+  margin: 0 0 28px;
+}
+
+/* ── Reviews ────────────────────────────────────────────────────────────── */
+
+.reviews-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+
+  .section-title { margin: 0; }
+
+  .rating-inline {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 12.5px;
+    font-weight: 700;
+    color: var(--app-green);
+
+    ion-icon { color: #ffd257; }
+  }
+}
+
+.reviews-empty {
+  text-align: center;
+  padding: 22px 16px;
+  margin-bottom: 20px;
+  border: 1px dashed var(--app-border);
+  border-radius: 16px;
+
+  ion-icon {
+    font-size: 26px;
+    color: var(--app-text-dim);
+    opacity: 0.6;
+  }
+
+  p {
+    margin: 8px 0 4px;
+    font-size: 13px;
+    color: var(--app-text-dim);
+  }
+}
+
+.link-btn {
+  background: none;
+  border: none;
+  padding: 6px 4px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--app-green);
+}
+
+.write-review-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  margin-bottom: 18px;
+  padding: 14px;
+  border: 1px solid var(--app-border);
+  border-radius: 14px;
+  background: transparent;
+  color: var(--app-text);
+  font-size: 13px;
+  font-weight: 600;
+
+  ion-icon { font-size: 16px; color: var(--app-green); }
+}
+
+.review-form {
+  background: var(--app-card-bg);
+  border-radius: 16px;
+  padding: 14px;
+  margin-bottom: 20px;
+
+  .form-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+  }
+
+  .form-label {
+    font-size: 12.5px;
+    color: var(--app-text-dim);
+  }
+
+  .form-input {
+    --background: rgba(255, 255, 255, 0.05);
+    --color: var(--app-text);
+    --placeholder-color: var(--app-text-dim);
+    --padding-start: 12px;
+    --padding-end: 12px;
+    border-radius: 12px;
+    margin-bottom: 10px;
+    font-size: 13px;
+  }
+
+  .form-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 16px;
+    margin-top: 4px;
+  }
+}
+
+.star-picker {
+  display: flex;
+  gap: 10px;
+
+  /* Stars are tap targets, not decoration — padding gives each one a 40px
+     box without making the glyphs cartoonishly large. */
+  ion-icon {
+    font-size: 24px;
+    padding: 8px 0;
+    color: var(--app-text-dim);
+
+    &.filled { color: #ffd257; }
+  }
+}
+
+.post-btn {
+  background: var(--app-green);
+  color: #08110a;
+  border: none;
+  font-weight: 700;
+  font-size: 13px;
+  padding: 11px 20px;
+  border-radius: 12px;
+}
+
+.review-card {
+  position: relative;
+  background: var(--app-card-bg);
+  border-radius: 16px;
+  padding: 14px;
+  margin-bottom: 12px;
+
+  .review-top {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+  }
+
+  /* Initial in a circle — no avatar images to invent or load. */
+  .review-avatar {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background: var(--app-green);
+    color: #08110a;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 14px;
+    flex-shrink: 0;
+  }
+
+  .review-meta {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-width: 0;
+
+    .author {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--app-text);
+    }
+
+    .stars ion-icon {
+      font-size: 11px;
+      color: rgba(255, 255, 255, 0.18);
+
+      &.filled { color: #ffd257; }
+    }
+  }
+
+  .date {
+    font-size: 10.5px;
+    color: var(--app-text-dim);
+    flex-shrink: 0;
+  }
+
+  .review-text {
+    font-size: 12.5px;
+    line-height: 1.55;
+    color: var(--app-text-dim);
+    margin: 0;
+    padding-right: 36px;
+  }
+
+  /* Destructive and small on purpose: a mis-tap here deletes someone's
+     review, so this is the one control that should NOT be easy to hit by
+     accident. Fitts's Law cuts both ways. */
+  .delete-review {
+    position: absolute;
+    bottom: 6px;
+    right: 6px;
+    background: none;
+    border: none;
+    padding: 8px;
+
+    ion-icon {
+      font-size: 14px;
+      color: var(--app-text-dim);
+      opacity: 0.5;
+    }
+  }
+}
+
+/* ── Thumb-zone action bar ──────────────────────────────────────────────────
+   Back, save, book. 56px tall clears both platform minimums (44pt Apple,
+   48dp Material) with room to spare.
+
+   Three weights, deliberately: Back is quiet because it is a retreat, Save is
+   quiet until it is on, and Book Now carries the only filled colour on the
+   screen because it is the one action the page exists to produce. */
+
+.action-bar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+  background: rgba(10, 15, 11, 0.94);
+  border-top: 1px solid var(--app-border);
+  backdrop-filter: blur(12px);
+}
+
+/* Shared shape for the two icon buttons. */
+.act-back,
+.act-save {
+  flex-shrink: 0;
+  width: 56px;
+  height: 56px;
+  border: 1px solid var(--app-border);
+  border-radius: 18px;
+  background: var(--app-card-bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  ion-icon {
+    font-size: 23px;
+    /* Set explicitly. Left unset, an icon inside an Ionic control inherits
+       the theme's primary blue — which is where that out-of-place blue arrow
+       came from. It was never a colour anyone chose. */
+    color: var(--app-text);
+  }
+}
+
+.act-back {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.act-save.on {
+  border-color: var(--ion-color-danger);
+
+  ion-icon { color: var(--ion-color-danger); }
+}
+
+.act-book {
+  flex: 1;
+  min-width: 0;
+  height: 56px;
+  border: none;
+  border-radius: 18px;
+  background: var(--app-green);
+  color: #08110a;
+  font-size: 15px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+
+  ion-icon { font-size: 19px; }
+}

@@ -1,0 +1,110 @@
+<ion-header class="ion-no-border">
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-button (click)="goBack()">
+        <ion-icon name="arrow-back-outline" slot="icon-only"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+    <ion-title>Personal Info</ion-title>
+    <ion-buttons slot="end">
+      <ion-button (click)="save()" class="save-btn" [disabled]="saving">
+        {{ saving ? 'Saving…' : 'Save' }}
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content [fullscreen]="true">
+  <div class="page-pad" *ngIf="form">
+
+    <div class="avatar-section">
+      <div class="avatar-wrap" (click)="triggerFileInput()">
+        <img [src]="avatarPreview" alt="Profile picture" />
+        <div class="edit-badge">
+          <ion-icon name="camera-outline"></ion-icon>
+        </div>
+      </div>
+      <span class="avatar-hint">Change Profile Picture</span>
+      <input id="avatarFileInput" type="file" accept="image/*" hidden (change)="onAvatarFileChange($event)" />
+    </div>
+
+    <form [formGroup]="form">
+      <p class="group-label">Personal Information</p>
+      <div class="form-card">
+        <ion-item lines="full" class="field" [class.invalid]="!!err('name')">
+          <ion-label position="stacked">Full Name</ion-label>
+          <ion-input formControlName="name" placeholder="Full name"></ion-input>
+        </ion-item>
+        <p class="err" *ngIf="err('name') as msg">{{ msg }}</p>
+
+        <ion-item lines="full" class="field">
+          <ion-label position="stacked">Email Address</ion-label>
+          <ion-input formControlName="email" type="email"></ion-input>
+        </ion-item>
+        <p class="note">Your email is your login and can't be changed here.</p>
+
+        <ion-item lines="full" class="field" [class.invalid]="!!err('phone')">
+          <ion-label position="stacked">Phone Number</ion-label>
+          <ion-input formControlName="phone" type="tel" placeholder="+63 900 000 0000"></ion-input>
+        </ion-item>
+        <p class="err" *ngIf="err('phone') as msg">{{ msg }}</p>
+
+        <ion-item lines="full" class="field" [class.invalid]="!!err('dob')">
+          <ion-label position="stacked">Date of Birth</ion-label>
+          <ion-input formControlName="dob" type="date" [max]="today"></ion-input>
+        </ion-item>
+        <p class="err" *ngIf="err('dob') as msg">{{ msg }}</p>
+
+        <ion-item lines="none" class="field" [class.invalid]="!!err('gender')">
+          <ion-label position="stacked">Gender</ion-label>
+          <ion-select formControlName="gender" interface="action-sheet" placeholder="Select gender">
+            <ion-select-option value="Male">Male</ion-select-option>
+            <ion-select-option value="Female">Female</ion-select-option>
+            <ion-select-option value="Other">Other</ion-select-option>
+            <ion-select-option value="Prefer not to say">Prefer not to say</ion-select-option>
+          </ion-select>
+        </ion-item>
+        <p class="err" *ngIf="err('gender') as msg">{{ msg }}</p>
+      </div>
+
+      <p class="group-label">About You</p>
+      <div class="form-card">
+        <ion-item lines="full" class="field" [class.invalid]="!!err('location')">
+          <ion-label position="stacked">Location</ion-label>
+          <ion-input formControlName="location" placeholder="City, Country"></ion-input>
+        </ion-item>
+        <p class="err" *ngIf="err('location') as msg">{{ msg }}</p>
+
+        <ion-item lines="none" class="field" [class.invalid]="!!err('bio')">
+          <ion-label position="stacked">Bio</ion-label>
+          <ion-textarea
+            formControlName="bio"
+            placeholder="Tell other hikers about yourself"
+            [autoGrow]="true"
+            rows="3"
+            maxlength="160"
+          ></ion-textarea>
+        </ion-item>
+        <p class="note counter">{{ bioLength }}/160</p>
+        <p class="err" *ngIf="err('bio') as msg">{{ msg }}</p>
+      </div>
+
+      <p class="group-label">Emergency Contact</p>
+      <div class="form-card">
+        <ion-item lines="full" class="field" [class.invalid]="!!err('emergencyContactName')">
+          <ion-label position="stacked">Contact Name</ion-label>
+          <ion-input formControlName="emergencyContactName" placeholder="Full name"></ion-input>
+        </ion-item>
+        <p class="err" *ngIf="err('emergencyContactName') as msg">{{ msg }}</p>
+
+        <ion-item lines="none" class="field" [class.invalid]="!!err('emergencyContactPhone')">
+          <ion-label position="stacked">Contact Phone</ion-label>
+          <ion-input formControlName="emergencyContactPhone" type="tel" placeholder="+63 900 000 0000"></ion-input>
+        </ion-item>
+        <p class="err" *ngIf="err('emergencyContactPhone') as msg">{{ msg }}</p>
+      </div>
+    </form>
+
+    <div class="bottom-spacer"></div>
+  </div>
+</ion-content>
