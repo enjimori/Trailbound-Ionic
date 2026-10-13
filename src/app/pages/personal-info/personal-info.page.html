@@ -19,7 +19,10 @@
 
     <div class="avatar-section">
       <div class="avatar-wrap" (click)="triggerFileInput()">
-        <img [src]="avatarPreview" alt="Profile picture" />
+        <img *ngIf="avatarPreview; else noPhoto" [src]="avatarPreview" alt="Profile picture" />
+        <ng-template #noPhoto>
+          <div class="no-photo"><ion-icon name="person"></ion-icon></div>
+        </ng-template>
         <div class="edit-badge">
           <ion-icon name="camera-outline"></ion-icon>
         </div>

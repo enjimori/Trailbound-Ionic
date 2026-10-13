@@ -1,10 +1,10 @@
 .save-btn {
-  --color: var(--app-green);
-  font-weight: 700;
+  --color: var(--app-accent);
+  font-weight: 600;
 }
 
 .page-pad {
-  padding: 8px 16px 0;
+  padding: 8px 18px 0;
 }
 
 .avatar-section {
@@ -25,17 +25,33 @@
     height: 100%;
     border-radius: 50%;
     object-fit: cover;
-    border: 3px solid var(--app-green);
+    border: 3px solid var(--app-bg);
+    box-shadow: 0 0 0 2px rgba(232, 217, 156, 0.75);
   }
+}
+
+/* Shown until the user uploads a photo — never a broken image. */
+.no-photo {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  border: 3px solid var(--app-bg);
+  box-shadow: 0 0 0 2px rgba(232, 217, 156, 0.75);
+  background: var(--app-card-hi);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  ion-icon { font-size: 44px; color: var(--app-text-dim); }
 }
 
 .edit-badge {
   position: absolute;
   bottom: 0;
   right: 0;
-  background: var(--app-green);
-  width: 30px;
-  height: 30px;
+  background: var(--app-cta);
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -43,7 +59,7 @@
   border: 2px solid var(--ion-background-color);
 
   ion-icon {
-    color: #08110a;
+    color: var(--app-on-accent);
     font-size: 15px;
   }
 }
@@ -51,24 +67,24 @@
 .avatar-hint {
   margin-top: 10px;
   font-size: 12.5px;
-  color: var(--app-green);
-  font-weight: 600;
+  color: var(--app-accent);
+  font-weight: 500;
 }
 
 .group-label {
-  font-size: 11.5px;
-  font-weight: 700;
-  letter-spacing: 0.6px;
-  text-transform: uppercase;
-  color: var(--app-text-dim);
+  font-family: var(--app-font-serif);
+  font-size: 18px;
+  font-weight: 500;
+  color: var(--app-text);
   margin: 0 4px 10px;
 }
 
 .form-card {
   background: var(--app-card-bg);
-  border-radius: 16px;
-  padding: 4px 14px;
-  margin-bottom: 22px;
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius);
+  padding: 4px 16px;
+  margin-bottom: 24px;
 }
 
 .field {
@@ -76,8 +92,10 @@
   --padding-start: 0;
   --inner-padding-end: 0;
 
+  --border-color: var(--app-border);
+
   ion-label {
-    font-size: 11px;
+    font-size: 12px;
     color: var(--app-text-dim);
     margin-bottom: 4px;
   }
