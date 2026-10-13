@@ -1,27 +1,30 @@
-<ion-header class="ion-no-border">
+<ion-header class="ion-no-border ex-header">
   <ion-toolbar>
-    <ion-title>Explore Trails</ion-title>
-  </ion-toolbar>
+    <div class="ex-header-inner">
+      <div class="ex-head">
+        <h1 class="page-title">Explore</h1>
+        <span class="ex-count">{{ results().length }} {{ results().length === 1 ? 'mountain' : 'mountains' }} found</span>
+      </div>
 
-  <ion-toolbar>
-    <ion-searchbar
-      placeholder="Search trails or peaks..."
-      [debounce]="150"
-      (ionInput)="onSearch($event)"
-    ></ion-searchbar>
-  </ion-toolbar>
+      <ion-searchbar
+        class="tb-search ex-search"
+        placeholder="Search mountains..."
+        [debounce]="150"
+        (ionInput)="onSearch($event)"
+      ></ion-searchbar>
 
-  <ion-toolbar>
-    <ion-segment
-      [value]="difficultyFilter()"
-      (ionChange)="onSegmentChange($event)"
-      class="difficulty-seg"
-    >
-      <ion-segment-button value="All"><ion-label>All</ion-label></ion-segment-button>
-      <ion-segment-button value="Easy"><ion-label>Easy</ion-label></ion-segment-button>
-      <ion-segment-button value="Moderate"><ion-label>Moderate</ion-label></ion-segment-button>
-      <ion-segment-button value="Hard"><ion-label>Hard</ion-label></ion-segment-button>
-    </ion-segment>
+      <ion-segment
+        [value]="difficultyFilter()"
+        (ionChange)="onSegmentChange($event)"
+        class="pill-seg difficulty-seg"
+        [scrollable]="true"
+      >
+        <ion-segment-button value="All"><ion-label>All</ion-label></ion-segment-button>
+        <ion-segment-button value="Easy"><ion-label>Easy</ion-label></ion-segment-button>
+        <ion-segment-button value="Moderate"><ion-label>Moderate</ion-label></ion-segment-button>
+        <ion-segment-button value="Hard"><ion-label>Hard</ion-label></ion-segment-button>
+      </ion-segment>
+    </div>
   </ion-toolbar>
 </ion-header>
 
@@ -111,6 +114,7 @@
   </div>
 
   <div class="trail-sheet" *ngIf="selectedTrail() as trail">
+    <span class="trail-sheet__grip"></span>
 
     <div class="trail-sheet__actions">
       <button
@@ -137,10 +141,10 @@
         <ion-icon name="star"></ion-icon>{{ trail.rating }}
       </span>
       <span
-        class="trail-sheet__badge"
+        class="diff-badge"
         [ngClass]="trail.difficulty.toLowerCase()"
       >{{ trail.difficulty }}</span>
-      <span class="trail-sheet__badge closed" *ngIf="isClosed(trail)">CLOSED</span>
+      <span class="trail-sheet__badge closed" *ngIf="isClosed(trail)">Closed</span>
     </div>
 
     <h2 class="trail-sheet__name">{{ trail.name }}</h2>
@@ -150,16 +154,25 @@
 
     <div class="trail-sheet__stats">
       <div>
-        <span class="label">Distance</span>
-        <span class="value">{{ trail.distance }}</span>
+        <ion-icon name="walk-outline"></ion-icon>
+        <span>
+          <span class="label">Distance</span>
+          <span class="value">{{ trail.distance }}</span>
+        </span>
       </div>
       <div>
-        <span class="label">Elevation</span>
-        <span class="value">{{ trail.elevation }}</span>
+        <ion-icon name="trending-up-outline"></ion-icon>
+        <span>
+          <span class="label">Elevation</span>
+          <span class="value">{{ trail.elevation }}</span>
+        </span>
       </div>
       <div>
-        <span class="label">Duration</span>
-        <span class="value">{{ trail.duration }}</span>
+        <ion-icon name="time-outline"></ion-icon>
+        <span>
+          <span class="label">Duration</span>
+          <span class="value">{{ trail.duration }}</span>
+        </span>
       </div>
     </div>
 

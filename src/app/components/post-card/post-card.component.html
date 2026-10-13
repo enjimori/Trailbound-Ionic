@@ -6,7 +6,7 @@
         <span class="name">{{ post.author }}</span>
         <ion-badge *ngIf="post.isPro" class="pro-badge">PRO</ion-badge>
       </div>
-      <span class="handle">{{ post.handle }} &middot; {{ post.timeAgo }}</span>
+      <span class="handle">{{ post.timeAgo }} &middot; {{ post.handle }}</span>
     </div>
     <ion-icon name="ellipsis-horizontal" class="more-icon"></ion-icon>
   </div>
@@ -17,19 +17,19 @@
   </div>
 
   <div class="media" *ngIf="post.images.length" [ngClass]="{'two-up': post.images.length > 1}">
-    <img *ngFor="let img of post.images" [src]="img" />
+    <img *ngFor="let img of post.images" [src]="img" alt="" />
   </div>
 
   <div class="actions">
-    <button class="action-btn" (click)="like.emit(post)">
-      <ion-icon [name]="post.liked ? 'heart' : 'heart-outline'" [ngClass]="{liked: post.liked}"></ion-icon>
-      <span [ngClass]="{liked: post.liked}">{{ formatLikes(post.likes) }}</span>
+    <button class="action-btn" [class.liked]="post.liked" (click)="like.emit(post)">
+      <ion-icon [name]="post.liked ? 'heart' : 'heart-outline'"></ion-icon>
+      <span>{{ formatLikes(post.likes) }}</span>
     </button>
     <button class="action-btn" (click)="comment.emit(post)">
       <ion-icon name="chatbubble-outline"></ion-icon>
       <span>{{ post.comments.length }}</span>
     </button>
-    <button class="action-btn" (click)="share.emit(post)">
+    <button class="action-btn share" (click)="share.emit(post)" aria-label="Share">
       <ion-icon name="share-social-outline"></ion-icon>
     </button>
   </div>

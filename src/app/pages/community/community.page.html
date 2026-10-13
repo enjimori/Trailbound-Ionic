@@ -1,19 +1,14 @@
 <ion-header class="ion-no-border">
   <ion-toolbar>
     <div class="header-row">
-      <app-logo badgeOnly [height]="50"></app-logo>
-
       <div class="title-block">
-        <h1>TrailTalk</h1>
-        <span class="subtitle">Join the adventure</span>
+        <h1>Community</h1>
+        <span class="subtitle">Stories from the trail</span>
       </div>
       <div class="header-actions">
-        <button class="icon-btn" (click)="goNotifications()">
+        <button class="icon-btn" (click)="goNotifications()" aria-label="Notifications">
           <ion-icon name="notifications-outline"></ion-icon>
           <ion-badge *ngIf="notificationService.unreadCount() > 0" class="badge-dot">{{ notificationService.unreadCount() }}</ion-badge>
-        </button>
-        <button class="join-btn" (click)="openComposer()">
-          <ion-icon name="add-outline"></ion-icon>
         </button>
       </div>
     </div>
@@ -22,6 +17,17 @@
 
 <ion-content [fullscreen]="true">
   <div class="page-pad">
+
+    <!-- Create post — opens the composer -->
+    <button class="create-card" (click)="openComposer()">
+      <span class="create-avatar"><ion-icon name="person"></ion-icon></span>
+      <span class="create-text">
+        <span class="t">Create Post</span>
+        <span class="s">Share your hike, thoughts, or photos...</span>
+      </span>
+      <span class="create-cam"><ion-icon name="camera-outline"></ion-icon></span>
+    </button>
+
     <app-post-card
       *ngFor="let post of postService.posts()"
       [post]="post"

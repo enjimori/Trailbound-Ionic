@@ -1,27 +1,52 @@
-ion-searchbar {
-  --background: var(--app-card-bg);
-  --border-radius: 16px;
-  --box-shadow: none;
-  --placeholder-color: var(--app-text-dim);
-  --icon-color: var(--app-text-dim);
-  --color: var(--app-text);
+/* ═══════════════════════════════════════════════════════════════════════════
+   EXPLORE
+   ═════════════════════════════════════════════════════════════════════════ */
+
+/* ── Header ─────────────────────────────────────────────────────────────── */
+
+.ex-header ion-toolbar {
+  --padding-start: 18px;
+  --padding-end: 18px;
+  --padding-top: 10px;
+  --padding-bottom: 12px;
+  --min-height: 0;
+}
+
+.ex-header-inner {
+  display: block;
+  width: 100%;
+}
+
+.ex-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+
+  .page-title {
+    margin: 0;
+    font-size: 28px;
+    font-weight: 500;
+    color: var(--app-text);
+  }
+}
+
+.ex-count {
+  font-size: 12.5px;
+  color: var(--app-text-dim);
+  white-space: nowrap;
+}
+
+.ex-search {
+  margin-bottom: 12px;
 }
 
 .difficulty-seg {
-  --background: var(--app-card-bg);
-  border-radius: 14px;
-  margin: 0 12px 8px;
-
-  ion-segment-button {
-    --color: var(--app-text-dim);
-    --color-checked: #08110a;
-    --indicator-color: var(--app-green);
-    font-weight: 600;
-    font-size: 12.5px;
-    min-height: 34px;
-    text-transform: none;
-  }
+  justify-content: flex-start;
 }
+
+/* ── Map ────────────────────────────────────────────────────────────────── */
 
 .map-content {
   --background: transparent;
@@ -34,31 +59,30 @@ ion-searchbar {
   inset: 0;
   z-index: 1;
   pointer-events: none;
-  background: linear-gradient(
-    180deg,
-    rgba(8, 17, 10, 0.35) 0%,
-    rgba(8, 17, 10, 0) 30%,
-    rgba(8, 17, 10, 0.55) 100%
-  );
+  background: linear-gradient(rgba(11, 18, 16, 0.55), transparent 22% 70%, rgba(11, 18, 16, 0.6));
 }
 
+/* General conditions banner — dark glass instead of a yellow slab. */
 .weather-alert {
   position: absolute;
   top: 12px;
-  left: 12px;
-  right: 12px;
+  left: 14px;
+  right: 66px;
   z-index: 5;
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 10px 12px;
-  border-radius: 14px;
-  background: #e8b32c;
-  color: #241a02;
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35);
+  gap: 12px;
+  padding: 11px 12px;
+  border-radius: 16px;
+  border: 1px solid var(--app-border-strong);
+  background: rgba(15, 24, 21, 0.86);
+  backdrop-filter: blur(12px);
+  color: var(--app-text);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.35);
 
   > ion-icon:first-child {
-    font-size: 18px;
+    font-size: 22px;
+    color: var(--app-star);
     flex-shrink: 0;
   }
 
@@ -66,12 +90,15 @@ ion-searchbar {
     flex: 1;
     display: flex;
     flex-direction: column;
-    line-height: 1.25;
-    font-size: 12px;
+    line-height: 1.3;
+    font-size: 11.5px;
     min-width: 0;
+    color: var(--app-text-dim);
 
     strong {
       font-size: 13px;
+      font-weight: 600;
+      color: var(--app-text);
     }
 
     span {
@@ -84,14 +111,16 @@ ion-searchbar {
   }
 
   &__temp {
-    font-size: 15px;
-    font-weight: 800;
+    font-family: var(--app-font-serif);
+    font-size: 20px;
+    font-weight: 500;
+    color: var(--app-text);
     flex-shrink: 0;
   }
 
   &__close {
     font-size: 16px;
-    opacity: 0.7;
+    color: var(--app-text-dim);
     flex-shrink: 0;
   }
 }
@@ -107,22 +136,24 @@ ion-searchbar {
   align-items: center;
   gap: 8px;
   padding: 18px 24px;
-  border-radius: 16px;
-  background: rgba(8, 17, 10, 0.75);
-  backdrop-filter: blur(6px);
+  border-radius: var(--app-radius);
+  border: 1px solid var(--app-border);
+  background: rgba(15, 24, 21, 0.86);
+  backdrop-filter: blur(8px);
   color: var(--app-text-dim);
   font-size: 13px;
   text-align: center;
 
   ion-icon {
     font-size: 26px;
+    color: var(--app-accent);
   }
 }
 
 .map-fabs {
   position: absolute;
-  right: 12px;
-  top: 76px;
+  right: 14px;
+  top: 12px;
   z-index: 5;
   display: flex;
   flex-direction: column;
@@ -131,24 +162,26 @@ ion-searchbar {
 
 .map-fab {
   position: relative;
-  width: 40px;
-  height: 40px;
-  border-radius: 12px;
-  border: none;
-  background: var(--app-card-bg);
+  width: 42px;
+  height: 42px;
+  border-radius: 14px;
+  border: 1px solid var(--app-border-strong);
+  background: rgba(15, 24, 21, 0.88);
+  backdrop-filter: blur(10px);
   color: var(--app-text);
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35);
 
   ion-icon {
-    font-size: 18px;
+    font-size: 19px;
   }
 
   &.active {
-    background: var(--app-green);
-    color: #08110a;
+    background: var(--app-accent);
+    border-color: var(--app-accent);
+    color: var(--app-on-accent);
   }
 
   &:disabled {
@@ -157,34 +190,35 @@ ion-searchbar {
 
   &__badge {
     position: absolute;
-    top: -5px;
-    right: -5px;
+    top: -6px;
+    right: -6px;
     min-width: 18px;
     height: 18px;
     padding: 0 5px;
     border-radius: 9px;
-    background: var(--app-green);
-    color: #08110a;
+    background: var(--app-accent);
+    color: var(--app-on-accent);
     font-size: 10.5px;
-    font-weight: 800;
+    font-weight: 700;
     line-height: 18px;
     text-align: center;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+    box-shadow: 0 0 0 2px var(--app-bg);
   }
 }
 
 .saved-panel {
   position: absolute;
-  top: 76px;
-  right: 60px;
+  top: 12px;
+  right: 66px;
   z-index: 7;
-  width: 232px;
+  width: 240px;
   max-height: 300px;
   overflow-y: auto;
-  padding: 10px;
-  border-radius: 16px;
-  background: var(--app-card-bg);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  padding: 12px;
+  border-radius: var(--app-radius);
+  border: 1px solid var(--app-border-strong);
+  background: var(--app-bg-raised);
+  box-shadow: 0 14px 32px rgba(0, 0, 0, 0.5);
 
   &__head {
     display: flex;
@@ -194,12 +228,14 @@ ion-searchbar {
     padding: 0 2px;
 
     strong {
-      font-size: 12.5px;
+      font-family: var(--app-font-serif);
+      font-size: 15px;
+      font-weight: 500;
       color: var(--app-text);
     }
 
     ion-icon {
-      font-size: 15px;
+      font-size: 16px;
       color: var(--app-text-dim);
     }
   }
@@ -213,11 +249,12 @@ ion-searchbar {
     text-align: center;
     color: var(--app-text-dim);
     font-size: 11.5px;
-    line-height: 1.4;
+    line-height: 1.45;
 
     ion-icon {
       font-size: 22px;
-      opacity: 0.6;
+      color: var(--app-accent);
+      opacity: 0.8;
     }
   }
 }
@@ -225,27 +262,27 @@ ion-searchbar {
 .saved-item {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   width: 100%;
-  padding: 8px;
+  padding: 9px 8px;
   border: none;
-  border-radius: 10px;
+  border-radius: 12px;
   background: transparent;
   text-align: left;
 
   &:active {
-    background: rgba(255, 255, 255, 0.06);
+    background: rgba(255, 255, 255, 0.05);
   }
 
   &__dot {
     width: 8px;
     height: 8px;
     border-radius: 50%;
-    background: var(--app-green);
+    background: var(--app-leaf);
     flex-shrink: 0;
 
     &.closed {
-      background: #ff5b5b;
+      background: var(--app-heart);
     }
   }
 
@@ -256,7 +293,7 @@ ion-searchbar {
     min-width: 0;
 
     strong {
-      font-size: 12px;
+      font-size: 12.5px;
       font-weight: 600;
       color: var(--app-text);
       white-space: nowrap;
@@ -265,7 +302,7 @@ ion-searchbar {
     }
 
     span {
-      font-size: 10.5px;
+      font-size: 11px;
       color: var(--app-text-dim);
       white-space: nowrap;
       overflow: hidden;
@@ -274,12 +311,13 @@ ion-searchbar {
   }
 
   &__remove {
-    font-size: 14px;
+    font-size: 15px;
     color: var(--app-text-dim);
     flex-shrink: 0;
-    opacity: 0.7;
   }
 }
+
+/* ── Trail sheet ────────────────────────────────────────────────────────── */
 
 .trail-sheet {
   position: absolute;
@@ -287,103 +325,138 @@ ion-searchbar {
   right: 0;
   bottom: 0;
   z-index: 6;
-  /* The sheet grew past the viewport once the weather card went in. Cap it
-     and let it scroll, so the trail name is never pushed off the top. */
+  /* Capped and scrollable, so the trail name is never pushed off the top. */
   max-height: calc(100% - 10px);
   overflow-y: auto;
   overscroll-behavior: contain;
-  padding: 16px 18px calc(22px + env(safe-area-inset-bottom, 0px));
-  border-radius: 20px 20px 0 0;
-  background: var(--app-card-bg);
-  box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.4);
-  animation: sheet-up 0.22s ease-out;
+  padding: 10px 18px calc(22px + env(safe-area-inset-bottom, 0px));
+  border-radius: 26px 26px 0 0;
+  border-top: 1px solid var(--app-border-strong);
+  background: var(--app-bg-raised);
+  box-shadow: 0 -14px 34px rgba(0, 0, 0, 0.45);
+  animation: sheet-up 0.24s ease-out;
+
+  &__grip {
+    display: block;
+    width: 40px;
+    height: 4px;
+    margin: 0 auto 12px;
+    border-radius: 2px;
+    background: var(--app-border-strong);
+  }
 
   &__actions {
     position: absolute;
-    top: 12px;
-    right: 14px;
+    top: 20px;
+    right: 16px;
     display: flex;
-    gap: 6px;
+    gap: 8px;
   }
 
   &__top {
     display: flex;
     align-items: center;
+    flex-wrap: wrap;
     gap: 8px;
-    margin-bottom: 6px;
-    padding-right: 100px;
+    margin-bottom: 8px;
+    padding-right: 130px;
   }
 
   &__eyebrow {
-    font-size: 11px;
-    color: var(--app-text-dim);
-    letter-spacing: 0.3px;
-    flex: 1;
+    flex-basis: 100%;
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    color: var(--app-accent);
   }
 
   &__rating {
     display: flex;
     align-items: center;
-    gap: 3px;
-    font-size: 12px;
-    font-weight: 700;
+    gap: 4px;
+    font-size: 12.5px;
+    font-weight: 600;
     color: var(--app-text);
 
     ion-icon {
-      font-size: 12px;
-      color: #ffd257;
+      font-size: 13px;
+      color: var(--app-star);
     }
   }
 
   &__badge {
-    font-size: 11px;
+    font-size: 11.5px;
     font-weight: 600;
-    padding: 3px 9px;
-    border-radius: 8px;
+    padding: 3px 10px;
+    border-radius: 7px;
     background: rgba(255, 255, 255, 0.08);
     color: var(--app-text-dim);
 
-    &.easy     { background: rgba(95, 217, 122, 0.18); color: #5FD97A; }
-    &.moderate { background: rgba(255, 169, 77, 0.18); color: #ffa94d; }
-    &.hard     { background: rgba(255, 91, 91, 0.18);  color: #ff5b5b; }
-    &.closed   { background: rgba(220, 60, 60, 0.25);  color: #ff6b6b; }
+    &.closed { background: rgba(240, 80, 90, 0.18); color: #ff9aa0; }
   }
 
   &__name {
-    margin: 0 0 2px;
-    font-size: 19px;
-    font-weight: 700;
+    margin: 0 0 4px;
+    font-family: var(--app-font-serif);
+    font-size: 25px;
+    font-weight: 500;
+    line-height: 1.15;
     color: var(--app-text);
   }
 
   &__region {
-    margin: 0 0 14px;
-    font-size: 12px;
+    margin: 0 0 16px;
+    font-size: 12.5px;
     color: var(--app-text-dim);
     display: flex;
     align-items: center;
-    gap: 4px;
+    gap: 5px;
 
-    ion-icon { font-size: 13px; }
+    ion-icon { font-size: 14px; }
   }
 
+  /* Three stats in one bordered strip with hairline dividers. */
   &__stats {
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: 16px;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    margin-bottom: 14px;
+    border: 1px solid var(--app-border);
+    border-radius: var(--app-radius);
+    background: var(--app-card-bg);
+
+    > div {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      padding: 13px 10px;
+      min-width: 0;
+
+      & + div { border-left: 1px solid var(--app-border); }
+
+      > ion-icon {
+        flex-shrink: 0;
+        font-size: 20px;
+        color: var(--app-text-dim);
+      }
+
+      > span { min-width: 0; }
+    }
 
     .label {
       display: block;
-      font-size: 11px;
+      font-size: 10.5px;
       color: var(--app-text-dim);
       margin-bottom: 2px;
     }
 
     .value {
       display: block;
-      font-size: 14px;
+      font-size: 13px;
       font-weight: 600;
       color: var(--app-text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
   }
 
@@ -392,43 +465,17 @@ ion-searchbar {
     align-items: stretch;
     gap: 8px;
   }
-
-  &__meta {
-    display: flex;
-    flex-direction: column;
-    flex-shrink: 0;
-
-    .label {
-      font-size: 9.5px;
-      color: var(--app-text-dim);
-    }
-
-    .value {
-      display: flex;
-      align-items: center;
-      gap: 4px;
-      font-size: 15px;
-      font-weight: 800;
-      color: var(--app-text);
-
-      ion-icon {
-        font-size: 14px;
-        color: #ffd257;
-      }
-    }
-  }
 }
 
-/* Photo banner. Replaces the old video row rather than sitting alongside it —
- * the sheet is already tall on a 667px screen, and the photo carries the same
- * "there is a preview here" affordance the video row did. */
+/* Photo banner of the mountain. */
 .trail-photo {
   position: relative;
-  height: 108px;
+  height: 132px;
   margin-bottom: 14px;
-  border-radius: 14px;
+  border-radius: var(--app-radius);
   overflow: hidden;
-  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--app-border);
+  background: var(--app-card-bg);
 
   img {
     width: 100%;
@@ -437,15 +484,14 @@ ion-searchbar {
     display: block;
   }
 
-  /* Keeps the play button and credit readable over a bright photo. */
+  /* Keeps the credit readable over a bright photo. */
   &::after {
     content: '';
     position: absolute;
     inset: 0;
     background: linear-gradient(
       180deg,
-      rgba(0, 0, 0, 0.1) 0%,
-      rgba(0, 0, 0, 0) 45%,
+      rgba(0, 0, 0, 0) 50%,
       rgba(0, 0, 0, 0.6) 100%
     );
     pointer-events: none;
@@ -456,6 +502,7 @@ ion-searchbar {
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
+    z-index: 1;
     display: flex;
     align-items: center;
     gap: 5px;
@@ -469,9 +516,9 @@ ion-searchbar {
 
   &__credit {
     position: absolute;
-    left: 8px;
-    bottom: 6px;
-    right: 8px;
+    left: 10px;
+    bottom: 7px;
+    right: 10px;
     z-index: 1;
     font-size: 9px;
     line-height: 1.3;
@@ -483,159 +530,100 @@ ion-searchbar {
 }
 
 .sheet-icon-btn {
-  width: 26px;
-  height: 26px;
-  border: none;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.08);
-  color: var(--app-text-dim);
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--app-border-strong);
+  border-radius: 12px;
+  background: var(--app-card-bg);
+  color: var(--app-text);
   display: flex;
   align-items: center;
   justify-content: center;
 
   ion-icon {
-    font-size: 14px;
+    font-size: 17px;
   }
 
   &.saved {
-    background: rgba(95, 217, 122, 0.2);
-    color: var(--app-green);
+    background: var(--app-accent-soft);
+    border-color: rgba(232, 217, 156, 0.4);
+    color: var(--app-accent);
   }
 }
 
-/* Two equal-width actions. Labels are sentence case, not shouty caps — they
- * read as descriptions of where the button takes you rather than commands. */
+/* Sheet buttons are ion-buttons; restyled through their CSS variables. */
 .sheet-btn {
   flex: 1;
-  --border-radius: 14px;
-  font-weight: 700;
-  font-size: 12.5px;
+  --border-radius: 999px;
+  --box-shadow: none;
+  --padding-start: 12px;
+  --padding-end: 12px;
+  height: 46px;
+  font-weight: 600;
+  font-size: 13px;
   text-transform: none;
   letter-spacing: 0;
   margin: 0;
 
   ion-icon {
-    font-size: 15px;
-    margin-right: 5px;
+    font-size: 16px;
+    margin-right: 6px;
   }
 
   &.primary {
-    --background: var(--app-green);
-    --background-activated: var(--app-green-dark);
-    --color: #08110a;
+    --background: var(--app-card-hi);
+    --background-activated: var(--app-card-bg-2);
+    --color: var(--app-text);
+    --border-width: 1px;
+    --border-style: solid;
+    --border-color: var(--app-border-strong);
   }
 
   &.secondary {
-    --background: rgba(255, 255, 255, 0.08);
-    --background-activated: rgba(255, 255, 255, 0.14);
+    --background: transparent;
+    --background-activated: rgba(255, 255, 255, 0.06);
     --color: var(--app-text);
+    --border-width: 1px;
+    --border-style: solid;
+    --border-color: var(--app-border-strong);
 
     &.on {
-      --background: rgba(95, 217, 122, 0.18);
-      --color: var(--app-green);
+      --background: var(--app-accent-soft);
+      --border-color: rgba(232, 217, 156, 0.45);
+      --color: var(--app-accent);
     }
   }
 }
 
-/* Full-width row of its own, under the two map actions. Outlined rather than
- * filled so it reads as secondary to "How to get there". */
+/* Full-width row of its own, under the two map actions. */
 .video-btn {
   width: 100%;
   margin-top: 8px;
   --background: transparent;
-  --background-activated: rgba(255, 255, 255, 0.08);
+  --background-activated: rgba(255, 255, 255, 0.06);
   --color: var(--app-text-dim);
   --border-width: 1px;
-  --border-style: solid;
-  --border-color: rgba(255, 255, 255, 0.14);
+  --border-style: dashed;
+  --border-color: var(--app-border-strong);
 }
 
 @keyframes sheet-up {
   from { transform: translateY(100%); }
   to   { transform: translateY(0); }
 }
+
+/* The cream pill — the one filled action in the sheet. */
 .sheet-btn.book-now {
   width: 100%;
-  margin-top: 8px;
-  --background: var(--app-green);
+  height: 54px;
+  margin-top: 12px;
+  --background: var(--app-cta);
   --background-activated: var(--app-green-dark);
-  --color: #08110a;
-  font-weight: 800;
+  --color: var(--app-on-accent);
+  --box-shadow: var(--app-cta-shadow);
+  font-size: 15px;
+  font-weight: 600;
 }
 
-/* ── Trail video modal ──────────────────────────────────────────────────── */
-
-.video-modal {
-  --width: 100%;
-  --height: auto;
-  --max-height: 86%;
-  --border-radius: 20px;
-  --background: #0d140e;
-}
-
-.video-shell {
-  background: #0d140e;
-  padding: 10px 12px calc(14px + env(safe-area-inset-bottom, 0px));
-}
-
-.video-bar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  padding: 2px 2px 10px;
-
-  .video-title {
-    font-size: 14px;
-    font-weight: 700;
-    color: var(--app-text);
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .video-close {
-    flex-shrink: 0;
-    width: 36px;
-    height: 36px;
-    border: none;
-    border-radius: 50%;
-    background: rgba(255, 255, 255, 0.08);
-    color: var(--app-text);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    ion-icon { font-size: 18px; }
-  }
-}
-
-/* A 16:9 box the iframe fills absolutely — videos letterbox themselves inside
-   it rather than stretching the sheet to whatever height the player wants. */
-.video-frame {
-  position: relative;
-  width: 100%;
-  aspect-ratio: 16 / 9;
-  border-radius: 14px;
-  overflow: hidden;
-  background: #000;
-
-  iframe {
-    position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    border: 0;
-  }
-}
-
-.video-credit {
-  margin: 10px 2px 0;
-  font-size: 10.5px;
-  color: var(--app-text-dim);
-
-  a {
-    color: var(--app-green);
-    text-decoration: none;
-  }
-}
+/* Trail video modal styles live in global.scss (under .video-modal) to keep
+   this file inside Angular's per-component style budget. */

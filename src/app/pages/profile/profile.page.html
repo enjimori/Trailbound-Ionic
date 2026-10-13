@@ -3,7 +3,7 @@
     <ion-title>Profile</ion-title>
     <!-- Edit button only for signed-in users -->
     <ion-buttons slot="end" *ngIf="signedInProfile()">
-      <ion-button (click)="goPersonalInfo()">
+      <ion-button (click)="goPersonalInfo()" class="edit-icon-btn" aria-label="Edit profile">
         <ion-icon name="pencil-outline" slot="icon-only"></ion-icon>
       </ion-button>
     </ion-buttons>
@@ -21,22 +21,25 @@
       <div class="avatar-wrap">
         <!-- Only show a photo the user actually uploaded; otherwise the default avatar -->
         <img *ngIf="p.avatar; else defaultAvatar" [src]="p.avatar" alt="Profile picture" />
-        <div class="verified-dot">
-          <ion-icon name="checkmark-circle"></ion-icon>
-        </div>
       </div>
-      <h2>{{ p.name || 'Trail Hiker' }}</h2>
-      <p class="email">{{ p.email }}</p>
 
-      <p class="location" *ngIf="p.location">
-        <ion-icon name="location-outline"></ion-icon> {{ p.location }}
-      </p>
-
-      <p class="bio" *ngIf="p.bio; else noBio">{{ p.bio }}</p>
-      <ng-template #noBio>
-        <p class="bio add-prompt" (click)="goPersonalInfo()">Add a short bio and your location</p>
-      </ng-template>
+      <div class="head-text">
+        <h2>{{ p.name || 'Trail Hiker' }}</h2>
+        <p class="rank">
+          Trail Explorer
+          <ion-icon name="checkmark-circle"></ion-icon>
+        </p>
+        <p class="email">{{ p.email }}</p>
+        <p class="location" *ngIf="p.location">
+          <ion-icon name="location-outline"></ion-icon> {{ p.location }}
+        </p>
+      </div>
     </div>
+
+    <p class="bio" *ngIf="p.bio; else noBio">{{ p.bio }}</p>
+    <ng-template #noBio>
+      <p class="bio add-prompt" (click)="goPersonalInfo()">+ Add a short bio and your location</p>
+    </ng-template>
 
     <div class="stats-row">
       <div class="stat">
@@ -44,25 +47,30 @@
         <span class="label">Total Hikes</span>
       </div>
       <div class="stat">
-        <span class="value">{{ p.totalDistanceKm | number:'1.0-1' }}k</span>
-        <span class="label">Total Dist.</span>
+        <span class="value">{{ p.totalDistanceKm | number:'1.0-1' }}<small>km</small></span>
+        <span class="label">Distance</span>
       </div>
       <div class="stat">
-        <span class="value">{{ p.highestPeakM | number:'1.0-0' }}m</span>
+        <span class="value">{{ p.highestPeakM | number:'1.0-0' }}<small>m</small></span>
         <span class="label">Highest Peak</span>
       </div>
     </div>
 
+    <button class="ghost-pill edit-profile" (click)="goPersonalInfo()">
+      Edit Profile
+      <ion-icon name="chevron-forward-outline"></ion-icon>
+    </button>
+
     <div class="section-header">
       <span class="section-title">Upcoming Adventures</span>
-      <span class="view-all-link" *ngIf="userService.upcoming().length" (click)="goPlanner()">View All</span>
+      <span class="view-all-link" *ngIf="userService.upcoming().length" (click)="goPlanner()">View all</span>
     </div>
 
     <div class="adventure-item" *ngFor="let adv of userService.upcoming()" (click)="openAdventure(adv)">
-      <img [src]="adv.image" />
+      <img [src]="adv.image" alt="" />
       <div class="adventure-body">
         <span class="adventure-name">{{ adv.name }}</span>
-        <span class="adventure-date">{{ adv.date }} &bull; {{ adv.duration }}</span>
+        <span class="adventure-date">{{ adv.date }} &middot; {{ adv.duration }}</span>
       </div>
       <ion-icon name="chevron-forward-outline"></ion-icon>
     </div>
@@ -79,23 +87,23 @@
 
     <div class="account-list">
       <div class="account-item" (click)="goPersonalInfo()">
-        <ion-icon name="person-outline"></ion-icon>
+        <span class="ai-icon"><ion-icon name="person-outline"></ion-icon></span>
         <span>Personal Information</span>
         <ion-icon name="chevron-forward-outline" class="chevron"></ion-icon>
       </div>
       <div class="account-item" (click)="goNotifications()">
-        <ion-icon name="notifications-outline"></ion-icon>
+        <span class="ai-icon"><ion-icon name="notifications-outline"></ion-icon></span>
         <span>Notifications</span>
         <span class="pill" *ngIf="notificationService.unreadCount() > 0">{{ notificationService.unreadCount() }} New</span>
         <ion-icon name="chevron-forward-outline" class="chevron"></ion-icon>
       </div>
       <div class="account-item" (click)="showComingSoon('Privacy & Security')">
-        <ion-icon name="shield-checkmark-outline"></ion-icon>
+        <span class="ai-icon"><ion-icon name="shield-checkmark-outline"></ion-icon></span>
         <span>Privacy &amp; Security</span>
         <ion-icon name="chevron-forward-outline" class="chevron"></ion-icon>
       </div>
       <div class="account-item" (click)="showComingSoon('Help Center')">
-        <ion-icon name="help-circle-outline"></ion-icon>
+        <span class="ai-icon"><ion-icon name="help-circle-outline"></ion-icon></span>
         <span>Help Center</span>
         <ion-icon name="chevron-forward-outline" class="chevron"></ion-icon>
       </div>
@@ -119,6 +127,7 @@
           <ng-container *ngTemplateOutlet="defaultAvatar"></ng-container>
         </div>
         <h2>Welcome, User!</h2>
+        <p class="guest-sub">Sign in to book hikes, save trails and join the community.</p>
       </div>
 
       <div class="guest-actions">

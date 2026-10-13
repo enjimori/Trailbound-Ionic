@@ -8,7 +8,7 @@
   <div class="page">
     <ion-segment
       mode="ios"
-      class="tabs"
+      class="tabs pill-seg"
       [value]="tab()"
       (ionChange)="onTabChange($event.detail.value)"
     >
@@ -32,16 +32,14 @@
           </div>
 
           <div class="info">
-            <span class="eyebrow">{{ isPast(b) ? 'Past climb' : 'Upcoming climb' }}</span>
             <h2 class="trail">{{ b.trailName }}</h2>
             <p class="when">
-              {{ toDate(b.date) | date: 'MMM d, y' }} &bull; {{ b.packageName }}
+              {{ toDate(b.date) | date: 'MMM d, y' }} &middot; {{ b.packageName }}
             </p>
+            <span class="status" [attr.data-status]="isPast(b) ? 'completed' : 'confirmed'">
+              {{ isPast(b) ? 'Completed' : 'Confirmed' }}
+            </span>
           </div>
-
-          <span class="status" [attr.data-status]="isPast(b) ? 'completed' : 'confirmed'">
-            {{ isPast(b) ? 'Completed' : 'Confirmed' }}
-          </span>
         </div>
 
         <div class="card-bottom">
@@ -50,7 +48,7 @@
             <span class="booking-id">#{{ b.reference }}</span>
           </div>
           <button type="button" class="details-btn" (click)="openDetails(b)">
-            Details <ion-icon name="arrow-forward"></ion-icon>
+            Details <ion-icon name="chevron-forward-outline"></ion-icon>
           </button>
         </div>
       </article>

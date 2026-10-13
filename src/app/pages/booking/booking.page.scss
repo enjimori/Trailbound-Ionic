@@ -1,732 +1,645 @@
 /* ═══════════════════════════════════════════════════════════════════════════
    BOOKING PAGE
 
-
    Every class is prefixed `bk-` so nothing here can collide with a teammate's
-   styles. Colours come from the app's existing CSS variables, with fallbacks
-   so the page still reads correctly if a variable is renamed.
+   styles. Colours come from the app's theme tokens (src/theme/variables.scss).
    ═════════════════════════════════════════════════════════════════════════ */
 
+:host {
+  --bk-green: var(--app-accent, #e8d99c);
+  --bk-text: var(--app-text, #eef0e7);
+  --bk-dim: var(--app-text-dim, #97a299);
+  --bk-card: var(--app-card-bg, #131d19);
+  --bk-inner: var(--app-bg-raised, #0f1815);
+  --bk-border: var(--app-border, rgba(222, 232, 206, 0.09));
+  --bk-border-strong: var(--app-border-strong, rgba(222, 232, 206, 0.16));
+}
 
-   :host {
-    --bk-green: var(--app-green, #5b9a63);
-    --bk-text: var(--app-text, #f2f5f2);
-    --bk-dim: var(--app-text-dim, #9aa89c);
-    --bk-card: var(--app-card-bg, #1b231c);
-    --bk-border: var(--app-border, rgba(255, 255, 255, 0.09));
-  }
-  
-  
-  /* ── Hero ───────────────────────────────────────────────────────────────── */
-  
-  
-  .bk-hero {
-    position: relative;
-    height: 280px;
-    background-size: cover;
-    background-position: center;
-  }
-  
-  
-  .bk-hero-gradient {
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(
-      to bottom,
-      rgba(0, 0, 0, 0.45) 0%,
-      rgba(0, 0, 0, 0.1) 40%,
-      rgba(10, 14, 11, 0.95) 100%
-    );
-  }
-  
-  
-  .bk-hero-body {
-    position: absolute;
-    left: 20px;
-    right: 20px;
-    bottom: 16px;
-  
-  
-    h1 {
-      margin: 6px 0 4px;
-      font-size: 26px;
-      font-weight: 800;
-      color: #fff;
-      line-height: 1.15;
-    }
-  }
-  
-  
-  .bk-region {
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    margin: 0;
-    font-size: 12.5px;
-    color: rgba(255, 255, 255, 0.82);
-  
-  
-    ion-icon { font-size: 13px; }
-  }
-  
-  
-  .bk-chips {
-    display: flex;
-    gap: 6px;
-  }
-  
-  
-  .bk-chip {
-    padding: 4px 9px;
-    border-radius: 6px;
-    font-size: 9.5px;
-    font-weight: 800;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    background: var(--bk-green);
-    color: #08110a;
-  
-  
-    &.difficulty { background: #b8562f; color: #fff; }
-    &.closed { background: #8c3030; color: #fff; }
-  }
-  
-  
-  /* ── Body ───────────────────────────────────────────────────────────────── */
-  
-  
-  .bk-body {
-    padding: 22px 20px 0;
-  }
-  
-  
-  .bk-title {
-    margin: 0 0 12px;
-    font-size: 16px;
-    font-weight: 800;
+/* ── Top bar ────────────────────────────────────────────────────────────── */
+
+.bk-topbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: calc(12px + env(safe-area-inset-top)) 16px 14px;
+}
+
+.bk-back {
+  flex-shrink: 0;
+  width: 42px;
+  height: 42px;
+  border: none;
+  border-radius: 14px;
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  ion-icon {
+    font-size: 22px;
     color: var(--bk-text);
   }
-  
-  
-  .bk-section-head {
-    display: flex;
-    align-items: baseline;
-    justify-content: space-between;
-  
-  
-    .bk-title { margin-bottom: 12px; }
+
+  &:active { background: rgba(255, 255, 255, 0.06); }
+}
+
+.bk-page-title {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 500;
+  color: var(--bk-text);
+}
+
+/* ── Trail card ─────────────────────────────────────────────────────────── */
+
+.bk-hero {
+  position: relative;
+  height: 220px;
+  margin: 0 18px;
+  border-radius: var(--app-radius-lg, 24px);
+  border: 1px solid var(--bk-border-strong);
+  overflow: hidden;
+  background-size: cover;
+  background-position: center;
+  background-color: var(--bk-card);
+}
+
+.bk-hero-gradient {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to bottom,
+    rgba(8, 13, 11, 0) 30%,
+    rgba(8, 13, 11, 0.55) 62%,
+    rgba(8, 13, 11, 0.94) 100%
+  );
+}
+
+.bk-hero-body {
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  bottom: 14px;
+
+  h2 {
+    margin: 8px 0 4px;
+    font-size: 23px;
+    font-weight: 500;
+    color: #fff;
+    line-height: 1.15;
   }
-  
-  
-  .bk-caption {
-    font-size: 11.5px;
+}
+
+.bk-region {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin: 0;
+  font-size: 12.5px;
+  color: rgba(238, 240, 231, 0.8);
+
+  ion-icon { font-size: 13px; }
+}
+
+.bk-chips {
+  display: flex;
+  gap: 6px;
+}
+
+.bk-chip {
+  padding: 3px 10px;
+  border-radius: 7px;
+  font-size: 11.5px;
+  font-weight: 600;
+  background: rgba(79, 139, 87, 0.85);
+  color: #e9f5e6;
+
+  &.closed { background: rgba(156, 58, 49, 0.9); color: #ffe8e3; }
+}
+
+/* ── Body ───────────────────────────────────────────────────────────────── */
+
+.bk-body {
+  padding: 8px 18px 0;
+}
+
+.bk-title {
+  margin: 22px 0 12px;
+  font-family: var(--app-font-serif);
+  font-size: 18px;
+  font-weight: 500;
+  color: var(--bk-text);
+}
+
+.bk-section-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.bk-caption {
+  font-size: 12px;
+  color: var(--bk-dim);
+}
+
+.bk-hint {
+  margin: 0 0 6px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--bk-dim);
+
+  &.tight { margin: -6px 0 12px; }
+}
+
+.bk-note {
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(224, 182, 74, 0.1);
+  border: 1px solid rgba(224, 182, 74, 0.26);
+  font-size: 12px;
+  line-height: 1.5;
+  color: #ead29a;
+}
+
+/* ── Date field ─────────────────────────────────────────────────────────── */
+
+.bk-field-label {
+  margin: 0 0 8px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--bk-dim);
+}
+
+.bk-date-field {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  padding: 16px 18px;
+  background: var(--bk-card);
+  border: 1px solid var(--bk-border);
+  border-radius: var(--app-radius, 18px);
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--bk-text);
+  text-align: left;
+
+  /* Dim until a date is actually chosen. */
+  .placeholder {
+    font-weight: 400;
     color: var(--bk-dim);
   }
-  
-  
-  .bk-hint {
-    margin: 0 0 18px;
-    font-size: 11.5px;
-    line-height: 1.5;
-    color: var(--bk-dim);
-  
-  
-    &.tight { margin: -6px 0 12px; }
+
+  ion-icon {
+    flex-shrink: 0;
+    font-size: 20px;
+    color: var(--bk-green);
   }
-  
-  
-  .bk-note {
-    margin: -4px 0 16px;
-    padding: 9px 12px;
-    border-radius: 10px;
-    background: rgba(200, 160, 60, 0.12);
-    border: 1px solid rgba(200, 160, 60, 0.28);
-    font-size: 11.5px;
-    line-height: 1.5;
-    color: #e0c98a;
+
+  &:has(span:not(.placeholder)) {
+    border-color: rgba(232, 217, 156, 0.45);
   }
-  
-  
-  /* ── Date strip ─────────────────────────────────────────────────────────── */
-  
-  
-  .bk-dates {
-    display: flex;
-    gap: 8px;
-    overflow-x: auto;
-    padding-bottom: 6px;
-    margin: 0 -20px 26px;
-    padding-left: 20px;
-    padding-right: 20px;
-  
-  
-    /* A visible scrollbar in a tap-to-scroll strip is just noise. */
-    scrollbar-width: none;
-    &::-webkit-scrollbar { display: none; }
+}
+
+.bk-date-modal {
+  --width: fit-content;
+  --min-width: 320px;
+  --height: fit-content;
+  --border-radius: 22px;
+  --background: var(--app-card-bg-2, #18241f);
+  --box-shadow: 0 16px 44px rgba(0, 0, 0, 0.5);
+
+  &::part(backdrop) {
+    background: #000;
+    opacity: 0.6;
   }
-  
-  
-  .bk-date {
-    flex: 0 0 auto;
-    width: 58px;
-    padding: 10px 0;
-    border-radius: 14px;
-    border: 1px solid var(--bk-border);
-    background: var(--bk-card);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 3px;
-  
-  
-    .wd {
-      font-size: 9.5px;
-      font-weight: 700;
-      letter-spacing: 0.06em;
-      color: var(--bk-dim);
-    }
-  
-  
-    .dd {
-      font-size: 17px;
-      font-weight: 800;
-      color: var(--bk-text);
-    }
-  
-  
-    &.active {
-      background: var(--bk-green);
-      border-color: var(--bk-green);
-  
-  
-      .wd { color: rgba(8, 17, 10, 0.75); }
-      .dd { color: #08110a; }
-    }
+}
+
+/* ion-datetime builds its calendar in shadow DOM, so its insides are reached
+   through ::part(). Overriding --ion-color-primary on the element recolours
+   the selected day, month arrows and year wheel at once. */
+ion-datetime {
+  --background: var(--app-card-bg-2, #18241f);
+  --background-rgb: 24, 36, 31;
+  --title-color: var(--app-text, #eef0e7);
+  --wheel-highlight-background: rgba(232, 217, 156, 0.14);
+  --wheel-fade-background-rgb: 24, 36, 31;
+
+  --ion-color-primary: var(--app-accent, #e8d99c);
+  --ion-color-primary-rgb: 232, 217, 156;
+  --ion-color-primary-contrast: #161d18;
+  --ion-color-primary-contrast-rgb: 22, 29, 24;
+
+  color: var(--app-text, #eef0e7);
+
+  &::part(calendar-day) {
+    color: var(--app-text, #eef0e7);
   }
-  
-  
-  /* ── Packages ───────────────────────────────────────────────────────────── */
-  
-  
-  .bk-pack {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 12px;
-    width: 100%;
-    text-align: left;
-    padding: 14px;
-    margin-bottom: 10px;
-    border-radius: 16px;
-    border: 1px solid var(--bk-border);
-    background: var(--bk-card);
-    color: var(--bk-text);
-  
-  
-    &.active {
-      border-color: var(--bk-green);
-      box-shadow: inset 0 0 0 1px var(--bk-green);
-    }
+
+  /* Today is outlined, not filled. */
+  &::part(calendar-day today) {
+    color: var(--app-accent, #e8d99c);
+    box-shadow: inset 0 0 0 1px var(--app-accent, #e8d99c);
   }
-  
-  
-  .bk-pack-main { min-width: 0; }
-  
-  
-  .bk-pack-name {
-    display: block;
-    font-size: 14px;
+
+  &::part(calendar-day active) {
+    background: var(--app-accent, #e8d99c);
+    color: #161d18;
     font-weight: 700;
-    margin-bottom: 6px;
   }
-  
-  
-  .bk-pack-list {
-    margin: 0;
-    padding-left: 15px;
-  
-  
-    li {
-      font-size: 11.5px;
-      line-height: 1.5;
-      color: var(--bk-dim);
-    }
+
+  &::part(calendar-day disabled) {
+    color: var(--app-text-dim, #97a299);
+    opacity: 0.35;
   }
-  
-  
-  .bk-pack-price {
-    flex-shrink: 0;
-    font-size: 14px;
-    font-weight: 800;
-    color: var(--bk-text);
+
+  &::part(month-year-button) {
+    color: var(--app-text, #eef0e7);
   }
-  
-  
-  /* ── Activities ─────────────────────────────────────────────────────────── */
-  
-  
-  .bk-acts {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    margin-bottom: 20px;
+
+  &::part(wheel-item) {
+    color: var(--app-text-dim, #97a299);
   }
-  
-  
-  .bk-act {
-    display: flex;
-    align-items: center;
-    gap: 7px;
-    padding: 9px 13px;
-    border-radius: 999px;
-    border: 1px solid var(--bk-border);
-    background: var(--bk-card);
-    color: var(--bk-text);
+
+  &::part(wheel-item active) {
+    color: var(--app-text, #eef0e7);
+    font-weight: 700;
+  }
+}
+
+/* ── Packages ───────────────────────────────────────────────────────────── */
+
+.bk-pack {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  text-align: left;
+  padding: 15px 16px;
+  margin-bottom: 10px;
+  border-radius: var(--app-radius, 18px);
+  border: 1px solid var(--bk-border);
+  background: var(--bk-card);
+  color: var(--bk-text);
+  transition: border-color 0.15s ease, background 0.15s ease;
+
+  &.active {
+    border-color: rgba(232, 217, 156, 0.6);
+    background:
+      linear-gradient(0deg, rgba(232, 217, 156, 0.06), rgba(232, 217, 156, 0.06)),
+      var(--bk-card);
+  }
+}
+
+.bk-pack-main { min-width: 0; }
+
+.bk-pack-name {
+  display: block;
+  font-family: var(--app-font-serif);
+  font-size: 16px;
+  font-weight: 500;
+  margin-bottom: 6px;
+}
+
+.bk-pack-list {
+  margin: 0;
+  padding-left: 15px;
+
+  li {
     font-size: 12px;
-  
-  
-    ion-icon { font-size: 15px; color: var(--bk-green); }
-  
-  
-    .n { font-weight: 600; }
-  
-  
-    .p {
-      font-size: 11px;
-      font-weight: 700;
-      color: var(--bk-dim);
-    }
-  
-  
-    &.active {
-      background: var(--bk-green);
-      border-color: var(--bk-green);
-      color: #08110a;
-  
-  
-      ion-icon { color: #08110a; }
-      .p { color: rgba(8, 17, 10, 0.75); }
-    }
+    line-height: 1.55;
+    color: var(--bk-dim);
   }
-  
-  
-  /* ── Guides ─────────────────────────────────────────────────────────────── */
-  
-  
-  .bk-guide {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    width: 100%;
-    text-align: left;
-    padding: 12px 14px;
-    margin-bottom: 10px;
-    border-radius: 16px;
-    border: 1px solid var(--bk-border);
-    background: var(--bk-card);
+}
+
+.bk-pack-price {
+  flex-shrink: 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--bk-green);
+}
+
+/* ── Add-ons: one list, a switch on each row ────────────────────────────── */
+
+.bk-acts {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 12px;
+  border: 1px solid var(--bk-border);
+  border-radius: var(--app-radius, 18px);
+  background: var(--bk-card);
+  overflow: hidden;
+}
+
+.bk-act {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 13px 14px;
+  border: none;
+  background: transparent;
+  color: var(--bk-text);
+  font-size: 13.5px;
+  text-align: left;
+
+  & + .bk-act { border-top: 1px solid var(--bk-border); }
+
+  .n {
+    flex: 1;
+    min-width: 0;
+    font-weight: 500;
+  }
+
+  .p {
+    flex-shrink: 0;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--bk-dim);
+  }
+
+  &.active .p { color: var(--bk-green); }
+}
+
+.bk-act-icon {
+  flex-shrink: 0;
+  width: 34px;
+  height: 34px;
+  border-radius: 11px;
+  border: 1px solid var(--bk-border);
+  background: var(--bk-inner);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  ion-icon { font-size: 17px; color: var(--bk-text); }
+}
+
+/* Visual switch; the whole row is the button. */
+.bk-switch {
+  position: relative;
+  flex-shrink: 0;
+  width: 44px;
+  height: 26px;
+  border-radius: 13px;
+  background: #2a3631;
+  transition: background 0.18s ease;
+
+  &::after {
+    content: '';
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: #e9ece3;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.35);
+    transition: transform 0.18s ease;
+  }
+
+  &.on {
+    background: var(--app-leaf, #4f8b57);
+    &::after { transform: translateX(18px); }
+  }
+}
+
+/* ── Guides ─────────────────────────────────────────────────────────────── */
+
+.bk-guide {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  text-align: left;
+  padding: 12px 14px;
+  margin-bottom: 10px;
+  border-radius: var(--app-radius, 18px);
+  border: 1px solid var(--bk-border);
+  background: var(--bk-card);
+  color: var(--bk-text);
+
+  &.active { border-color: rgba(232, 217, 156, 0.6); }
+}
+
+.bk-guide-avatar {
+  width: 42px;
+  height: 42px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--app-accent-soft, rgba(232, 217, 156, 0.14));
+  border: 1px solid rgba(232, 217, 156, 0.35);
+  color: var(--bk-green);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--app-font-serif);
+  font-weight: 600;
+  font-size: 17px;
+}
+
+.bk-guide-meta {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+
+  .n { font-size: 14px; font-weight: 600; }
+  .s { font-size: 11.5px; color: var(--bk-dim); }
+}
+
+.bk-radio {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  border: 2px solid var(--bk-border-strong);
+
+  &.on {
+    border-color: var(--bk-green);
+    background: var(--bk-green);
+    box-shadow: inset 0 0 0 3px var(--bk-card);
+  }
+}
+
+/* ── Merchandise ────────────────────────────────────────────────────────── */
+
+.bk-merch {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  margin-bottom: 8px;
+  border-radius: 16px;
+  border: 1px solid var(--bk-border);
+  background: var(--bk-card);
+
+  > ion-icon {
+    font-size: 20px;
     color: var(--bk-text);
-  
-  
-    &.active { border-color: var(--bk-green); }
-  }
-  
-  
-  .bk-guide-avatar {
-    width: 40px;
-    height: 40px;
     flex-shrink: 0;
-    border-radius: 50%;
-    background: var(--bk-green);
-    color: #08110a;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: 800;
-    font-size: 16px;
   }
-  
-  
-  .bk-guide-meta {
-    display: flex;
-    flex-direction: column;
-    flex: 1;
-    min-width: 0;
-  
-  
-    .n { font-size: 13.5px; font-weight: 700; }
-    .s { font-size: 11px; color: var(--bk-dim); }
-  }
-  
-  
-  .bk-radio {
-    width: 18px;
-    height: 18px;
-    flex-shrink: 0;
-    border-radius: 50%;
-    border: 2px solid var(--bk-border);
-  
-  
-    &.on {
-      border-color: var(--bk-green);
-      background: var(--bk-green);
-      box-shadow: inset 0 0 0 3px var(--bk-card);
-    }
-  }
-  
-  
-  /* ── Merchandise ────────────────────────────────────────────────────────── */
-  
-  
-  .bk-merch {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 11px 14px;
-    margin-bottom: 8px;
-    border-radius: 14px;
-    background: var(--bk-card);
-  
-  
-    > ion-icon {
-      font-size: 20px;
-      color: var(--bk-green);
-      flex-shrink: 0;
-    }
-  }
-  
-  
-  .bk-merch-meta {
-    display: flex;
-    flex-direction: column;
-    flex: 1;
-    min-width: 0;
-  
-  
-    .n { font-size: 13px; font-weight: 600; color: var(--bk-text); }
-    .p { font-size: 11.5px; font-weight: 700; color: var(--bk-green); }
-  }
-  
-  
-  .bk-stepper {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    flex-shrink: 0;
-  
-  
-    .qty {
-      min-width: 14px;
-      text-align: center;
-      font-size: 13px;
-      font-weight: 700;
-      color: var(--bk-text);
-    }
-  
-  
-    .step {
-      width: 28px;
-      height: 28px;
-      border-radius: 50%;
-      border: 1px solid var(--bk-border);
-      background: transparent;
-      color: var(--bk-text);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-  
-  
-      ion-icon { font-size: 15px; }
-  
-  
-      &:disabled { opacity: 0.3; }
-  
-  
-      &.add {
-        background: var(--bk-green);
-        border-color: var(--bk-green);
-        color: #08110a;
-      }
-    }
-  }
-  
-  
-  /* ── Running total ──────────────────────────────────────────────────────── */
-  
-  
-  .bk-summary {
-    margin-top: 26px;
-    padding: 16px;
-    border-radius: 16px;
-    background: var(--bk-card);
-  
-  
-    .bk-title { font-size: 14px; margin-bottom: 10px; }
-  
-  
-    .row {
-      display: flex;
-      justify-content: space-between;
-      gap: 12px;
-      font-size: 12.5px;
-      color: var(--bk-text);
-      padding: 5px 0;
-  
-  
-      &.muted { color: var(--bk-dim); }
-  
-  
-      &.total {
-        margin-top: 8px;
-        padding-top: 11px;
-        border-top: 1px solid var(--bk-border);
-        font-size: 15px;
-        font-weight: 800;
-        color: var(--bk-green);
-      }
-    }
-  }
-  
-  
-  /* Clears the sticky footer so the last row is never trapped underneath it. */
-  .bk-spacer { height: 110px; }
-  
-  
-  /* ── Sticky footer ──────────────────────────────────────────────────────── */
-  
-  
-  .bk-footer {
-    position: fixed;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    z-index: 20;
-    display: flex;
-    align-items: center;
-    /* Tighter than before: the bar now carries three things, not two. */
-    gap: 10px;
-    padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
-    background: rgba(12, 17, 13, 0.96);
-    border-top: 1px solid var(--bk-border);
-    backdrop-filter: blur(12px);
-  }
-  
-  
-  /* Back, in the footer beside the price. Quiet on purpose — it is a retreat
-     from a page whose whole job is the green button two inches to its right,
-     and the two must not read as equals. 48px clears Material's minimum. */
-  .bk-back {
-    flex-shrink: 0;
-    width: 48px;
-    height: 48px;
-    border: 1px solid var(--bk-border);
-    border-radius: 14px;
-    background: rgba(255, 255, 255, 0.05);
-    display: flex;
-    align-items: center;
-    justify-content: center;
+}
 
+.bk-merch-meta {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
 
-    ion-icon {
-      font-size: 21px;
-      /* Set explicitly: an unset icon inside an Ionic control inherits the
-         theme's primary blue, which is where that stray blue arrow came from. */
-      color: var(--bk-text);
-    }
-  }
+  .n { font-size: 13.5px; font-weight: 500; color: var(--bk-text); }
+  .p { font-size: 12px; font-weight: 600; color: var(--bk-green); }
+}
 
+/* Group-size style stepper: − n + in one rounded track. */
+.bk-stepper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  padding: 3px;
+  border-radius: 999px;
+  border: 1px solid var(--bk-border);
+  background: var(--bk-inner);
 
-  .bk-footer-price {
-    display: flex;
-    flex-direction: column;
-    flex-shrink: 0;
-  
-  
-    .l {
-      font-size: 9.5px;
-      font-weight: 700;
-      letter-spacing: 0.06em;
-      text-transform: uppercase;
-      color: var(--bk-dim);
-    }
-  
-  
-    .v { font-size: 18px; font-weight: 800; color: var(--bk-text); }
-  }
-  
-  
-  .bk-cta {
-    flex: 1;
-    /* Without this the label refuses to shrink and pushes the price off the
-       bar on a 320px screen. */
-    min-width: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    padding: 15px;
-    border: none;
-    border-radius: 14px;
-    background: var(--bk-green);
-    color: #08110a;
-    font-size: 14px;
-    font-weight: 800;
-  
-  
-    ion-icon { font-size: 16px; }
-  
-  
-    &:disabled {
-      background: #3a423b;
-      color: var(--bk-dim);
-    }
-  }
-  
-  
-  /* ── Not found ──────────────────────────────────────────────────────────── */
-  
-  
-  .bk-missing {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 14px;
-    height: 100%;
-    color: var(--bk-dim);
-  }
-  /* ── Hike date ──────────────────────────────────────────────────────────
-     The field and the calendar both used to carry hardcoded light-theme
-     colours — a pale grey box and Ionic's default primary blue — which made
-     them the only two things on a dark green app that looked borrowed from
-     somewhere else. Everything below is driven by the app's own tokens. */
-
-
-  .bk-field-label {
-    margin: 0 0 8px;
-    font-size: 9.5px;
-    font-weight: 800;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: var(--bk-dim);
-  }
-
-
-  .bk-date-field {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    width: 100%;
-    padding: 15px 16px;
-    margin-bottom: 22px;
-    background: var(--bk-card);
-    border: 1px solid var(--bk-border);
-    border-radius: 14px;
-    font-size: 14px;
+  .qty {
+    min-width: 16px;
+    text-align: center;
+    font-size: 13.5px;
     font-weight: 600;
     color: var(--bk-text);
-    text-align: left;
+  }
 
+  .step {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    border: none;
+    background: var(--app-card-hi, #1e2c26);
+    color: var(--bk-text);
+    display: flex;
+    align-items: center;
+    justify-content: center;
 
-    /* Dim until a date is actually chosen, so "mm / dd / yyyy" reads as a
-       prompt rather than as a value. */
-    .placeholder {
-      font-weight: 500;
-      color: var(--bk-dim);
+    ion-icon { font-size: 15px; }
+
+    &:disabled { opacity: 0.35; }
+
+    &.add {
+      background: var(--bk-green);
+      color: #161d18;
     }
+  }
+}
 
+/* ── Total trip cost ────────────────────────────────────────────────────── */
 
-    ion-icon {
-      flex-shrink: 0;
-      font-size: 19px;
+.bk-summary {
+  margin-top: 24px;
+  padding: 18px 18px 14px;
+  border-radius: var(--app-radius-lg, 24px);
+  border: 1px solid var(--bk-border-strong);
+  background:
+    radial-gradient(120% 80% at 100% 100%, rgba(79, 139, 87, 0.12), transparent 60%),
+    var(--bk-card);
+
+  .bk-sum-label {
+    margin: 0;
+    font-size: 13px;
+    color: var(--bk-dim);
+  }
+
+  .bk-sum-total {
+    margin: 2px 0 12px;
+    font-family: var(--app-font-serif);
+    font-size: 32px;
+    font-weight: 500;
+    color: var(--bk-text);
+  }
+
+  .row {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    font-size: 13px;
+    color: var(--bk-text);
+    padding: 6px 0;
+    border-top: 1px solid var(--bk-border);
+
+    &.muted { color: var(--bk-dim); }
+
+    &.total {
+      margin-top: 4px;
+      padding-top: 11px;
+      font-size: 15px;
+      font-weight: 600;
       color: var(--bk-green);
     }
+  }
+}
 
+/* Clears the sticky footer so the last row is never trapped underneath it. */
+.bk-spacer { height: 120px; }
 
-    /* A chosen date gets a green edge, matching how a selected package reads
-       further down the page. */
-    &:has(span:not(.placeholder)) {
-      border-color: rgba(91, 154, 99, 0.45);
-    }
+/* ── Sticky footer — price + Continue ───────────────────────────────────── */
+
+.bk-footer {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 18px calc(12px + env(safe-area-inset-bottom));
+  background: rgba(13, 21, 18, 0.95);
+  border-top: 1px solid var(--bk-border);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+.bk-footer-price {
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+
+  .l {
+    font-size: 11px;
+    color: var(--bk-dim);
   }
 
-
-  .bk-date-modal {
-    --width: fit-content;
-    --min-width: 320px;
-    --height: fit-content;
-    --border-radius: 20px;
-    --background: var(--app-card-bg, #1b231c);
-    --box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
-
-
-    &::part(backdrop) {
-      background: #000;
-      opacity: 0.55;
-    }
+  .v {
+    font-family: var(--app-font-serif);
+    font-size: 22px;
+    font-weight: 500;
+    color: var(--bk-text);
   }
+}
 
+.bk-cta {
+  flex: 1;
+  min-width: 0;
+  width: auto;
+  min-height: 52px;
+}
 
-  /* ion-datetime builds its calendar in shadow DOM, so its insides are reached
-     through ::part(). The selected-day pill, the month navigation arrows and
-     the year wheel all read --ion-color-primary, so overriding that one
-     variable on the element recolours all three at once — no part needed. */
-  ion-datetime {
-    --background: var(--app-card-bg, #1b231c);
-    --background-rgb: 27, 35, 28;
-    --title-color: var(--app-text, #f2f5f2);
-    --wheel-highlight-background: rgba(91, 154, 99, 0.16);
-    --wheel-fade-background-rgb: 27, 35, 28;
+/* ── Not found ──────────────────────────────────────────────────────────── */
 
+.bk-missing {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  height: 100%;
+  padding: 0 32px;
+  color: var(--bk-dim);
 
-    --ion-color-primary: var(--app-green, #5b9a63);
-    --ion-color-primary-rgb: 91, 154, 99;
-    --ion-color-primary-contrast: #08110a;
-    --ion-color-primary-contrast-rgb: 8, 17, 10;
-
-
-    color: var(--app-text, #f2f5f2);
-
-
-    &::part(calendar-day) {
-      color: var(--app-text, #f2f5f2);
-    }
-
-
-    /* Today is outlined, not filled: filling it competes with the day the
-       user actually picked. */
-    &::part(calendar-day today) {
-      color: var(--app-green, #5b9a63);
-      box-shadow: inset 0 0 0 1px var(--app-green, #5b9a63);
-    }
-
-
-    &::part(calendar-day active) {
-      background: var(--app-green, #5b9a63);
-      color: #08110a;
-      font-weight: 800;
-    }
-
-
-    /* Dates before tomorrow. Visibly out of reach rather than merely faint. */
-    &::part(calendar-day disabled) {
-      color: var(--app-text-dim, #9aa89c);
-      opacity: 0.35;
-    }
-
-
-    &::part(month-year-button) {
-      color: var(--app-text, #f2f5f2);
-    }
-
-
-    &::part(wheel-item) {
-      color: var(--app-text-dim, #9aa89c);
-    }
-
-
-    &::part(wheel-item active) {
-      color: var(--app-text, #f2f5f2);
-      font-weight: 700;
-    }
-  }
+  .ghost-pill { width: auto; }
+}

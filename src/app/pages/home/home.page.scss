@@ -1,145 +1,405 @@
-.header-row {
-  display: flex;
-  align-items: center;
-  padding: 4px 12px;
-  gap: 8px;
+/* ═══════════════════════════════════════════════════════════════════════════
+   HOME
+   ═════════════════════════════════════════════════════════════════════════ */
+
+/* ── Hero ───────────────────────────────────────────────────────────────── */
+
+.hero {
+  position: relative;
+  padding: calc(14px + env(safe-area-inset-top)) 18px 20px;
+  overflow: hidden;
 }
 
-ion-searchbar {
-  --background: var(--app-card-bg);
-  --border-radius: 16px;
-  --box-shadow: none;
-  --placeholder-color: var(--app-text-dim);
-  --icon-color: var(--app-text-dim);
-  --color: var(--app-text);
-  padding: 0;
-  flex: 1;
+.hero-photo {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center 30%;
+  transform: scale(1.04);
+}
+
+/* Darkens the top for the brand row, keeps the ridge visible mid-frame,
+   then melts into the page colour so the search bar sits on solid ground. */
+.hero-shade {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(180deg,
+      rgba(11, 18, 16, 0.70) 0%,
+      rgba(11, 18, 16, 0.18) 28%,
+      rgba(11, 18, 16, 0.35) 55%,
+      rgba(11, 18, 16, 0.92) 82%,
+      var(--app-bg) 100%),
+    radial-gradient(120% 60% at 85% 18%, rgba(240, 190, 120, 0.18), transparent 60%);
+}
+
+.hero-inner {
+  position: relative;
+  z-index: 1;
+}
+
+.brand-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 64px;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.brand-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.1;
+}
+
+.brand-name {
+  font-family: var(--app-font-serif);
+  font-size: 22px;
+  font-weight: 500;
+  color: #fff;
+  letter-spacing: -0.01em;
+}
+
+.brand-tag {
+  margin-top: 3px;
+  font-size: 11px;
+  color: rgba(238, 240, 231, 0.72);
+  letter-spacing: 0.02em;
 }
 
 .bell-btn {
   position: relative;
-  background: var(--app-card-bg);
-  border: none;
   width: 44px;
   height: 44px;
-  border-radius: 14px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(14, 20, 17, 0.45);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   display: flex;
   align-items: center;
   justify-content: center;
-  flex-shrink: 0;
 
   ion-icon {
     font-size: 20px;
-    color: var(--app-text);
+    color: #fff;
   }
 }
 
 .bell-badge {
   position: absolute;
-  top: 2px;
-  right: 2px;
-  --background: var(--ion-color-danger);
-  font-size: 9px;
+  top: 5px;
+  right: 5px;
+  --background: var(--app-heart);
+  --color: #fff;
+  --padding-top: 0;
+  --padding-bottom: 0;
+  --padding-start: 4px;
+  --padding-end: 4px;
   min-width: 16px;
   height: 16px;
-  padding: 0;
+  font-size: 9.5px;
+  font-weight: 700;
+  line-height: 16px;
+  border-radius: 8px;
+  box-shadow: 0 0 0 2px rgba(14, 20, 17, 0.9);
 }
 
-.page-pad {
-  padding: 4px 16px 0;
+.hero-title {
+  margin: 0 0 10px;
+  font-family: var(--app-font-serif);
+  font-size: 40px;
+  font-weight: 500;
+  line-height: 1.08;
+  color: #fff;
+  letter-spacing: -0.015em;
+  text-shadow: 0 2px 18px rgba(0, 0, 0, 0.35);
 }
 
-.weather-card {
-  background: linear-gradient(135deg, #1e2a1e, #182118);
-  border: 1px solid var(--app-border);
-  border-radius: 18px;
-  padding: 14px 16px;
+.hero-sub {
+  margin: 0 0 22px;
+  max-width: 290px;
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: rgba(238, 240, 231, 0.84);
+}
+
+/* Search and filter share one rounded field. */
+.search-shell {
+  position: relative;
+
+  ion-searchbar.tb-search {
+    --background: rgba(19, 29, 25, 0.82);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    padding-right: 0;
+
+    /* Room for the filter button inside the field. */
+    ::ng-deep .searchbar-input { padding-inline-end: 54px !important; }
+  }
+}
+
+.filter-btn {
+  position: absolute;
+  top: 50%;
+  right: 6px;
+  transform: translateY(-50%);
+  z-index: 2;
+  width: 40px;
+  height: 40px;
+  border: none;
+  border-radius: 13px;
+  background: transparent;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  margin-bottom: 18px;
-  cursor: pointer;
+  justify-content: center;
 
-  .weather-left {
-    display: flex;
-    align-items: center;
-    gap: 12px;
+  ion-icon { font-size: 21px; color: var(--app-text); }
 
-    ion-icon {
-      font-size: 30px;
-      color: #ffd257;
-    }
-
-    h4 {
-      margin: 0;
-      font-size: 13.5px;
-      font-weight: 700;
-      color: var(--app-text);
-    }
-
-    p {
-      margin: 2px 0 0;
-      font-size: 11.5px;
-      color: var(--app-text-dim);
-      max-width: 190px;
-    }
+  &.open {
+    background: var(--app-accent);
+    ion-icon { color: var(--app-on-accent); }
   }
+}
 
-  .weather-temp {
-    font-size: 22px;
-    font-weight: 700;
-    color: var(--app-text);
-  }
+.filter-dot {
+  position: absolute;
+  top: 7px;
+  right: 7px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--app-accent);
+  border: 2px solid var(--app-card-bg);
+}
+
+/* ── Body ───────────────────────────────────────────────────────────────── */
+
+.page-pad {
+  padding: 2px 18px 0;
 }
 
 .chip-row {
-  margin-bottom: 20px;
-  padding-bottom: 2px;
+  gap: 10px;
+  margin: 0 -18px 18px;
+  padding: 0 18px 2px;
+}
 
-  ion-chip {
-    --background: var(--app-card-bg);
-    color: var(--app-text-dim);
-    font-weight: 600;
-    font-size: 13px;
-    margin: 0;
+.chip {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 38px;
+  padding: 0 18px;
+  border-radius: 999px;
+  border: 1px solid var(--app-border-strong);
+  background: var(--app-card-bg);
+  color: var(--app-text);
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
 
-    &.active {
-      --background: var(--app-green);
-      color: #08110a;
-    }
+  ion-icon { font-size: 13px; color: var(--app-text-dim); }
+
+  &.active {
+    background: #1f3a2b;
+    border-color: rgba(122, 176, 128, 0.45);
+    color: #e3f0dc;
+
+    ion-icon { color: #e3f0dc; }
   }
 }
 
 .section-header {
   display: flex;
-  align-items: center;
+  align-items: baseline;
   justify-content: space-between;
-  margin-bottom: 12px;
+  margin: 26px 0 12px;
+
+  .section-title { font-size: 18px; }
+}
+
+.count-link {
+  font-size: 12.5px;
+  color: var(--app-text-dim);
+}
+
+/* ── Featured carousel ──────────────────────────────────────────────────── */
+
+.featured-row {
+  gap: 12px;
+  margin: 0 -18px;
+  padding: 0 18px 4px;
+  scroll-snap-type: x mandatory;
+  scroll-padding: 0 18px;
+}
+
+.featured-item {
+  flex: 0 0 86%;
+  scroll-snap-align: start;
+
+  &.solo { flex-basis: 100%; }
+}
+
+/* ── Recommended strip ──────────────────────────────────────────────────── */
+
+.rec-row {
+  gap: 12px;
+  margin: 0 -18px;
+  padding: 0 18px 4px;
+}
+
+.rec-card {
+  flex: 0 0 152px;
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius);
+  background: var(--app-card-bg);
+  overflow: hidden;
+  text-align: left;
+}
+
+.rec-photo {
+  display: block;
+  height: 96px;
+  background-size: cover;
+  background-position: center;
+}
+
+.rec-body {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 10px 11px 12px;
+  min-width: 0;
+
+  .diff-badge {
+    margin-top: 8px;
+    font-size: 10.5px;
+    padding: 2px 8px;
+  }
+}
+
+.rec-name {
+  width: 100%;
+  font-family: var(--app-font-serif);
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--app-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.rec-region {
+  width: 100%;
+  font-size: 11px;
+  color: var(--app-text-dim);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── Search results list (same row as the Explore list) ─────────────────── */
+
+.list-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  padding: 10px;
+  margin-bottom: 10px;
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius);
+  background: var(--app-card-bg);
+  text-align: left;
+}
+
+.list-photo {
+  flex-shrink: 0;
+  width: 88px;
+  height: 80px;
+  border-radius: 13px;
+  background-size: cover;
+  background-position: center;
+}
+
+.list-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.list-name {
+  width: 100%;
+  font-family: var(--app-font-serif);
+  font-size: 15.5px;
+  font-weight: 500;
+  color: var(--app-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.list-meta {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  color: var(--app-text-dim);
+
+  ion-icon { font-size: 13px; color: var(--app-accent); }
+}
+
+.list-chev {
+  flex-shrink: 0;
+  font-size: 17px;
+  color: var(--app-text-dim);
 }
 
 .empty-state {
   text-align: center;
-  padding: 30px 0;
+  padding: 34px 0 10px;
   color: var(--app-text-dim);
 
   ion-icon {
     font-size: 34px;
     margin-bottom: 8px;
+    opacity: 0.7;
   }
 
   p { margin: 0; font-size: 13.5px; }
 }
 
+/* ── Community preview ──────────────────────────────────────────────────── */
+
 .community-preview {
-  margin-bottom: 12px;
+  margin: 0 -18px 12px;
+  padding: 0 18px 4px;
+  cursor: pointer;
 
   .mini-post {
     position: relative;
-    min-width: 140px;
-    height: 100px;
-    border-radius: 14px;
+    flex: 0 0 210px;
+    height: 128px;
+    border-radius: var(--app-radius);
     overflow: hidden;
-    flex-shrink: 0;
+    border: 1px solid var(--app-border);
+    background: var(--app-card-bg);
 
     img {
       width: 100%;
@@ -150,91 +410,71 @@ ion-searchbar {
 
   .mini-post-overlay {
     position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    background: linear-gradient(transparent, rgba(0,0,0,0.75));
-    padding: 6px 8px;
+    inset: auto 0 0 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 30px 12px 10px;
+    background: linear-gradient(transparent, rgba(8, 13, 11, 0.92));
 
-    span {
+    .who {
       color: #fff;
-      font-size: 11px;
+      font-size: 12px;
       font-weight: 600;
+    }
+
+    .what {
+      color: rgba(238, 240, 231, 0.75);
+      font-size: 11px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
   }
 }
 
 .bottom-spacer {
-  height: 24px;
+  height: 28px;
 }
 
-/* Filter button and panel */
-.filter-btn {
-  position: relative;
-  background: var(--app-card-bg);
-  border: none;
-  width: 44px;
-  height: 44px;
-  border-radius: 14px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-
-  ion-icon { font-size: 20px; color: var(--app-text); }
-
-  &.open {
-    background: var(--app-green);
-    ion-icon { color: #08110a; }
-  }
-}
-
-.filter-dot {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--app-green);
-  border: 2px solid var(--app-card-bg);
-}
+/* ── Filter panel ───────────────────────────────────────────────────────── */
 
 .filter-panel {
   background: var(--app-card-bg);
   border: 1px solid var(--app-border);
-  border-radius: 16px;
-  padding: 14px;
+  border-radius: var(--app-radius);
+  padding: 16px;
   margin-bottom: 16px;
 }
 
-.filter-group + .filter-group { margin-top: 12px; }
+.filter-group + .filter-group { margin-top: 14px; }
 
 .filter-label {
   display: block;
   font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.3px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--app-text-dim);
-  margin-bottom: 8px;
+  margin-bottom: 9px;
 }
 
 .filter-options { display: flex; flex-wrap: wrap; gap: 8px; }
 
 .filter-pill {
-  border: 1px solid var(--app-border);
+  border: 1px solid var(--app-border-strong);
   background: transparent;
-  color: var(--app-text-dim);
+  color: var(--app-text);
   font-size: 12.5px;
-  font-weight: 600;
-  padding: 7px 14px;
-  border-radius: 20px;
+  font-weight: 500;
+  padding: 8px 15px;
+  border-radius: 999px;
 
   &.active {
-    background: var(--app-green);
-    border-color: var(--app-green);
-    color: #08110a;
+    background: var(--app-accent);
+    border-color: var(--app-accent);
+    color: var(--app-on-accent);
+    font-weight: 600;
   }
 }
 
@@ -246,53 +486,46 @@ ion-searchbar {
   padding: 0;
   border: none;
   background: none;
-  color: var(--app-text-dim);
-  font-size: 12px;
+  color: var(--app-accent);
+  font-size: 12.5px;
+  font-weight: 500;
 
-  ion-icon { font-size: 13px; }
+  ion-icon { font-size: 14px; }
 }
 
-/* Brand row — emblem upper-left, bell upper-right, search below */
-.brand-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 2px 14px 8px;
-
-  .bell-btn { margin-left: auto; }
-}
-
-/* ── Weather forecast picker ────────────────────────────────────────────────
-   Replaces the old .weather-card. Collapsed by default: weather belongs to a
-   specific mountain, so the user asks for one rather than being shown a
-   figure for "the country" that means nothing. */
+/* ── Weather card / picker ──────────────────────────────────────────────── */
 
 .wx-panel {
-  background: linear-gradient(135deg, #1e2a1e, #182118);
+  background: var(--app-card-bg);
   border: 1px solid var(--app-border);
-  border-radius: 18px;
-  margin-bottom: 18px;
+  border-radius: var(--app-radius);
   overflow: hidden;
-
-  &.open {
-    background: var(--app-card-bg);
-  }
 }
 
 .wx-head {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 14px;
   width: 100%;
   padding: 14px 16px;
   border: none;
   background: transparent;
   text-align: left;
 
+  .wx-glyph-wrap {
+    width: 48px;
+    height: 48px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 14px;
+    background: linear-gradient(160deg, rgba(242, 193, 78, 0.18), rgba(242, 193, 78, 0.04));
+  }
+
   .wx-glyph {
     font-size: 28px;
-    color: #ffd257;
-    flex-shrink: 0;
+    color: var(--app-star);
   }
 
   .wx-head-text {
@@ -302,15 +535,15 @@ ion-searchbar {
     min-width: 0;
 
     strong {
-      font-size: 13.5px;
-      font-weight: 700;
+      font-size: 14px;
+      font-weight: 600;
       color: var(--app-text);
     }
 
     small {
-      margin-top: 2px;
-      font-size: 11.5px;
-      color: var(--app-text-dim);
+      margin-top: 3px;
+      font-size: 12px;
+      color: var(--app-accent);
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
@@ -318,24 +551,30 @@ ion-searchbar {
   }
 
   .wx-chev {
-    font-size: 16px;
+    font-size: 17px;
     color: var(--app-text-dim);
     flex-shrink: 0;
+    transition: transform 0.2s ease;
+
+    &.up { transform: rotate(90deg); }
   }
 }
 
 .wx-body {
   padding: 0 14px 14px;
+  border-top: 1px solid var(--app-border);
+  padding-top: 14px;
 }
 
 .wx-search {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 0 12px;
+  padding: 0 14px;
   margin-bottom: 10px;
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.05);
+  border-radius: 14px;
+  border: 1px solid var(--app-border);
+  background: var(--app-bg-raised);
 
   ion-icon {
     font-size: 15px;
@@ -346,7 +585,7 @@ ion-searchbar {
   input {
     flex: 1;
     min-width: 0;
-    padding: 11px 0;
+    padding: 12px 0;
     border: none;
     background: transparent;
     color: var(--app-text);
@@ -370,22 +609,22 @@ ion-searchbar {
   display: flex;
   flex-direction: column;
   width: 100%;
-  padding: 9px 10px;
+  padding: 10px 10px;
   border: none;
-  border-radius: 10px;
+  border-radius: 12px;
   background: transparent;
   text-align: left;
 
-  &:active { background: rgba(255, 255, 255, 0.06); }
+  &:active { background: rgba(255, 255, 255, 0.05); }
 
   .n {
-    font-size: 13px;
-    font-weight: 600;
+    font-size: 13.5px;
+    font-weight: 500;
     color: var(--app-text);
   }
 
   .r {
-    font-size: 11px;
+    font-size: 11.5px;
     color: var(--app-text-dim);
   }
 }
@@ -405,8 +644,8 @@ ion-searchbar {
   border: none;
   background: none;
   font-size: 12.5px;
-  font-weight: 600;
-  color: var(--app-green);
+  font-weight: 500;
+  color: var(--app-accent);
 
   ion-icon { font-size: 14px; }
 }

@@ -1,28 +1,26 @@
-// Palette pulled from the existing app screens (bg / card) and the
-// booking-history mockup (pill, status, hint). Font is inherited from the app.
-$accent: #7fbf6e;
+// Booking history — colours come from the app theme (src/theme/variables.scss).
+$confirmed: #8cc48f;
 $pending: #e0b15c;
-$muted: #9aa398;
-$danger: #e0605a;
-$warn: #e0a458;
+$completed: #e8d99c;
+$danger: #f0505a;
+$warn: #e0b64a;
 
 $status-colors: (
-  confirmed: $accent,
+  confirmed: $confirmed,
   pending: $pending,
-  completed: $muted,
+  completed: $completed,
   cancelled: $danger,
 );
 
 :host,
 ion-modal.details-sheet {
-  --bk-bg: #10140f;
-  --bk-card: #1a201a;
-  --bk-card-raised: #232a23;
-  --bk-pill: #353d34;
-  --bk-line: rgba(255, 255, 255, 0.07);
-  --bk-text: #f3f5f2;
-  --bk-muted: #{$muted};
-  --bk-accent: #{$accent};
+  --bk-bg: var(--app-bg, #0b1210);
+  --bk-card: var(--app-card-bg, #131d19);
+  --bk-card-raised: var(--app-card-hi, #1e2c26);
+  --bk-line: var(--app-border, rgba(222, 232, 206, 0.09));
+  --bk-text: var(--app-text, #eef0e7);
+  --bk-muted: var(--app-text-dim, #97a299);
+  --bk-accent: var(--app-accent, #e8d99c);
 }
 
 // ---------- Header ----------
@@ -35,10 +33,9 @@ ion-toolbar {
 
 .page-title {
   margin: 0;
-  padding: 10px 20px 4px;
-  font-size: 24px;
-  font-weight: 700;
-  letter-spacing: -0.01em;
+  padding: 12px 20px 4px;
+  font-size: 28px;
+  font-weight: 500;
   color: var(--bk-text);
 }
 
@@ -47,28 +44,18 @@ ion-content {
 }
 
 .page {
-  padding: 8px 16px 28px;
+  padding: 8px 18px 28px;
 }
 
-// ---------- Upcoming / Past switch ----------
+// ---------- Upcoming / Past switch (pills, see global .pill-seg) ----------
 
 ion-segment.tabs {
-  --background: var(--bk-card);
-  border-radius: 14px;
-  padding: 4px;
   margin-bottom: 16px;
 
   ion-segment-button {
-    --indicator-color: var(--bk-pill);
-    --indicator-box-shadow: none;
-    --color: var(--bk-muted);
-    --color-checked: var(--bk-text);
-    --border-color: transparent;
-    --border-radius: 10px;
-    min-height: 38px;
+    flex: 1 1 0;
+    min-height: 42px;
     font-size: 14px;
-    font-weight: 600;
-    letter-spacing: 0;
   }
 }
 
@@ -76,21 +63,22 @@ ion-segment.tabs {
 
 .card {
   background: var(--bk-card);
-  border-radius: 20px;
-  padding: 16px;
-  margin-bottom: 14px;
+  border: 1px solid var(--bk-line);
+  border-radius: var(--app-radius, 18px);
+  padding: 12px;
+  margin-bottom: 12px;
 }
 
 .card-top {
   display: flex;
-  align-items: flex-start;
-  gap: 12px;
+  align-items: center;
+  gap: 14px;
 }
 
 .thumb {
-  flex: 0 0 56px;
-  width: 56px;
-  height: 56px;
+  flex: 0 0 92px;
+  width: 92px;
+  height: 84px;
   border-radius: 14px;
   overflow: hidden;
   background: var(--bk-card-raised);
@@ -110,9 +98,9 @@ ion-segment.tabs {
   }
 
   &--lg {
-    flex-basis: 72px;
-    width: 72px;
-    height: 72px;
+    flex-basis: 76px;
+    width: 76px;
+    height: 76px;
     border-radius: 16px;
   }
 }
@@ -124,79 +112,79 @@ ion-segment.tabs {
 
 .eyebrow {
   display: block;
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  font-size: 11px;
   color: var(--bk-muted);
 }
 
 .trail {
-  margin: 4px 0 4px;
-  font-size: 18px;
-  font-weight: 700;
+  margin: 0 0 4px;
+  font-size: 17px;
+  font-weight: 500;
   line-height: 1.2;
   color: var(--bk-text);
 }
 
 .when {
-  margin: 0;
-  font-size: 12px;
+  margin: 0 0 8px;
+  font-size: 12.5px;
   color: var(--bk-muted);
 }
 
 .status {
   flex: none;
   display: inline-block;
-  padding: 5px 10px;
-  border-radius: 999px;
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  padding: 3px 10px;
+  border-radius: 7px;
+  font-size: 11px;
+  font-weight: 600;
   white-space: nowrap;
 
   @each $name, $c in $status-colors {
     &[data-status='#{$name}'] {
       color: $c;
       background: rgba($c, 0.12);
-      border: 1px solid rgba($c, 0.35);
+      border: 1px solid rgba($c, 0.3);
     }
   }
 }
 
 .card-bottom {
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   justify-content: space-between;
-  margin-top: 16px;
-  padding-top: 14px;
+  margin-top: 12px;
+  padding: 11px 4px 2px;
   border-top: 1px solid var(--bk-line);
 }
 
+.id-block {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
 .booking-id {
-  display: block;
-  margin-top: 3px;
-  font-size: 15px;
-  font-weight: 700;
+  font-size: 13.5px;
+  font-weight: 600;
   color: var(--bk-text);
+  font-variant-numeric: tabular-nums;
 }
 
 .details-btn {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 3px;
   padding: 6px 0 6px 12px;
   background: none;
   border: 0;
   font: inherit;
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--bk-accent);
   cursor: pointer;
 
   ion-icon {
-    font-size: 14px;
+    font-size: 15px;
   }
 
   &:active {
@@ -211,13 +199,13 @@ ion-segment.tabs {
   align-items: flex-start;
   gap: 10px;
   margin-top: 4px;
-  padding: 12px 14px;
+  padding: 13px 14px;
   border-radius: 14px;
-  background: #262320;
-  border: 1px solid rgba($warn, 0.18);
-  font-size: 12px;
+  background: rgba($warn, 0.08);
+  border: 1px solid rgba($warn, 0.22);
+  font-size: 12.5px;
   line-height: 1.45;
-  color: #cfc7bc;
+  color: #ead29a;
 
   ion-icon {
     flex: none;
@@ -230,19 +218,24 @@ ion-segment.tabs {
 // ---------- Empty state ----------
 
 .empty {
-  padding: 56px 24px;
+  margin-top: 12px;
+  padding: 44px 24px;
+  border: 1px dashed var(--app-border-strong, rgba(222, 232, 206, 0.16));
+  border-radius: var(--app-radius-lg, 24px);
   text-align: center;
   color: var(--bk-muted);
 
   ion-icon {
     font-size: 40px;
-    opacity: 0.6;
+    color: var(--bk-accent);
+    opacity: 0.85;
   }
 
   h3 {
-    margin: 12px 0 4px;
-    font-size: 16px;
-    font-weight: 600;
+    margin: 12px 0 6px;
+    font-family: var(--app-font-serif);
+    font-size: 19px;
+    font-weight: 500;
     color: var(--bk-text);
   }
 
@@ -256,20 +249,23 @@ ion-segment.tabs {
   .cta {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
-    margin-top: 20px;
-    padding: 10px 18px;
+    gap: 7px;
+    margin-top: 22px;
+    min-height: 48px;
+    padding: 0 22px;
     border: 0;
     border-radius: 999px;
-    background: var(--bk-accent);
-    color: #10140f;
+    background: var(--app-cta, #e3e6bf);
+    box-shadow: var(--app-cta-shadow, none);
+    color: var(--app-on-accent, #161d18);
     font: inherit;
     font-size: 14px;
     font-weight: 600;
     cursor: pointer;
 
     ion-icon {
-      font-size: 16px;
+      font-size: 17px;
+      color: var(--app-on-accent, #161d18);
       opacity: 1;
     }
   }
@@ -278,17 +274,17 @@ ion-segment.tabs {
 // ---------- Details sheet ----------
 
 ion-modal.details-sheet {
-  --background: var(--bk-card);
-  --border-radius: 24px;
-  --handle-background: rgba(255, 255, 255, 0.25);
+  --background: var(--app-bg-raised, #0f1815);
+  --border-radius: 26px;
+  --handle-background: rgba(255, 255, 255, 0.22);
 
   ion-content {
-    --background: var(--bk-card);
+    --background: var(--app-bg-raised, #0f1815);
   }
 }
 
 .sheet {
-  padding: 24px 20px 32px;
+  padding: 26px 20px 32px;
 }
 
 .sheet-head {
@@ -299,7 +295,7 @@ ion-modal.details-sheet {
 
   .trail {
     margin-top: 0;
-    font-size: 20px;
+    font-size: 21px;
   }
 
   .where {
@@ -316,11 +312,11 @@ ion-modal.details-sheet {
   flex: none;
   display: grid;
   place-items: center;
-  width: 34px;
-  height: 34px;
-  border-radius: 50%;
-  border: 0;
-  background: var(--bk-card-raised);
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+  border: 1px solid var(--bk-line);
+  background: var(--bk-card);
   color: var(--bk-text);
   font-size: 20px;
   cursor: pointer;
@@ -328,7 +324,10 @@ ion-modal.details-sheet {
 
 .rows {
   margin: 0;
-  border-top: 1px solid var(--bk-line);
+  padding: 2px 16px;
+  border: 1px solid var(--bk-line);
+  border-radius: var(--app-radius, 18px);
+  background: var(--bk-card);
 }
 
 .row {
@@ -340,9 +339,10 @@ ion-modal.details-sheet {
   border-bottom: 1px solid var(--bk-line);
 
   dt {
+    flex: none;
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 9px;
     font-size: 13px;
     color: var(--bk-muted);
 
@@ -351,14 +351,10 @@ ion-modal.details-sheet {
     }
   }
 
-  dt {
-    flex: none;
-  }
-
   dd {
     margin: 0;
-    font-size: 14px;
-    font-weight: 600;
+    font-size: 13.5px;
+    font-weight: 500;
     text-align: right;
     color: var(--bk-text);
   }
@@ -369,7 +365,7 @@ ion-modal.details-sheet {
 
   &--total {
     border-bottom: 0;
-    padding-top: 18px;
+    padding-top: 16px;
 
     dt {
       font-size: 14px;
@@ -378,8 +374,9 @@ ion-modal.details-sheet {
     }
 
     dd {
-      font-size: 20px;
-      font-weight: 700;
+      font-family: var(--app-font-serif);
+      font-size: 22px;
+      font-weight: 500;
       color: var(--bk-accent);
     }
   }
