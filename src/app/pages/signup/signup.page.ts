@@ -101,7 +101,7 @@ export class SignupPage {
     try {
       const { confirmPassword, ...data } = this.form.getRawValue();
       await this.userService.signUp(data);
-      await this.toast('Account created. Welcome to TrailTalk!', 'success');
+      await this.toast('Account created. Welcome to TrailBound!', 'success');
       this.router.navigate(['/tabs/home'], { replaceUrl: true });
     } catch (e: any) {
       if (e?.code === 'auth/email-already-in-use') {

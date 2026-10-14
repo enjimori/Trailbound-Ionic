@@ -1,12 +1,12 @@
-# TrailTalk — Ionic Angular App
+# TrailBound — Ionic Angular App
 
-A hiking & trail community app built with **Ionic 8 + Angular 18 (standalone components)**, recreating the Home, TrailTalk community feed, Notifications, Profile, and Personal Info screens — fully wired up and interactive.
+A hiking & trail community app built with **Ionic 8 + Angular 18 (standalone components)**, recreating the Home, TrailBound community feed, Notifications, Profile, and Personal Info screens — fully wired up and interactive.
 
 ## Features implemented
 
 - **Home** — live search over trails, category filter chips (Nearby/Popular/Scenic/Forest), weather alert banner (tap for detail toast), trail cards with a working **DETAILS** button that opens a full trail page, notification bell with unread badge, and a community posts preview strip.
 - **Explore tab** — full trail catalog with search + difficulty segment filter.
-- **TrailTalk (Community)** — social feed with working **like** (heart fill + count), **comment** (bottom-sheet modal, add & view comments), **share** (native share sheet if supported, otherwise copy-link toast), and a **"+" compose button** to publish a new post.
+- **TrailBound (Community)** — social feed with working **like** (heart fill + count), **comment** (bottom-sheet modal, add & view comments), **share** (native share sheet if supported, otherwise copy-link toast), and a **"+" compose button** to publish a new post.
 - **Notifications** — tapping a notification marks it read and routes contextually (weather → Home, maintenance → trail detail, social → Community, tips → info alert). "Mark all" clears the unread badge everywhere.
 - **Planner tab** — upcoming adventures list with add/remove, feeding the Profile page's "Upcoming Adventures".
 - **Profile** — stats, upcoming adventures (tap → trail detail), account menu (Personal Info, Notifications, Privacy & Security, Help Center), and a **Sign Out** flow with confirmation that routes to a Login screen.
@@ -44,7 +44,7 @@ src/app/
   tabs/              Bottom tab bar (Home, Explore, Community, Planner, Profile)
   pages/
     home/            Screenshot 1
-    community/       Screenshot 2 (TrailTalk feed)
+    community/       Screenshot 2 (TrailBound feed)
     notifications/   Screenshot 2 (Notifications)
     profile/         Screenshot 3 (Profile)
     personal-info/   Screenshot 3 (Personal Info)

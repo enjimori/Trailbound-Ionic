@@ -24,7 +24,7 @@ import {
  * ═══════════════════════════════════════════════════════════════════════════
  */
 
-const STORAGE_KEY = 'trailtalk.bookings.v1';
+const STORAGE_KEY = 'TrailBound.bookings.v1';
 
 @Injectable({ providedIn: 'root' })
 export class BookingService {

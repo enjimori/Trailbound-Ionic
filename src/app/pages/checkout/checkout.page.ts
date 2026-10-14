@@ -127,7 +127,7 @@ export class CheckoutPage implements OnInit {
     this.cvv = String(ev.detail.value ?? '').replace(/\D/g, '').slice(0, 4);
   }
 
-  // ── pay ─────────────────────────────────────────────────────────────────
+  // submmiting payment//
 
   async pay() {
     const d = this.draft();

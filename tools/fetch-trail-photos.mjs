@@ -36,7 +36,7 @@ const API = 'https://commons.wikimedia.org/w/api.php';
 // Commons asks for a descriptive User-Agent identifying the app and a contact.
 // Requests without one are rate-limited or refused. PUT YOUR OWN EMAIL HERE.
 const USER_AGENT =
-  'TrailTalk-photo-fetch/1.0 (student project; contact: you@example.com)';
+  'TrailBound-photo-fetch/1.0 (student project; contact: you@example.com)';
 
 /**
  * Search terms per trail. Deliberately the MOUNTAIN name, not the trail name —

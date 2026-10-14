@@ -58,9 +58,9 @@ export class CommunityPage {
 
   async onShare(post: Post) {
     const shareData = {
-      title: post.author + ' on TrailTalk',
+      title: post.author + ' on TrailBound',
       text: post.content,
-      url: 'https://trailtalk.app/posts/' + post.id,
+      url: 'https://TrailBound.app/posts/' + post.id,
     };
     if ((navigator as any).share) {
       try {

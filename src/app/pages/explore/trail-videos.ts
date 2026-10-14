@@ -219,6 +219,9 @@ export function videoFor(id: string): TrailVideo | undefined {
  */
 export function embedUrlFor(v: TrailVideo): string | null {
   if (!v.videoId) return null;
+
+  // SWITCH: chooses the correct embed URL based on the video provider.
+  // This keeps each platform's embed format in one place and avoids broken iframes.
   switch (v.kind) {
     case 'youtube':
       return `https://www.youtube-nocookie.com/embed/${v.videoId}?rel=0`;

@@ -1,3 +1,4 @@
+
 export interface UpcomingAdventure {
   id: string;
   trailId: string;

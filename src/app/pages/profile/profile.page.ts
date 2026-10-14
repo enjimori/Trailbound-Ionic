@@ -86,7 +86,7 @@ export class ProfilePage {
   async confirmSignOut() {
     const alert = await this.alertCtrl.create({
       header: 'Sign Out',
-      message: 'Are you sure you want to sign out of TrailTalk?',
+      message: 'Are you sure you want to sign out of TrailBound?',
       buttons: [
         { text: 'Cancel', role: 'cancel' },
         {

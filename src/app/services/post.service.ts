@@ -73,7 +73,7 @@ export class PostService {
       list.map(p => p.id === postId ? { ...p, comments: [...p.comments, comment] } : p)
     );
   }
-
+//new community post//
   addPost(content: string, image?: string) {
     const post: Post = {
       id: 'p' + Date.now(),

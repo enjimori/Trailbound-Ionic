@@ -1,8 +1,8 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'com.trailtalk.app',
-  appName: 'TrailTalk',
+  appId: 'com.trailbound.app',
+  appName: 'TrailBound',
   webDir: 'www'
 };
 

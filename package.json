@@ -1,7 +1,7 @@
 {
-  "name": "trailtalk",
+  "name": "TrailBound",
   "version": "1.0.0",
-  "author": "TrailTalk",
+  "author": "TrailBound",
   "homepage": "https://ionicframework.com/",
   "scripts": {
     "ng": "ng",
@@ -50,5 +50,5 @@
     "@types/leaflet": "^1.9.22",
     "typescript": "~5.4.0"
   },
-  "description": "TrailTalk - Hiking & Trail Community App"
+  "description": "TrailBound - Hiking & Trail Community App"
 }

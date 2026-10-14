@@ -150,6 +150,7 @@
       <ion-icon name="arrow-back-outline"></ion-icon>
     </button>
 
+    <!-- pay button -->
     <button class="co-pay" [disabled]="processing()" (click)="pay()">
       <ng-container *ngIf="!processing(); else working">
         Pay ₱{{ q.total | number }}

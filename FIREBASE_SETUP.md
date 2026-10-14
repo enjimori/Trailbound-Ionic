@@ -1,4 +1,4 @@
-# Firebase setup for TrailTalk
+# Firebase setup for TrailBound
 
 ## 1. Create the project
 1. Go to https://console.firebase.google.com and click **Add project**.

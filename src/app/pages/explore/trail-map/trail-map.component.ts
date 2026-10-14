@@ -299,6 +299,10 @@ export class TrailMapComponent implements AfterViewInit, OnDestroy {
     this.baseLayer = undefined;
     this.labelLayer = undefined;
 
+    // SWITCH / BRANCH LOGIC:
+    // This section decides which basemap style should be loaded next.
+    // If the selected key is "satellite", it uses Esri imagery + labels.
+    // Otherwise, it falls back to the CARTO basemap set for dark/voyager/light.
     if (key === 'satellite') {
       // Esri serves z/y/x — ROW BEFORE COLUMN, the opposite of CARTO and OSM.
       // Swapping these silently shows the wrong part of the world rather than
@@ -348,9 +352,14 @@ export class TrailMapComponent implements AfterViewInit, OnDestroy {
   private renderMarkers() {
     if (!this.map) return;
 
+    // LOOP: removes every existing marker from the current map before rebuilding.
+    // This keeps the map from stacking stale markers when trails change.
     this.markers.forEach(m => m.remove());
     this.markers.clear();
 
+    // LOOP: runs once for every trail in the current list.
+    // Each pass creates a new marker, attaches a click event, and stores it
+    // in the map so it can be updated later when a trail is selected.
     for (const trail of this._trails) {
       const marker = L.marker([trail.lat, trail.lng], {
         icon: this.buildIcon(trail),
@@ -383,6 +392,9 @@ export class TrailMapComponent implements AfterViewInit, OnDestroy {
 
   private applySelectionStyles() {
     if (!this.map) return;
+
+    // LOOP: re-renders the icon for each trail when selection changes.
+    // This updates the highlighted state without recreating all markers.
     for (const trail of this._trails) {
       this.markers.get(trail.id)?.setIcon(this.buildIcon(trail));
     }
