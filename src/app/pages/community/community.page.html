@@ -15,90 +15,311 @@
   </ion-toolbar>
 </ion-header>
 
+<!-- One hidden picker for every "add photos" button (opens the gallery / camera on phones) -->
+<input
+  #photoInput
+  type="file"
+  accept="image/*"
+  multiple
+  hidden
+  (change)="onPhotosPicked($event)"
+/>
+
 <ion-content [fullscreen]="true">
   <div class="page-pad">
 
     <!-- Create post — opens the composer -->
-    <button class="create-card" (click)="openComposer()">
-      <span class="create-avatar"><ion-icon name="person"></ion-icon></span>
+    <div class="create-card" role="button" tabindex="0" (click)="openComposer()" (keyup.enter)="openComposer()">
+      <span class="create-avatar">
+        <img *ngIf="isSignedIn && me.avatar; else noAvatar" [src]="me.avatar" alt="" />
+        <ng-template #noAvatar><ion-icon name="person"></ion-icon></ng-template>
+      </span>
       <span class="create-text">
         <span class="t">Create Post</span>
-        <span class="s">Share your hike, thoughts, or photos...</span>
+        <span class="s" *ngIf="isSignedIn; else guestHint">Share your hike, thoughts, or photos...</span>
+        <ng-template #guestHint><span class="s">Sign in to share your hike</span></ng-template>
       </span>
-      <span class="create-cam"><ion-icon name="camera-outline"></ion-icon></span>
-    </button>
+      <button class="create-cam" (click)="pickPhotosFromCard($event)" aria-label="Post photos">
+        <ion-icon name="camera-outline"></ion-icon>
+      </button>
+    </div>
 
-    <app-post-card
-      *ngFor="let post of postService.posts()"
-      [post]="post"
-      (like)="onLike($event)"
-      (comment)="openComments($event)"
-      (share)="onShare($event)"
-    ></app-post-card>
+    <!-- Feed filter -->
+    <div class="filter-row" role="tablist">
+      <button role="tab" class="chip" [class.active]="activeFilter() === 'latest'" [attr.aria-selected]="activeFilter() === 'latest'" (click)="setFilter('latest')">Latest</button>
+      <button role="tab" class="chip" [class.active]="activeFilter() === 'top'" [attr.aria-selected]="activeFilter() === 'top'" (click)="setFilter('top')">Top</button>
+      <button role="tab" class="chip" [class.active]="activeFilter() === 'mine'" [attr.aria-selected]="activeFilter() === 'mine'" (click)="setFilter('mine')">My posts</button>
+    </div>
+
+    <!-- Loading -->
+    <div class="feed-state" *ngIf="postService.loading()">
+      <ion-spinner name="crescent"></ion-spinner>
+      <p>Loading posts…</p>
+    </div>
+
+    <!-- Couldn't load -->
+    <div class="feed-state" *ngIf="!postService.loading() && postService.loadError() as err">
+      <ion-icon name="cloud-offline-outline"></ion-icon>
+      <p>{{ err }}</p>
+      <button class="state-btn" (click)="postService.retry()">
+        <ion-icon name="refresh-outline"></ion-icon> Try again
+      </button>
+    </div>
+
+    <ng-container *ngIf="!postService.loading() && !postService.loadError()">
+      <app-post-card
+        *ngFor="let post of visiblePosts(); trackBy: trackById"
+        [post]="post"
+        [highlight]="highlightId() === post.id"
+        (like)="onLike($event)"
+        (comment)="openComments($event)"
+        (share)="onShare($event)"
+        (menu)="onMenu($event)"
+        (openImage)="openViewer($event)"
+        (openTrail)="openTrail($event)"
+      ></app-post-card>
+
+      <!-- Empty feed -->
+      <div class="feed-state" *ngIf="!visiblePosts().length">
+        <ion-icon name="chatbubble-ellipses-outline"></ion-icon>
+        <ng-container *ngIf="activeFilter() === 'mine'; else emptyAll">
+          <p>You haven't posted yet.</p>
+        </ng-container>
+        <ng-template #emptyAll><p>No posts yet. Be the first to share a hike!</p></ng-template>
+        <button class="state-btn primary" (click)="openComposer()">Create a post</button>
+      </div>
+
+      <button class="load-more" *ngIf="postService.hasMore() && activeFilter() !== 'mine'" (click)="postService.loadMore()">
+        Load older posts
+      </button>
+    </ng-container>
+
     <div class="bottom-spacer"></div>
   </div>
 </ion-content>
 
-<!-- Composer Modal -->
-<ion-modal [isOpen]="showComposer" (didDismiss)="cancelComposer()">
+<!-- ═══════════════════════ Composer (new / edit post) ═══════════════════════ -->
+<ion-modal
+  #composerModal
+  [isOpen]="showComposer"
+  [canDismiss]="canDismissComposer"
+  (didPresent)="onComposerDidPresent()"
+  (didDismiss)="onComposerDismissed()"
+>
   <ng-template>
     <ion-header class="ion-no-border">
       <ion-toolbar>
         <div class="modal-header">
-          <button class="text-btn" (click)="cancelComposer()">Cancel</button>
-          <span class="modal-title">New Post</span>
-          <button class="text-btn primary" (click)="publishPost()">Post</button>
+          <button class="text-btn" (click)="closeComposer()" [disabled]="publishing">Cancel</button>
+          <span class="modal-title">{{ editingPostId ? 'Edit Post' : 'New Post' }}</span>
+          <button class="text-btn primary" (click)="publishPost()" [disabled]="!canPublish">
+            <ion-spinner *ngIf="publishing" name="crescent"></ion-spinner>
+            <span *ngIf="!publishing">{{ editingPostId ? 'Save' : 'Post' }}</span>
+          </button>
         </div>
       </ion-toolbar>
     </ion-header>
+
     <ion-content class="ion-padding">
+      <!-- Who is posting: always the signed-in account -->
+      <div class="composer-author">
+        <img *ngIf="me.avatar; else composerNoAvatar" [src]="me.avatar" alt="" class="author-avatar" />
+        <ng-template #composerNoAvatar>
+          <span class="author-avatar default"><ion-icon name="person"></ion-icon></span>
+        </ng-template>
+        <div class="author-text">
+          <span class="author-name">{{ me.name }}</span>
+          <span class="author-sub"><ion-icon name="people-outline"></ion-icon> Visible to everyone on TrailBound</span>
+        </div>
+      </div>
+
       <ion-textarea
-        [(ngModel)]="newPostText"
+        [(ngModel)]="draftText"
         placeholder="Share something with the trail community..."
-        auto-grow="true"
-        rows="4"
+        [autoGrow]="true"
+        [rows]="4"
+        [maxlength]="POST_TEXT_MAX"
         class="composer-textarea"
+        aria-label="Post text"
       ></ion-textarea>
-      <ion-input
-        [(ngModel)]="newPostImage"
-        placeholder="Paste an image URL (optional)"
-        class="composer-input"
-      ></ion-input>
+      <div class="char-count" [class.warn]="draftText.length > POST_TEXT_MAX - 100">
+        {{ draftText.length }} / {{ POST_TEXT_MAX }}
+      </div>
+
+      <!-- Picked photos -->
+      <div class="photo-grid" *ngIf="draftImages.length || processingPhotos">
+        <div class="photo-thumb" *ngFor="let img of draftImages; let i = index">
+          <img [src]="img" alt="" (click)="openDraftViewer(i)" />
+          <button class="remove-photo" (click)="removePhoto(i)" aria-label="Remove photo">
+            <ion-icon name="close"></ion-icon>
+          </button>
+        </div>
+        <div class="photo-thumb processing" *ngIf="processingPhotos">
+          <ion-spinner name="crescent"></ion-spinner>
+        </div>
+        <button
+          class="photo-thumb add"
+          *ngIf="!processingPhotos && draftImages.length < POST_PHOTO_MAX"
+          (click)="choosePhotos()"
+          aria-label="Add more photos"
+        >
+          <ion-icon name="add-outline"></ion-icon>
+        </button>
+      </div>
+
+      <!-- Tagged trail -->
+      <div class="trail-chip" *ngIf="draftTrail">
+        <ion-icon name="location-outline"></ion-icon>
+        <span>{{ draftTrail.name }}</span>
+        <button (click)="clearTrail()" aria-label="Remove trail tag"><ion-icon name="close"></ion-icon></button>
+      </div>
+
+      <!-- Add to post -->
+      <div class="attach-row">
+        <button class="attach-btn" (click)="choosePhotos()" [disabled]="processingPhotos || draftImages.length >= POST_PHOTO_MAX">
+          <ion-icon name="images-outline"></ion-icon>
+          <span>Photos</span>
+          <small>{{ draftImages.length }}/{{ POST_PHOTO_MAX }}</small>
+        </button>
+        <button class="attach-btn" [class.on]="showTrailPicker" (click)="toggleTrailPicker()">
+          <ion-icon name="location-outline"></ion-icon>
+          <span>{{ draftTrail ? 'Change trail' : 'Tag a trail' }}</span>
+        </button>
+      </div>
+
+      <!-- Trail picker -->
+      <div class="trail-picker" *ngIf="showTrailPicker">
+        <input
+          class="trail-search"
+          type="search"
+          [(ngModel)]="trailQuery"
+          placeholder="Search a mountain or region"
+          aria-label="Search trails"
+        />
+        <button class="trail-option" *ngFor="let t of trailMatches" (click)="selectTrail(t)">
+          <span class="name">{{ t.name }}</span>
+          <span class="region">{{ t.region }}</span>
+        </button>
+        <p class="trail-empty" *ngIf="!trailMatches.length">No trails match "{{ trailQuery }}"</p>
+      </div>
+
+      <p class="privacy-note">
+        <ion-icon name="shield-checkmark-outline"></ion-icon>
+        Photos are resized and their location data (GPS) is removed before posting.
+      </p>
     </ion-content>
   </ng-template>
 </ion-modal>
 
-<!-- Comments Modal -->
-<ion-modal [isOpen]="showComments" (didDismiss)="showComments = false" [breakpoints]="[0, 0.6, 0.9]" [initialBreakpoint]="0.6">
+<!-- ═══════════════════════ Comments ═══════════════════════ -->
+<!-- expandToScroll=false keeps the comment box (ion-footer) visible at every
+     sheet height; before, it sat below the screen until the sheet was dragged up. -->
+<ion-modal
+  [isOpen]="showComments"
+  (didDismiss)="onCommentsDismissed()"
+  [breakpoints]="[0, 0.6, 0.92]"
+  [initialBreakpoint]="0.6"
+  [expandToScroll]="false"
+>
   <ng-template>
     <ion-header class="ion-no-border">
       <ion-toolbar>
         <div class="modal-header">
-          <span class="modal-title">Comments</span>
+          <span class="modal-title">
+            Comments<span class="count" *ngIf="activePost()?.commentCount"> &middot; {{ activePost()?.commentCount }}</span>
+          </span>
           <button class="text-btn" (click)="showComments = false">Close</button>
         </div>
       </ion-toolbar>
     </ion-header>
-    <ion-content class="ion-padding">
-      <div class="comment-list" *ngIf="activePost">
-        <div class="comment" *ngFor="let c of activePost.comments">
-          <img [src]="c.avatar" />
-          <div class="comment-body">
-            <span class="c-author">{{ c.author }}</span>
-            <p>{{ c.text }}</p>
-            <span class="c-time">{{ c.timeAgo }}</span>
-          </div>
+
+    <ion-content class="ion-padding" #commentList>
+      <ng-container *ngIf="activePost() as post; else postGone">
+        <div class="feed-state small" *ngIf="postService.commentsLoading()">
+          <ion-spinner name="crescent"></ion-spinner>
         </div>
-        <p *ngIf="!activePost.comments.length" class="no-comments">No comments yet. Be the first!</p>
-      </div>
+        <p class="no-comments" *ngIf="postService.commentsError() as err">{{ err }}</p>
+
+        <div class="comment-list" *ngIf="!postService.commentsLoading()">
+          <div class="comment" *ngFor="let c of postService.comments(); trackBy: trackById">
+            <img *ngIf="c.avatar; else commentNoAvatar" [src]="c.avatar" alt="" class="c-avatar" />
+            <ng-template #commentNoAvatar>
+              <span class="c-avatar default"><ion-icon name="person"></ion-icon></span>
+            </ng-template>
+            <div class="comment-body">
+              <div class="c-head">
+                <span class="c-author">{{ c.author }}</span>
+                <span class="c-badge" *ngIf="c.isPostAuthor">Author</span>
+                <span class="c-badge you" *ngIf="c.isMine">You</span>
+              </div>
+              <p>{{ c.text }}</p>
+              <div class="c-meta">
+                <span class="c-time">{{ c.timeAgo }}</span>
+                <button class="c-delete" *ngIf="canDeleteComment(c)" (click)="confirmDeleteComment(c)">Delete</button>
+              </div>
+            </div>
+          </div>
+          <p *ngIf="!postService.comments().length && !postService.commentsError()" class="no-comments">
+            No comments yet. Be the first!
+          </p>
+        </div>
+      </ng-container>
+      <ng-template #postGone>
+        <p class="no-comments">This post has been deleted.</p>
+      </ng-template>
     </ion-content>
+
+    <ion-footer class="ion-no-border">
     <ion-toolbar class="comment-input-bar">
-      <div class="comment-input-row">
-        <ion-input [(ngModel)]="newComment" placeholder="Add a comment..." (keyup.enter)="submitComment()"></ion-input>
-        <button class="send-btn" (click)="submitComment()">
-          <ion-icon name="send-outline"></ion-icon>
+      <!-- Signed in: comment as yourself -->
+      <div class="comment-input-row" *ngIf="isSignedIn; else commentGuest">
+        <img *ngIf="me.avatar; else inputNoAvatar" [src]="me.avatar" alt="" class="me-avatar" />
+        <ng-template #inputNoAvatar>
+          <span class="me-avatar default"><ion-icon name="person"></ion-icon></span>
+        </ng-template>
+        <input
+          class="comment-input"
+          [(ngModel)]="newComment"
+          [placeholder]="'Comment as ' + me.name + '...'"
+          [maxlength]="COMMENT_TEXT_MAX"
+          (keyup.enter)="submitComment(commentList)"
+          aria-label="Write a comment"
+        />
+        <button
+          class="send-btn"
+          (click)="submitComment(commentList)"
+          [disabled]="!newComment.trim() || sendingComment || !activePost()"
+          aria-label="Send comment"
+        >
+          <ion-spinner *ngIf="sendingComment" name="crescent"></ion-spinner>
+          <ion-icon *ngIf="!sendingComment" name="send-outline"></ion-icon>
         </button>
       </div>
+      <ng-template #commentGuest>
+        <div class="comment-input-row">
+          <button class="state-btn primary full" (click)="showComments = false; goSignIn()">Sign in to comment</button>
+        </div>
+      </ng-template>
     </ion-toolbar>
+    </ion-footer>
+  </ng-template>
+</ion-modal>
+
+<!-- ═══════════════════════ Photo viewer ═══════════════════════ -->
+<ion-modal class="viewer-modal" [isOpen]="!!viewer" (didDismiss)="viewer = null" (didPresent)="onViewerPresented()">
+  <ng-template>
+    <div class="viewer">
+      <button class="viewer-close" (click)="viewer = null" aria-label="Close photo">
+        <ion-icon name="close"></ion-icon>
+      </button>
+      <div class="viewer-strip" #strip (scroll)="onViewerScroll(strip)">
+        <div class="viewer-slide" *ngFor="let img of viewer?.images">
+          <img [src]="img" alt="" />
+        </div>
+      </div>
+      <div class="viewer-dots" *ngIf="(viewer?.images?.length ?? 0) > 1">
+        <span *ngFor="let img of viewer?.images; let i = index" [class.on]="i === viewer?.index"></span>
+      </div>
+    </div>
   </ng-template>
 </ion-modal>

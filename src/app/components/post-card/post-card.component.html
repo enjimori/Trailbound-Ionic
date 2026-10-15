@@ -1,33 +1,65 @@
-<div class="post-card">
+<div class="post-card" [class.highlight]="highlight" [attr.id]="'post-' + post.id">
   <div class="post-header">
-    <img class="avatar" [src]="post.avatar" [alt]="post.author" />
+    <!-- The photo the author uploaded, or the default silhouette -->
+    <img *ngIf="post.avatar; else defaultAvatar" class="avatar" [src]="post.avatar" [alt]="post.author" />
+    <ng-template #defaultAvatar>
+      <span class="avatar default-avatar" role="img" [attr.aria-label]="post.author">
+        <ion-icon name="person"></ion-icon>
+      </span>
+    </ng-template>
+
     <div class="who">
       <div class="name-row">
         <span class="name">{{ post.author }}</span>
         <ion-badge *ngIf="post.isPro" class="pro-badge">PRO</ion-badge>
+        <span *ngIf="post.isMine" class="you-tag">You</span>
       </div>
-      <span class="handle">{{ post.timeAgo }} &middot; {{ post.handle }}</span>
+      <span class="handle">
+        {{ post.timeAgo }}<ng-container *ngIf="post.edited"> &middot; edited</ng-container><ng-container *ngIf="post.handle"> &middot; {{ post.handle }}</ng-container>
+      </span>
     </div>
-    <ion-icon name="ellipsis-horizontal" class="more-icon"></ion-icon>
+    <button class="more-btn" (click)="menu.emit(post)" aria-label="Post options">
+      <ion-icon name="ellipsis-horizontal" class="more-icon"></ion-icon>
+    </button>
   </div>
 
-  <p class="content">{{ post.content }}</p>
+  <button *ngIf="post.trailId" class="trail-tag" (click)="openTrail.emit(post)">
+    <ion-icon name="location-outline"></ion-icon>
+    <span>{{ post.trailName || 'View trail' }}</span>
+    <ion-icon name="chevron-forward-outline" class="chev"></ion-icon>
+  </button>
+
+  <p class="content" *ngIf="post.content">
+    <span class="text">{{ shownText }}</span>
+    <button *ngIf="isLong" class="see-more" (click)="expanded = !expanded">{{ expanded ? 'See less' : 'See more' }}</button>
+  </p>
   <div class="tags" *ngIf="post.tags?.length">
     <span class="tag" *ngFor="let t of post.tags">{{ t }}</span>
   </div>
 
-  <div class="media" *ngIf="post.images.length" [ngClass]="{'two-up': post.images.length > 1}">
-    <img *ngFor="let img of post.images" [src]="img" alt="" />
+  <div
+    class="media"
+    *ngIf="post.images.length"
+    [ngClass]="'count-' + (post.images.length > 4 ? 4 : post.images.length)"
+  >
+    <button
+      class="media-item"
+      *ngFor="let img of post.images.slice(0, 4); let i = index"
+      (click)="openImage.emit({ post: post, index: i })"
+      [attr.aria-label]="'Open photo ' + (i + 1)"
+    >
+      <img [src]="img" alt="" loading="lazy" />
+    </button>
   </div>
 
   <div class="actions">
-    <button class="action-btn" [class.liked]="post.liked" (click)="like.emit(post)">
+    <button class="action-btn" [class.liked]="post.liked" (click)="like.emit(post)" [attr.aria-pressed]="post.liked" aria-label="Like">
       <ion-icon [name]="post.liked ? 'heart' : 'heart-outline'"></ion-icon>
       <span>{{ formatLikes(post.likes) }}</span>
     </button>
-    <button class="action-btn" (click)="comment.emit(post)">
+    <button class="action-btn" (click)="comment.emit(post)" aria-label="Comments">
       <ion-icon name="chatbubble-outline"></ion-icon>
-      <span>{{ post.comments.length }}</span>
+      <span>{{ post.commentCount }}</span>
     </button>
     <button class="action-btn share" (click)="share.emit(post)" aria-label="Share">
       <ion-icon name="share-social-outline"></ion-icon>

@@ -3,6 +3,15 @@
 .post-card {
   padding: 18px 0 14px;
   border-bottom: 1px solid var(--app-border);
+  border-radius: 0;
+  transition: background-color 0.6s ease, box-shadow 0.6s ease;
+
+  /* Shared-link target: a soft glow that fades out */
+  &.highlight {
+    background: var(--app-accent-soft);
+    box-shadow: 0 0 0 10px var(--app-accent-soft);
+    border-radius: 6px;
+  }
 }
 
 .post-header {
@@ -11,6 +20,7 @@
   margin-bottom: 10px;
 
   .avatar {
+    flex-shrink: 0;
     width: 44px;
     height: 44px;
     border-radius: 50%;
@@ -18,6 +28,17 @@
     margin-right: 12px;
     border: 1px solid var(--app-border-strong);
     background: var(--app-card-hi);
+  }
+
+  .default-avatar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    ion-icon {
+      font-size: 22px;
+      color: var(--app-text-dim);
+    }
   }
 
   .who {
@@ -31,12 +52,16 @@
     display: flex;
     align-items: center;
     gap: 6px;
+    min-width: 0;
   }
 
   .name {
     font-weight: 600;
     font-size: 14.5px;
     color: var(--app-text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .pro-badge {
@@ -51,10 +76,35 @@
     border-radius: 5px;
   }
 
+  .you-tag {
+    flex-shrink: 0;
+    padding: 1px 7px;
+    border-radius: 999px;
+    border: 1px solid var(--app-border-strong);
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--app-accent);
+  }
+
   .handle {
     margin-top: 1px;
     font-size: 12px;
     color: var(--app-text-dim);
+  }
+
+  .more-btn {
+    flex-shrink: 0;
+    width: 36px;
+    height: 36px;
+    margin-right: -8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: none;
+    border: none;
+    border-radius: 50%;
+
+    &:active { background: var(--app-card-bg); }
   }
 
   .more-icon {
@@ -63,11 +113,47 @@
   }
 }
 
+.trail-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  max-width: 100%;
+  margin: 0 0 10px;
+  padding: 5px 10px 5px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--app-border-strong);
+  background: var(--app-card-bg);
+  color: var(--app-accent);
+  font-size: 12px;
+  font-weight: 500;
+
+  span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  ion-icon { font-size: 14px; flex-shrink: 0; }
+  .chev { font-size: 12px; color: var(--app-text-dim); }
+}
+
 .content {
   font-size: 14.5px;
   line-height: 1.5;
   color: var(--app-text);
   margin: 0 0 10px;
+  overflow-wrap: anywhere;
+
+  .text { white-space: pre-line; }
+
+  .see-more {
+    background: none;
+    border: none;
+    padding: 0 0 0 4px;
+    color: var(--app-text-dim);
+    font-size: 13.5px;
+    font-weight: 600;
+  }
 }
 
 .tags {
@@ -95,8 +181,25 @@
   overflow: hidden;
   margin-bottom: 4px;
 
-  &.two-up {
+  &.count-2,
+  &.count-3,
+  &.count-4 {
     grid-template-columns: 1fr 1fr;
+  }
+
+  /* Three photos: the first one runs full width on top */
+  &.count-3 .media-item:first-child { grid-column: 1 / -1; }
+
+  &.count-1 img { height: 236px; }
+  &.count-3 .media-item:not(:first-child) img,
+  &.count-4 img { height: 140px; }
+
+  .media-item {
+    display: block;
+    padding: 0;
+    border: none;
+    background: none;
+    width: 100%;
   }
 
   img {
@@ -129,7 +232,10 @@
   ion-icon {
     font-size: 21px;
     color: var(--app-text);
+    transition: transform 0.15s ease;
   }
+
+  &:active ion-icon { transform: scale(0.85); }
 
   &.liked {
     color: var(--app-heart);

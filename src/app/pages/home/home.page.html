@@ -264,15 +264,22 @@
     </div>
 
     <div class="community-preview scroll-x" (click)="goCommunity()">
-      <div class="mini-post" *ngFor="let post of latestPosts()">
-        <img *ngIf="post.images.length; else avatarOnly" [src]="post.images[0]" alt="" />
-        <ng-template #avatarOnly>
-          <img [src]="post.avatar" alt="" />
+      <div class="mini-post" *ngFor="let post of latestPosts()" [class.text-only]="!post.images.length">
+        <img *ngIf="post.images.length; else textOnly" [src]="post.images[0]" alt="" />
+        <!-- No photo: show the start of the post as a quote card -->
+        <ng-template #textOnly>
+          <p class="mini-quote">{{ post.content }}</p>
         </ng-template>
         <div class="mini-post-overlay">
           <span class="who">{{ post.author }}</span>
-          <span class="what">{{ post.content }}</span>
+          <span class="what" *ngIf="post.images.length">{{ post.content || post.trailName }}</span>
         </div>
+      </div>
+
+      <!-- No posts yet -->
+      <div class="mini-post mini-empty" *ngIf="!latestPosts().length">
+        <ion-icon name="chatbubble-ellipses-outline"></ion-icon>
+        <span>No posts yet — share the first hike story</span>
       </div>
     </div>
 
