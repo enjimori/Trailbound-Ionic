@@ -3,8 +3,8 @@
 }
 
 .nav-login {
-  --color: var(--app-green);
-  font-weight: 700;
+  --color: var(--app-accent);
+  font-weight: 600;
 }
 
 .signup-wrap {
@@ -26,15 +26,17 @@
 
   h1 {
     margin: 8px 0 4px;
-    font-size: 24px;
-    font-weight: 800;
+    font-size: 26px;
+    font-weight: 500;
     color: var(--app-text);
   }
 
   p {
-    margin: 0;
-    font-size: 13px;
-    color: var(--app-text-dim);
+    margin: 4px 0 0;
+    font-family: var(--app-font-serif);
+    font-size: 16px;
+    font-style: italic;
+    color: rgba(238, 240, 231, 0.82);
   }
 }
 
@@ -45,12 +47,11 @@
 }
 
 .group-label {
-  font-size: 11.5px;
-  font-weight: 700;
-  letter-spacing: 0.6px;
-  text-transform: uppercase;
-  color: var(--app-text-dim);
-  margin: 6px 4px 0;
+  font-family: var(--app-font-serif);
+  font-size: 18px;
+  font-weight: 500;
+  color: var(--app-text);
+  margin: 14px 4px 0;
 }
 
 .field-group {
@@ -60,7 +61,7 @@
 }
 
 .lbl {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--app-text-dim);
   margin: 0 4px;
 
@@ -75,9 +76,13 @@
   --background: var(--app-card-bg);
   --color: var(--app-text);
   --placeholder-color: var(--app-text-dim);
-  --border-radius: 14px;
-  --border-color: var(--app-border);
-  --padding-start: 14px;
+  --placeholder-opacity: 1;
+  --border-radius: 16px;
+  --border-color: var(--app-border-strong);
+  --highlight-color-focused: var(--app-accent);
+  --padding-start: 16px;
+  min-height: 52px;
+  font-size: 14px;
 }
 
 .eye {
@@ -129,17 +134,18 @@
 
 .chip {
   background: var(--app-card-bg);
-  border: 1px solid var(--app-border);
+  border: 1px solid var(--app-border-strong);
   color: var(--app-text);
   font-size: 13px;
-  font-weight: 600;
-  padding: 9px 14px;
-  border-radius: 20px;
+  font-weight: 500;
+  padding: 9px 16px;
+  border-radius: 999px;
 
   &.active {
-    background: var(--app-green);
-    border-color: var(--app-green);
-    color: #08110a;
+    background: var(--app-accent);
+    border-color: var(--app-accent);
+    color: var(--app-on-accent);
+    font-weight: 600;
   }
 }
 
@@ -157,7 +163,7 @@
   }
 
   li.ok {
-    color: var(--app-green);
+    color: #8cc48f;
 
     &::before {
       content: '● ';
@@ -172,14 +178,16 @@
 }
 
 .signin-btn {
-  background: var(--app-green);
-  color: #08110a;
+  min-height: 54px;
+  background: var(--app-cta);
+  box-shadow: var(--app-cta-shadow), inset 0 1px 0 rgba(255, 255, 255, 0.5);
+  color: var(--app-on-accent);
   border: none;
-  font-weight: 800;
+  font-weight: 600;
   font-size: 15px;
-  padding: 15px;
-  border-radius: 16px;
-  margin-top: 8px;
+  padding: 0 16px;
+  border-radius: 999px;
+  margin-top: 12px;
 
   &:disabled {
     opacity: 0.6;
@@ -200,7 +208,7 @@
   background: none;
   border: none;
   padding: 0;
-  color: var(--app-green);
-  font-weight: 700;
+  color: var(--app-accent);
+  font-weight: 600;
   font-size: 13px;
 }

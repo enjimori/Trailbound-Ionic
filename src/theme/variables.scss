@@ -1,57 +1,163 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   TRAILBOUND THEME — "evening ridge"
+
+   Near-black forest greens, a warm cream accent, serif headings over a clean
+   sans body. Every page reads its colours from the tokens below, so a change
+   here restyles the whole app.
+
+   The --app-green name is kept (half the pages reference it) but it now holds
+   the cream accent rather than a bright green.
+   ═════════════════════════════════════════════════════════════════════════ */
+
 :root {
-  --ion-color-primary: #5FD97A;
-  --ion-color-primary-rgb: 95,217,122;
-  --ion-color-primary-contrast: #08110a;
-  --ion-color-primary-contrast-rgb: 8,17,10;
-  --ion-color-primary-shade: #54bf6b;
-  --ion-color-primary-tint: #70dd87;
+  /* ── Type ── */
+  --app-font-serif: 'Lora', Georgia, 'Times New Roman', serif;
+  --app-font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --ion-font-family: var(--app-font-sans);
 
-  --ion-color-secondary: #2f3830;
-  --ion-color-danger: #ff5b5b;
-  --ion-color-danger-rgb: 255,91,91;
-  --ion-color-danger-contrast: #ffffff;
-  --ion-color-danger-shade: #e05050;
-  --ion-color-danger-tint: #ff6c6c;
+  /* ── Surfaces ── */
+  --app-bg: #0b1210;
+  --app-bg-raised: #0f1815;
+  --app-card-bg: #131d19;
+  --app-card-bg-2: #18241f;
+  --app-card-hi: #1e2c26;
+  --app-border: rgba(222, 232, 206, 0.09);
+  --app-border-strong: rgba(222, 232, 206, 0.16);
 
-  --ion-color-medium: #8b9a8e;
-  --ion-color-medium-rgb: 139,154,142;
+  /* ── Text ── */
+  --app-text: #eef0e7;
+  --app-text-dim: #97a299;
+  --app-text-faint: #6c776f;
 
-  --ion-background-color: #10140f;
-  --ion-background-color-rgb: 16,20,15;
-  --ion-text-color: #f2f5f1;
-  --ion-text-color-rgb: 242,245,241;
+  /* ── Accent ── */
+  --app-accent: #e8d99c;              /* links, active tab, active chip */
+  --app-accent-soft: rgba(232, 217, 156, 0.14);
+  --app-green: #dfe3b6;               /* primary buttons (cream sage) */
+  --app-green-dark: #c6cc9b;
+  --app-on-accent: #161d18;           /* text on any accent fill */
+  --app-cta: linear-gradient(180deg, #ecefcc 0%, #d4d9ab 100%);
+  --app-cta-shadow: 0 8px 22px rgba(214, 220, 168, 0.16);
+  --app-leaf: #4f8b57;                /* switches, success */
+  --app-star: #f2c14e;
+  --app-heart: #f0505a;
 
-  --ion-toolbar-background: #10140f;
-  --ion-item-background: transparent;
-  --ion-card-background: #1a201a;
+  /* ── Difficulty badges ── */
+  --diff-easy-bg: #2f6b3d;
+  --diff-easy-fg: #e4f3e2;
+  --diff-moderate-bg: #9a6a1f;
+  --diff-moderate-fg: #fff2dc;
+  --diff-hard-bg: #9c3a31;
+  --diff-hard-fg: #ffe8e3;
 
-  --ion-tab-bar-background: #171d16;
-  --ion-tab-bar-color: #7b8a7e;
-  --ion-tab-bar-color-selected: #5FD97A;
-
-  --app-bg: #10140f;
-  --app-card-bg: #1a201a;
-  --app-card-bg-2: #1e251d;
-  --app-text: #f2f5f1;
-  --app-text-dim: #93a396;
-  --app-green: #5FD97A;
-  --app-green-dark: #3f8f52;
-  --app-border: #262e24;
+  /* ── Radii ── */
+  --app-radius-sm: 12px;
+  --app-radius: 18px;
+  --app-radius-lg: 24px;
 }
+
+/* ── Ionic palette ──────────────────────────────────────────────────────────
+   Ionic's dark palette (imported in global.scss, which loads AFTER this file)
+   sets these same variables on :root and :root.ios / :root.md. The selectors
+   below are one step more specific, so the app's colours win — this is what
+   stops Ionic's default blue from leaking into back arrows and toggles. */
+html:root,
+html.ios:root,
+html.md:root {
+  --ion-color-primary: #e8d99c;
+  --ion-color-primary-rgb: 232, 217, 156;
+  --ion-color-primary-contrast: #161d18;
+  --ion-color-primary-contrast-rgb: 22, 29, 24;
+  --ion-color-primary-shade: #ccbf89;
+  --ion-color-primary-tint: #eadda6;
+
+  --ion-color-secondary: #1e2c26;
+  --ion-color-success: #4f8b57;
+  --ion-color-success-rgb: 79, 139, 87;
+  --ion-color-success-contrast: #ffffff;
+  --ion-color-success-contrast-rgb: 255, 255, 255;
+  --ion-color-success-shade: #457a4d;
+  --ion-color-success-tint: #619768;
+
+  --ion-color-danger: #f0505a;
+  --ion-color-danger-rgb: 240, 80, 90;
+  --ion-color-danger-contrast: #ffffff;
+  --ion-color-danger-contrast-rgb: 255, 255, 255;
+  --ion-color-danger-shade: #d3464f;
+  --ion-color-danger-tint: #f2626b;
+
+  --ion-color-dark: #1e2c26;
+  --ion-color-dark-rgb: 30, 44, 38;
+  --ion-color-dark-contrast: #eef0e7;
+  --ion-color-dark-contrast-rgb: 238, 240, 231;
+  --ion-color-dark-shade: #1a2721;
+  --ion-color-dark-tint: #35413c;
+
+  --ion-color-medium: #97a299;
+  --ion-color-medium-rgb: 151, 162, 153;
+
+  --ion-background-color: #0b1210;
+  --ion-background-color-rgb: 11, 18, 16;
+  --ion-text-color: #eef0e7;
+  --ion-text-color-rgb: 238, 240, 231;
+
+  --ion-toolbar-background: #0b1210;
+  --ion-item-background: transparent;
+  --ion-card-background: #131d19;
+
+  --ion-tab-bar-background: #0d1613;
+  --ion-tab-bar-color: #7f8b83;
+  --ion-tab-bar-color-selected: #e8d99c;
+  --ion-toolbar-color: #eef0e7;
+  --ion-toolbar-border-color: rgba(222, 232, 206, 0.09);
+  --ion-border-color: rgba(222, 232, 206, 0.09);
+  --ion-placeholder-color: #97a299;
+}
+
+html.ios:root ion-modal,
+html.md:root ion-modal {
+  --ion-background-color: #0f1815;
+  --ion-toolbar-background: #0f1815;
+  --ion-toolbar-border-color: rgba(222, 232, 206, 0.09);
+}
+
+/* ── Tab bar ─────────────────────────────────────────────────────────────── */
 
 ion-tab-bar {
   --background: var(--ion-tab-bar-background);
+  --border: 0;
   border-top: 1px solid var(--app-border);
-  height: 62px;
+  height: 66px;
+  padding-bottom: env(safe-area-inset-bottom);
 }
 
 ion-tab-button {
-  --background: var(--ion-tab-bar-background);
+  --background: transparent;
   --color: var(--ion-tab-bar-color);
   --color-selected: var(--ion-tab-bar-color-selected);
+  --ripple-color: transparent;
+  position: relative;
+
+  /* A short cream bar under the selected tab, as in the mockup. */
+  &::after {
+    content: '';
+    position: absolute;
+    bottom: 3px;
+    left: 50%;
+    width: 0;
+    height: 2px;
+    border-radius: 2px;
+    background: var(--app-accent);
+    transform: translateX(-50%);
+    transition: width 0.2s ease;
+  }
+
+  &.tab-selected::after {
+    width: 26px;
+  }
 }
 
 ion-toolbar {
   --background: var(--ion-toolbar-background);
   --color: var(--app-text);
+  --border-width: 0;
 }

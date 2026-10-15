@@ -97,6 +97,54 @@ export const TRAIL_PHOTOS: Record<string, TrailPhoto> = {
     license: "CC BY-SA 4.0",
     source: "https://commons.wikimedia.org/wiki/File:Mount_Ugo_view_from_Mines_View_Baguio_(Itogon,_Benguet;_12-04-2022).jpg",
   },
+  T001: {
+    url: "assets/trails/T001.jpg",
+    credit: "Bien02",
+    license: "CC BY 4.0",
+    source: "https://commons.wikimedia.org/wiki/File:Panoramic_Shot_of_Mt._Pulag_Summit_and_Grassland.jpg",
+  },
+  T005: {
+    url: "assets/trails/T005.jpg",
+    credit: "Zeus Angelo Salvo",
+    license: "CC BY-SA 4.0",
+    source: "https://commons.wikimedia.org/wiki/File:Tarak_Ridge_campsite,_Mount_Mariveles.jpg",
+  },
+  T008: {
+    url: "assets/trails/T008.png",
+    credit: "Aajim",
+    license: "CC BY-SA 3.0",
+    source: "https://commons.wikimedia.org/wiki/File:Tapulao_Pine_Forest.png",
+  },
+  T011: {
+    url: "assets/trails/T011.jpg",
+    credit: "Ervin Malicdem",
+    license: "CC BY-SA 4.0",
+    source: "https://commons.wikimedia.org/wiki/File:Bagwis_Cliff_of_Malepunyo_Range.jpg",
+  },
+  T016: {
+    url: "assets/trails/T016.jpg",
+    credit: "Iaminwar",
+    license: "CC BY-SA 4.0",
+    source: "https://commons.wikimedia.org/wiki/File:Daraitan.jpg",
+  },
+  T020: {
+    url: "assets/trails/T020.jpg",
+    credit: "Johnpaulo5860",
+    license: "CC0",
+    source: "https://commons.wikimedia.org/wiki/File:Dambana_ng_Kagitingan,_Memorial_for_the_WW2_Battle_of_Mt._Kalisungan,_San_Pablo_City,_Laguna.jpg",
+  },
+  T026: {
+    url: "assets/trails/T026.jpg",
+    credit: "Paul Christian B. Yang-ed",
+    license: "CC0",
+    source: "https://commons.wikimedia.org/wiki/File:Walkway_and_ricefields_somewhere_in_Dalupirip,_Itogon,_Benguet,_Philippines.jpg",
+  },
+  T028: {
+    url: "assets/trails/T028.jpg",
+    credit: "Aninah Ong",
+    license: "CC BY-SA 4.0",
+    source: "https://commons.wikimedia.org/wiki/File:Tarlac_-_Zambales_Superloop_-_28.jpg",
+  },
 };
 
 const PLACEHOLDER =

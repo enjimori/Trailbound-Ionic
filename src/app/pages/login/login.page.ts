@@ -1,7 +1,7 @@
 import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { IonContent, IonIcon, IonInput, ToastController } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
 import { eyeOutline, eyeOffOutline, leaf } from 'ionicons/icons';
@@ -19,6 +19,7 @@ export class LoginPage {
   private fb = inject(FormBuilder);
   private userService = inject(UserService);
   private router = inject(Router);
+  private route = inject(ActivatedRoute);
   private toastCtrl = inject(ToastController);
 
   form = this.fb.nonNullable.group({
@@ -59,7 +60,7 @@ export class LoginPage {
         color: 'success',
       });
       toast.present();
-      this.router.navigate(['/tabs/home'], { replaceUrl: true });
+      this.router.navigateByUrl(this.returnUrl(), { replaceUrl: true });
     } catch (e: any) {
       this.loginError = e?.message ?? 'Could not sign in. Please try again.';
     } finally {
@@ -71,8 +72,20 @@ export class LoginPage {
     this.router.navigate(['/signup']);
   }
 
+  /**
+   * Where to go after signing in. Pages that ask a guest to sign in (e.g.
+   * liking a post) pass ?returnUrl=/tabs/community so the user lands back
+   * where they were. Only in-app paths are accepted, never another site.
+   */
+  private returnUrl(): string {
+    const url = this.route.snapshot.queryParamMap.get('returnUrl') ?? '';
+    return url.startsWith('/') && !url.startsWith('//') && !url.includes('://') && !url.includes('\\')
+      ? url
+      : '/tabs/home';
+  }
+
   /** Browse the app without an account. */
   continueAsGuest() {
-    this.router.navigate(['/tabs/home'], { replaceUrl: true });
+    this.router.navigateByUrl(this.returnUrl(), { replaceUrl: true });
   }
 }

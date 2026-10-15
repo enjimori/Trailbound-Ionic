@@ -34,24 +34,28 @@ app-trail-map {
 
 /* Leaflet builds these nodes itself, outside the Angular view. */
 .trailmap-marker {
-  width: 26px;
-  height: 26px;
+  /* 20px dot centred in the 26px icon box the map anchors on. */
+  width: 20px;
+  height: 20px;
+  margin: 3px 0 0 3px;
   border-radius: 50%;
-  background: var(--app-green, #5fd97a);
-  border: 3px solid rgba(255, 255, 255, 0.85);
-  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.4);
+  background: var(--app-accent, #e8d99c);
+  border: 3px solid rgba(11, 18, 16, 0.92);
+  box-shadow: 0 0 0 2px rgba(232, 217, 156, 0.35), 0 4px 12px rgba(0, 0, 0, 0.45);
   box-sizing: border-box;
   transition: width 0.15s ease, height 0.15s ease;
 
   &--closed {
-    background: #ff5b5b;
+    background: #f0505a;
+    box-shadow: 0 0 0 2px rgba(240, 80, 90, 0.35), 0 4px 12px rgba(0, 0, 0, 0.45);
   }
 
   &--selected {
-    width: 34px;
-    height: 34px;
-    margin: -4px 0 0 -4px;
+    width: 32px;
+    height: 32px;
+    margin: -3px 0 0 -3px;
     border-color: #ffffff;
+    box-shadow: 0 0 0 6px rgba(232, 217, 156, 0.28), 0 6px 16px rgba(0, 0, 0, 0.5);
   }
 }
 
@@ -59,7 +63,7 @@ app-trail-map {
  * changes when the basemap does. Restyle it, never hide it. The max-width lets
  * Esri's longer credit wrap instead of stretching across the whole map. */
 .leaflet-control-attribution {
-  background: rgba(0, 0, 0, 0.5) !important;
+  background: rgba(11, 18, 16, 0.7) !important;
   color: var(--app-text-dim, #8a9a8e) !important;
   font-size: 9px !important;
   max-width: 72vw;

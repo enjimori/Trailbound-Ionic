@@ -207,7 +207,7 @@ export class HomePage {
       const n = parseFloat(String(s).replace(/,/g, ''));
       return Number.isFinite(n) ? n : Number.MAX_SAFE_INTEGER;
     };
-
+//Sorting the trails//
     switch (this.sortBy()) {
       case 'name':
         return [...list].sort((a, b) => a.name.localeCompare(b.name));

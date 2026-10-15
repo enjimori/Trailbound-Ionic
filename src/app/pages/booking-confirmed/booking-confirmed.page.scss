@@ -3,54 +3,56 @@
    ═════════════════════════════════════════════════════════════════════════ */
 
 :host {
-  --bc-green: var(--app-green, #5b9a63);
-  --bc-text: var(--app-text, #f2f5f2);
-  --bc-dim: var(--app-text-dim, #9aa89c);
-  --bc-card: var(--app-card-bg, #1b231c);
-  --bc-border: var(--app-border, rgba(255, 255, 255, 0.09));
+  --bc-green: var(--app-accent, #e8d99c);
+  --bc-text: var(--app-text, #eef0e7);
+  --bc-dim: var(--app-text-dim, #97a299);
+  --bc-card: var(--app-card-bg, #131d19);
+  --bc-inner: var(--app-bg-raised, #0f1815);
+  --bc-border: var(--app-border, rgba(222, 232, 206, 0.09));
 }
 
 .bc-wrap {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 56px 24px calc(32px + env(safe-area-inset-bottom));
+  padding: calc(56px + env(safe-area-inset-top)) 22px calc(32px + env(safe-area-inset-bottom));
   text-align: center;
 
   h1 {
-    margin: 26px 0 10px;
-    font-size: 27px;
-    font-weight: 800;
+    margin: 28px 0 10px;
+    font-size: 30px;
+    font-weight: 500;
     color: var(--bc-text);
   }
 }
 
 .bc-check {
-  width: 104px;
-  height: 104px;
+  width: 100px;
+  height: 100px;
   border-radius: 50%;
-  background: var(--bc-green);
+  background: var(--app-cta, #e3e6bf);
   display: flex;
   align-items: center;
   justify-content: center;
-  /* A soft halo rather than a hard edge — this is the one celebratory
-     moment in the flow. */
-  box-shadow: 0 0 0 14px rgba(91, 154, 99, 0.12);
+  /* A soft halo — the one celebratory moment in the flow. */
+  box-shadow:
+    0 0 0 12px rgba(232, 217, 156, 0.1),
+    0 0 0 26px rgba(232, 217, 156, 0.05);
 
   ion-icon {
-    font-size: 52px;
-    color: #08110a;
+    font-size: 50px;
+    color: var(--app-on-accent, #161d18);
   }
 }
 
 .bc-sub {
-  margin: 0 0 30px;
-  font-size: 13.5px;
+  margin: 0 0 28px;
+  font-size: 14px;
   line-height: 1.6;
   color: var(--bc-dim);
   max-width: 300px;
 
-  strong { color: var(--bc-text); font-weight: 700; }
+  strong { color: var(--bc-text); font-weight: 600; }
 }
 
 /* ── Receipt card ───────────────────────────────────────────────────────── */
@@ -58,26 +60,26 @@
 .bc-card {
   width: 100%;
   padding: 18px;
-  border-radius: 18px;
+  border-radius: var(--app-radius-lg, 24px);
+  border: 1px solid var(--bc-border);
   background: var(--bc-card);
   text-align: left;
 }
 
 .bc-label {
   display: block;
-  font-size: 9.5px;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  font-size: 11px;
+  font-weight: 500;
   color: var(--bc-dim);
 }
 
 .bc-ref {
   display: block;
-  margin-top: 5px;
-  font-size: 21px;
-  font-weight: 800;
-  color: var(--bc-text);
+  margin-top: 4px;
+  font-family: var(--app-font-serif);
+  font-size: 24px;
+  font-weight: 500;
+  color: var(--bc-green);
   /* Tabular figures keep the reference from shifting width per digit. */
   font-variant-numeric: tabular-nums;
 }
@@ -98,27 +100,29 @@
 }
 
 .bc-thumb {
-  width: 42px;
-  height: 42px;
+  width: 48px;
+  height: 48px;
   flex-shrink: 0;
-  border-radius: 10px;
+  border-radius: 13px;
   background-size: cover;
   background-position: center;
-  background-color: #12190f;
+  background-color: var(--bc-inner);
 }
 
 .bc-avatar {
-  width: 42px;
-  height: 42px;
+  width: 48px;
+  height: 48px;
   flex-shrink: 0;
   border-radius: 50%;
-  background: var(--bc-green);
-  color: #08110a;
+  background: var(--app-accent-soft, rgba(232, 217, 156, 0.14));
+  border: 1px solid rgba(232, 217, 156, 0.35);
+  color: var(--bc-green);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-weight: 800;
-  font-size: 17px;
+  font-family: var(--app-font-serif);
+  font-weight: 600;
+  font-size: 18px;
 }
 
 .bc-meta {
@@ -127,16 +131,14 @@
   min-width: 0;
 
   .l {
-    font-size: 9.5px;
-    font-weight: 800;
-    letter-spacing: 0.07em;
-    text-transform: uppercase;
+    font-size: 11px;
     color: var(--bc-dim);
   }
 
   .v {
-    font-size: 14px;
-    font-weight: 700;
+    font-family: var(--app-font-serif);
+    font-size: 16px;
+    font-weight: 500;
     color: var(--bc-text);
   }
 }
@@ -145,8 +147,8 @@
   display: flex;
   justify-content: space-between;
   gap: 14px;
-  padding: 5px 0;
-  font-size: 12.5px;
+  padding: 6px 0;
+  font-size: 13px;
   color: var(--bc-dim);
 
   span:last-child {
@@ -156,12 +158,18 @@
 
   &.total {
     margin-top: 8px;
-    padding-top: 11px;
+    padding-top: 12px;
     border-top: 1px solid var(--bc-border);
     font-size: 15px;
-    font-weight: 800;
+    font-weight: 600;
+    color: var(--bc-text);
 
-    span:last-child { color: var(--bc-green); }
+    span:last-child {
+      font-family: var(--app-font-serif);
+      font-size: 21px;
+      font-weight: 500;
+      color: var(--bc-green);
+    }
   }
 }
 
@@ -170,12 +178,12 @@
   gap: 9px;
   margin-top: 16px;
   padding: 12px;
-  border-radius: 11px;
-  background: rgba(200, 160, 60, 0.12);
-  border: 1px solid rgba(200, 160, 60, 0.28);
-  font-size: 11.5px;
+  border-radius: 13px;
+  background: rgba(224, 182, 74, 0.1);
+  border: 1px solid rgba(224, 182, 74, 0.26);
+  font-size: 12px;
   line-height: 1.5;
-  color: #e0c98a;
+  color: #ead29a;
 
   ion-icon { flex-shrink: 0; font-size: 15px; margin-top: 1px; }
 }
@@ -188,26 +196,25 @@
   justify-content: center;
   gap: 8px;
   width: 100%;
+  min-height: 54px;
   margin-top: 26px;
-  padding: 17px;
   border: none;
-  border-radius: 15px;
-  background: var(--bc-green);
-  color: #08110a;
-  font-size: 14.5px;
-  font-weight: 800;
-  letter-spacing: 0.02em;
-  text-transform: uppercase;
+  border-radius: 999px;
+  background: var(--app-cta, #e3e6bf);
+  box-shadow: var(--app-cta-shadow, none), inset 0 1px 0 rgba(255, 255, 255, 0.5);
+  color: var(--app-on-accent, #161d18);
+  font-size: 15px;
+  font-weight: 600;
 
-  ion-icon { font-size: 16px; }
+  ion-icon { font-size: 17px; }
 }
 
 .bc-link {
-  margin-top: 16px;
-  padding: 6px;
+  margin-top: 14px;
+  padding: 8px;
   background: none;
   border: none;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--bc-dim);
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--bc-green);
 }

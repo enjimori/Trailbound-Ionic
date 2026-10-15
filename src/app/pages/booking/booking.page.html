@@ -1,20 +1,25 @@
 <ion-content [fullscreen]="true" *ngIf="trail() as t">
 
-  <!-- ── Hero ──────────────────────────────────────────────────────────────
-       No toolbar over the photo. Back lives in the footer bar now, beside the
-       price — the bottom edge is the one band both thumbs reach equally, and
-       the top-left corner is the hardest point on a tall phone to reach. -->
+  <!-- ── Top bar ─────────────────────────────────────────────────────── -->
+  <div class="bk-topbar">
+    <button class="bk-back" (click)="goBack()" aria-label="Go back">
+      <ion-icon name="arrow-back-outline"></ion-icon>
+    </button>
+    <h1 class="bk-page-title">Book Your Hike</h1>
+  </div>
+
+  <!-- ── Trail card ──────────────────────────────────────────────────── -->
   <div class="bk-hero" [style.backgroundImage]="'url(' + t.image + ')'">
     <div class="bk-hero-gradient"></div>
 
     <div class="bk-hero-body">
       <div class="bk-chips">
-        <span class="bk-chip difficulty">{{ t.difficulty }} difficulty</span>
+        <span class="diff-badge" [ngClass]="t.difficulty.toLowerCase()">{{ t.difficulty }}</span>
         <span class="bk-chip" [class.closed]="isClosed(t)">
           {{ isClosed(t) ? 'Closed' : 'Open' }}
         </span>
       </div>
-      <h1>{{ t.name }}</h1>
+      <h2>{{ t.name }}</h2>
       <p class="bk-region">
         <ion-icon name="location-outline"></ion-icon> {{ t.region }}
       </p>
@@ -24,7 +29,7 @@
   <div class="bk-body">
 
     <!-- ── Date ────────────────────────────────────────────────────────── -->
-    <p class="bk-field-label">Hike date</p>
+    <p class="bk-title">Select Date</p>
 
     <button type="button" id="bk-date-field" class="bk-date-field">
       <span [class.placeholder]="!date()">{{ displayDate() }}</span>
@@ -68,7 +73,7 @@
     </button>
 
     <!-- ── Activities ──────────────────────────────────────────────────── -->
-    <p class="bk-title">Add activities</p>
+    <p class="bk-title">Add-ons</p>
 
     <div class="bk-acts">
       <button
@@ -77,12 +82,13 @@
         [class.active]="isActivityOn(a.id)"
         (click)="toggleActivity(a.id)"
       >
-        <ion-icon [name]="a.icon"></ion-icon>
+        <span class="bk-act-icon"><ion-icon [name]="a.icon"></ion-icon></span>
         <span class="n">{{ a.name }}</span>
         <span class="p" *ngIf="isActivityCovered(a.id); else actPrice">Included</span>
         <ng-template #actPrice>
           <span class="p">+₱{{ a.price | number }}</span>
         </ng-template>
+        <span class="bk-switch" [class.on]="isActivityOn(a.id)" aria-hidden="true"></span>
       </button>
     </div>
 
@@ -150,7 +156,8 @@
 
     <!-- ── Running total ───────────────────────────────────────────────── -->
     <div class="bk-summary" *ngIf="quote() as q">
-      <p class="bk-title">Your booking so far</p>
+      <p class="bk-sum-label">Total Trip Cost</p>
+      <p class="bk-sum-total">₱{{ q.total | number }}</p>
 
       <div class="row">
         <span>{{ q.packageName }}</span>
@@ -188,17 +195,13 @@
 
   <!-- ── Sticky footer — back, price, book ─────────────────────────────── -->
   <div class="bk-footer" *ngIf="quote() as q">
-    <button class="bk-back" (click)="goBack()" aria-label="Go back">
-      <ion-icon name="arrow-back-outline"></ion-icon>
-    </button>
-
     <div class="bk-footer-price">
       <span class="l">Total price</span>
       <span class="v">₱{{ q.total | number }}</span>
     </div>
 
-    <button class="bk-cta" [disabled]="isClosed(t)" (click)="proceed()">
-      {{ isClosed(t) ? 'Trail closed' : 'Book adventure' }}
+    <button class="bk-cta cta-pill" [disabled]="isClosed(t)" (click)="proceed()">
+      {{ isClosed(t) ? 'Trail closed' : 'Continue' }}
       <ion-icon name="arrow-forward" *ngIf="!isClosed(t)"></ion-icon>
     </button>
   </div>
@@ -207,6 +210,8 @@
 <ion-content *ngIf="!trail()">
   <div class="bk-missing">
     <p>Trail not found.</p>
-    <ion-button (click)="goBack()">Go back</ion-button>
+    <button class="ghost-pill" (click)="goBack()">
+      <ion-icon name="arrow-back-outline"></ion-icon> Go back
+    </button>
   </div>
 </ion-content>

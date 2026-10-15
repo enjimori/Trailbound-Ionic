@@ -3,40 +3,45 @@
    ═════════════════════════════════════════════════════════════════════════ */
 
 :host {
-  --co-green: var(--app-green, #5b9a63);
-  --co-text: var(--app-text, #f2f5f2);
-  --co-dim: var(--app-text-dim, #9aa89c);
-  --co-card: var(--app-card-bg, #1b231c);
-  --co-border: var(--app-border, rgba(255, 255, 255, 0.09));
+  --co-green: var(--app-accent, #e8d99c);
+  --co-text: var(--app-text, #eef0e7);
+  --co-dim: var(--app-text-dim, #97a299);
+  --co-card: var(--app-card-bg, #131d19);
+  --co-inner: var(--app-bg-raised, #0f1815);
+  --co-border: var(--app-border, rgba(222, 232, 206, 0.09));
+  --co-border-strong: var(--app-border-strong, rgba(222, 232, 206, 0.16));
 }
 
 .co-header ion-toolbar {
   --background: transparent;
   --border-color: transparent;
   --color: var(--co-text);
+  --padding-top: 6px;
 }
 
 ion-title {
-  font-size: 16px;
-  font-weight: 700;
+  font-size: 22px;
+  font-weight: 500;
 }
 
 .co-body {
-  padding: 8px 20px 0;
+  padding: 4px 18px 0;
 }
 
 .co-title {
-  margin: 18px 0 11px;
-  font-size: 16px;
-  font-weight: 800;
+  margin: 20px 0 12px;
+  font-family: var(--app-font-serif);
+  font-size: 18px;
+  font-weight: 500;
   color: var(--co-text);
 }
 
 /* ── Order summary ──────────────────────────────────────────────────────── */
 
 .co-card {
-  padding: 15px;
-  border-radius: 18px;
+  padding: 16px;
+  border-radius: var(--app-radius, 18px);
+  border: 1px solid var(--co-border);
   background: var(--co-card);
 }
 
@@ -50,27 +55,29 @@ ion-title {
 .co-guide { margin-top: 14px; }
 
 .co-thumb {
-  width: 56px;
-  height: 56px;
+  width: 64px;
+  height: 64px;
   flex-shrink: 0;
-  border-radius: 12px;
+  border-radius: 14px;
   background-size: cover;
   background-position: center;
-  background-color: #12190f;
+  background-color: var(--co-inner);
 }
 
 .co-avatar {
-  width: 38px;
-  height: 38px;
+  width: 40px;
+  height: 40px;
   flex-shrink: 0;
   border-radius: 50%;
-  background: var(--co-green);
-  color: #08110a;
+  background: var(--app-accent-soft, rgba(232, 217, 156, 0.14));
+  border: 1px solid rgba(232, 217, 156, 0.35);
+  color: var(--co-green);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-weight: 800;
-  font-size: 15px;
+  font-family: var(--app-font-serif);
+  font-weight: 600;
+  font-size: 16px;
 }
 
 .co-trail-meta {
@@ -79,13 +86,18 @@ ion-title {
   min-width: 0;
   gap: 2px;
 
-  .n { font-size: 14px; font-weight: 700; color: var(--co-text); }
-  .s { font-size: 11.5px; color: var(--co-dim); }
+  .n {
+    font-family: var(--app-font-serif);
+    font-size: 16px;
+    font-weight: 500;
+    color: var(--co-text);
+  }
+  .s { font-size: 12px; color: var(--co-dim); }
 }
 
 .co-divider {
   height: 1px;
-  margin: 14px 0 10px;
+  margin: 14px 0 8px;
   background: var(--co-border);
 }
 
@@ -93,19 +105,25 @@ ion-title {
   display: flex;
   justify-content: space-between;
   gap: 12px;
-  padding: 5px 0;
-  font-size: 12.5px;
+  padding: 6px 0;
+  font-size: 13px;
   color: var(--co-text);
 
   .muted { color: var(--co-dim); }
 
   &.total {
     margin-top: 8px;
-    padding-top: 11px;
+    padding-top: 12px;
     border-top: 1px solid var(--co-border);
     font-size: 15px;
-    font-weight: 800;
-    color: var(--co-green);
+    font-weight: 600;
+
+    span:last-child {
+      font-family: var(--app-font-serif);
+      font-size: 22px;
+      font-weight: 500;
+      color: var(--co-green);
+    }
   }
 }
 
@@ -123,24 +141,28 @@ ion-title {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
+  gap: 7px;
   padding: 16px 10px;
-  border-radius: 14px;
+  border-radius: 16px;
   border: 1px solid var(--co-border);
   background: var(--co-card);
   color: var(--co-text);
-  font-size: 12.5px;
-  font-weight: 600;
+  font-size: 13px;
+  font-weight: 500;
 
-  ion-icon { font-size: 20px; color: var(--co-green); }
+  ion-icon { font-size: 22px; color: var(--co-text); }
 
   &.active {
-    border-color: var(--co-green);
-    box-shadow: inset 0 0 0 1px var(--co-green);
+    border-color: rgba(232, 217, 156, 0.6);
+    background:
+      linear-gradient(0deg, rgba(232, 217, 156, 0.07), rgba(232, 217, 156, 0.07)),
+      var(--co-card);
+
+    ion-icon { color: var(--co-green); }
   }
 
   &.off {
-    opacity: 0.4;
+    opacity: 0.45;
 
     ion-icon { color: var(--co-dim); }
   }
@@ -148,10 +170,10 @@ ion-title {
   .soon {
     position: absolute;
     top: 7px;
-    right: 8px;
-    font-size: 8.5px;
-    font-weight: 800;
-    letter-spacing: 0.05em;
+    right: 9px;
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
     text-transform: uppercase;
     color: var(--co-dim);
   }
@@ -161,25 +183,24 @@ ion-title {
 
 .co-label {
   display: block;
-  margin-bottom: 6px;
-  font-size: 9.5px;
-  font-weight: 800;
-  letter-spacing: 0.07em;
-  text-transform: uppercase;
+  margin-bottom: 7px;
+  font-size: 12px;
+  font-weight: 500;
   color: var(--co-dim);
 }
 
 .co-input {
-  --background: rgba(255, 255, 255, 0.05);
+  --background: var(--co-card);
   --color: var(--co-text);
   --placeholder-color: var(--co-dim);
-  --padding-start: 14px;
-  --padding-end: 14px;
-  --padding-top: 13px;
-  --padding-bottom: 13px;
-  border-radius: 12px;
+  --padding-start: 16px;
+  --padding-end: 16px;
+  --padding-top: 14px;
+  --padding-bottom: 14px;
+  border: 1px solid var(--co-border);
+  border-radius: 14px;
   margin-bottom: 14px;
-  font-size: 13.5px;
+  font-size: 14px;
 }
 
 .co-split {
@@ -194,13 +215,13 @@ ion-title {
   display: flex;
   gap: 10px;
   margin-top: 4px;
-  padding: 13px;
-  border-radius: 12px;
-  background: rgba(200, 160, 60, 0.12);
-  border: 1px solid rgba(200, 160, 60, 0.3);
-  font-size: 11.5px;
+  padding: 14px;
+  border-radius: 14px;
+  background: rgba(224, 182, 74, 0.1);
+  border: 1px solid rgba(224, 182, 74, 0.26);
+  font-size: 12px;
   line-height: 1.55;
-  color: #e0c98a;
+  color: #ead29a;
 
   ion-icon {
     flex-shrink: 0;
@@ -208,10 +229,10 @@ ion-title {
     margin-top: 1px;
   }
 
-  strong { color: #f0dda8; }
+  strong { color: #f3e2b4; }
 }
 
-.co-spacer { height: 110px; }
+.co-spacer { height: 116px; }
 
 /* ── Sticky pay bar ─────────────────────────────────────────────────────── */
 
@@ -224,30 +245,27 @@ ion-title {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
-  background: rgba(12, 17, 13, 0.96);
+  padding: 12px 18px calc(12px + env(safe-area-inset-bottom));
+  background: rgba(13, 21, 18, 0.95);
   border-top: 1px solid var(--co-border);
-  backdrop-filter: blur(12px);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
 }
 
-/* Back, beside the action it is the alternative to. Quiet on purpose: on a
-   payment screen the one loud thing should be the amount you are about to
-   pay. 52px clears both platform minimums. */
+/* Back, beside the action it is the alternative to. Quiet on purpose. */
 .co-back {
   flex-shrink: 0;
   width: 52px;
   height: 52px;
-  border: 1px solid var(--co-border);
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--co-border-strong);
+  border-radius: 50%;
+  background: var(--co-card);
   display: flex;
   align-items: center;
   justify-content: center;
 
   ion-icon {
     font-size: 21px;
-    /* Set explicitly. An unset icon inside an Ionic control inherits the
-       theme's primary blue — which is where the stray blue arrows came from. */
     color: var(--co-text);
   }
 
@@ -256,20 +274,20 @@ ion-title {
 
 .co-pay {
   flex: 1;
-  /* Without this the label refuses to shrink and pushes Back off the bar on a
-     narrow screen. */
+  /* Without this the label refuses to shrink on a narrow screen. */
   min-width: 0;
-  height: 52px;
+  height: 54px;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
   border: none;
-  border-radius: 14px;
-  background: var(--co-green);
-  color: #08110a;
+  border-radius: 999px;
+  background: var(--app-cta, #e3e6bf);
+  box-shadow: var(--app-cta-shadow, none), inset 0 1px 0 rgba(255, 255, 255, 0.5);
+  color: var(--app-on-accent, #161d18);
   font-size: 15px;
-  font-weight: 800;
+  font-weight: 600;
 
   ion-icon { font-size: 17px; }
 

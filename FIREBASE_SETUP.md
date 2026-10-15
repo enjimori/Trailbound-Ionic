@@ -1,4 +1,4 @@
-# Firebase setup for TrailTalk
+# Firebase setup for TrailBound
 
 ## 1. Create the project
 1. Go to https://console.firebase.google.com and click **Add project**.
@@ -25,12 +25,26 @@ ionic serve
 
 ## Data layout
 ```
-users/{uid}
+users/{uid}                       private, only the owner can read it
   profile:  { name, email, phone, dob, gender, location, bio, avatar, ... }
   upcoming: [ { id, trailId, name, image, date, duration }, ... ]
+
+posts/{postId}                    Community feed, readable by everyone
+  { authorUid, authorName, text, images: [jpeg data URLs], trailId?, trailName?,
+    likedBy: [uid, ...], commentCount, createdAt, editedAt? }
+posts/{postId}/comments/{id}
+  { authorUid, authorName, text, createdAt }
+
+profiles/{uid}                    public name + small photo of people who have
+  { name, avatar, updatedAt }     posted or commented (shown on their posts)
 ```
+
+**After pulling the Community update, publish `firestore.rules` again**
+(Firestore → Rules → paste → Publish, or `firebase deploy --only firestore:rules`).
+Until then the Community tab says the posts can't be read.
 
 ## Notes
 - Sign-in errors say "Incorrect email or password" for both unknown accounts and wrong passwords. This is deliberate: Firebase hides which one it was, so attackers can't discover which emails are registered.
 - Email is read-only in Personal Info. Changing a login email in Firebase needs re-authentication and a verification email, which is a separate feature.
 - Avatars are cropped to 256x256 and stored as a small data URL inside the user document, so no Firebase Storage (paid plan) is needed.
+- Post photos work the same way: each one is resized (max 1280px, about 200 KB) and stored inside the post, up to 4 per post, which keeps a post under Firestore's 1 MB document limit. Re-encoding also strips the GPS location phones embed in photos.

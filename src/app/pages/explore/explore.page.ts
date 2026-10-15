@@ -138,6 +138,8 @@ export class ExplorePage implements ViewDidEnter, OnDestroy {
    * dataset. Saving writes to the shared UserService, so a trail saved here
    * also appears in the Profile tab — same store the detail page writes to.
    */
+  // LOOP: walk the saved ids once and map them back to the Explore catalog.
+  // This keeps the bookmark list synced with the shared user data store.
   savedTrails = computed(() => {
     const ids = new Set(this.userService.upcoming().map(u => u.trailId));
     return TRAILS_30.filter(t => ids.has(t.id));
@@ -325,6 +327,8 @@ export class ExplorePage implements ViewDidEnter, OnDestroy {
       this.toast('No trail video recorded for this one yet');
       return;
     }
+    // SWITCH / BRANCH LOGIC: decide whether to open an external trail guide or
+    // embed the playable video in the modal based on the media kind.
     if (v.kind === 'page') {
       window.open(v.url, '_blank');
       return;

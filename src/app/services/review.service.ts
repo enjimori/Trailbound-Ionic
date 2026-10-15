@@ -31,7 +31,7 @@ export interface TrailReview {
   createdAt: string;
 }
 
-const STORAGE_KEY = 'trailtalk.reviews.v1';
+const STORAGE_KEY = 'TrailBound.reviews.v1';
 
 @Injectable({ providedIn: 'root' })
 export class ReviewService {

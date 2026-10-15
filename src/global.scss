@@ -13,24 +13,50 @@
 
 @import "@ionic/angular/css/palettes/dark.always.css";
 
+/* ═══════════════════════════════════════════════════════════════════════════
+   GLOBAL LOOK
+   Shared building blocks used across pages. Page files only add layout.
+   ═════════════════════════════════════════════════════════════════════════ */
+
+html, body {
+  background: var(--app-bg);
+}
+
 * {
-  font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-family: var(--app-font-sans);
+  -webkit-font-smoothing: antialiased;
 }
 
 ion-content {
   --background: var(--app-bg);
 }
 
+/* Serif display type — page titles, trail names, big numbers. */
+h1, h2,
+ion-title,
+.serif,
+.page-title,
+.section-title {
+  font-family: var(--app-font-serif);
+  letter-spacing: -0.01em;
+}
+
+ion-title {
+  font-size: 20px;
+  font-weight: 500;
+}
+
 .section-title {
   font-size: 17px;
-  font-weight: 700;
+  font-weight: 500;
   color: var(--app-text);
 }
 
 .view-all-link {
   font-size: 13px;
   font-weight: 500;
-  color: var(--ion-color-medium);
+  color: var(--app-accent);
+  cursor: pointer;
 }
 
 .scroll-x {
@@ -42,7 +68,7 @@ ion-content {
 }
 
 .pill-btn {
-  --border-radius: 20px;
+  --border-radius: 999px;
   --box-shadow: none;
   font-weight: 600;
   text-transform: none;
@@ -51,9 +77,365 @@ ion-content {
 
 .card-surface {
   background: var(--app-card-bg);
-  border-radius: 20px;
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius);
 }
 
 ion-item {
   --background: transparent;
 }
+
+button {
+  font-family: var(--app-font-sans);
+  cursor: pointer;
+}
+
+/* ── Difficulty badge ──────────────────────────────────────────────────────
+   Solid, compact, rounded — the red / amber / green chips in the mockup.
+   Any element with .diff-badge plus .easy / .moderate / .hard. */
+.diff-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 7px;
+  font-size: 11.5px;
+  font-weight: 600;
+  line-height: 1.4;
+  letter-spacing: 0.01em;
+  background: var(--app-card-hi);
+  color: var(--app-text);
+
+  &.easy     { background: var(--diff-easy-bg);     color: var(--diff-easy-fg); }
+  &.moderate { background: var(--diff-moderate-bg); color: var(--diff-moderate-fg); }
+  &.hard     { background: var(--diff-hard-bg);     color: var(--diff-hard-fg); }
+}
+
+/* ── Primary call-to-action: the cream pill ("Book This Hike →") ─────────── */
+.cta-pill {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 54px;
+  padding: 0 22px;
+  border: none;
+  border-radius: 999px;
+  background: var(--app-cta);
+  box-shadow: var(--app-cta-shadow), inset 0 1px 0 rgba(255, 255, 255, 0.5);
+  color: var(--app-on-accent);
+  font-size: 15px;
+  font-weight: 600;
+
+  ion-icon { font-size: 18px; color: var(--app-on-accent); }
+
+  &:active { filter: brightness(0.95); }
+
+  &:disabled {
+    background: var(--app-card-hi);
+    box-shadow: none;
+    color: var(--app-text-faint);
+    ion-icon { color: var(--app-text-faint); }
+  }
+}
+
+/* Secondary pill — dark with a hairline border ("Edit Profile ›"). */
+.ghost-pill {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 50px;
+  padding: 0 20px;
+  border: 1px solid var(--app-border-strong);
+  border-radius: 999px;
+  background: var(--app-card-bg);
+  color: var(--app-text);
+  font-size: 14px;
+  font-weight: 500;
+
+  ion-icon { font-size: 17px; color: var(--app-accent); }
+}
+
+/* Round translucent icon button that sits over photos. */
+.glass-btn {
+  width: 44px;
+  height: 44px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 14px;
+  background: rgba(14, 20, 17, 0.45);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  ion-icon { font-size: 20px; color: #fff; }
+}
+
+/* ── Searchbar: one rounded field, dark glass ────────────────────────────── */
+ion-searchbar.tb-search {
+  --background: rgba(24, 36, 31, 0.86);
+  --border-radius: 18px;
+  --box-shadow: none;
+  --placeholder-color: var(--app-text-dim);
+  --placeholder-opacity: 1;
+  --icon-color: var(--app-text-dim);
+  --color: var(--app-text);
+  --clear-button-color: var(--app-text-dim);
+  padding: 0;
+  min-height: 0;
+  height: auto;
+
+  .searchbar-input-container { height: 52px; }
+
+  .searchbar-input {
+    height: 52px !important;
+    font-size: 14px !important;
+    border: 1px solid var(--app-border-strong) !important;
+    padding-inline-start: 46px !important;
+  }
+
+  .searchbar-search-icon {
+    margin-inline-start: 16px !important;
+    width: 20px !important;
+  }
+}
+
+/* ── Segments as separate pills (All / Easy / Moderate / Hard …) ────────── */
+ion-segment.pill-seg {
+  --background: transparent;
+  background: transparent;
+  gap: 8px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  &::-webkit-scrollbar { display: none; }
+
+  ion-segment-button {
+    --background: var(--app-card-bg);
+    --background-checked: var(--app-accent);
+    --background-hover: var(--app-card-bg-2);
+    --color: var(--app-text);
+    --color-checked: var(--app-on-accent);
+    --indicator-color: transparent;
+    --indicator-box-shadow: none;
+    --border-radius: 999px;
+    --border-color: var(--app-border-strong);
+    --border-style: solid;
+    --border-width: 1px;
+    --padding-start: 16px;
+    --padding-end: 16px;
+    min-height: 38px;
+    min-width: auto;
+    flex: 0 0 auto;
+    margin: 0;
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 500;
+    text-transform: none;
+    letter-spacing: 0;
+
+    &::before { display: none; }  /* iOS divider lines */
+
+    &.segment-button-checked {
+      border-color: var(--app-accent);
+      font-weight: 600;
+    }
+  }
+}
+
+/* ── Overlays ────────────────────────────────────────────────────────────── */
+
+ion-modal {
+  --background: var(--app-bg-raised);
+  --backdrop-opacity: 0.6;
+}
+
+ion-modal ion-content {
+  --background: var(--app-bg-raised);
+}
+
+ion-modal ion-toolbar {
+  --background: var(--app-bg-raised);
+}
+
+ion-alert {
+  --background: var(--app-card-bg-2) !important;
+
+  .alert-wrapper {
+    border: 1px solid var(--app-border-strong);
+    border-radius: 20px !important;
+  }
+
+  .alert-title {
+    font-family: var(--app-font-serif) !important;
+    font-weight: 500 !important;
+    color: var(--app-text) !important;
+  }
+
+  .alert-message { color: var(--app-text-dim) !important; }
+
+  .alert-button { color: var(--app-accent) !important; }
+  .alert-button-role-destructive { color: var(--app-heart) !important; }
+}
+
+ion-toast {
+  --background: var(--app-card-hi);
+  --color: var(--app-text);
+  --border-radius: 14px;
+  --box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+  font-size: 13px;
+}
+
+ion-action-sheet {
+  --background: var(--app-card-bg-2);
+  --button-color: var(--app-text);
+}
+
+/* ── Explore: trail video modal ─────────────────────────────────────────── */
+
+.video-modal {
+  --width: 100%;
+  --height: auto;
+  --max-height: 86%;
+  --border-radius: 22px;
+  --background: var(--app-bg-raised);
+}
+
+.video-modal {
+  .video-shell {
+    background: var(--app-bg-raised);
+    padding: 12px 14px calc(16px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .video-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 2px 2px 12px;
+
+    .video-title {
+      font-family: var(--app-font-serif);
+      font-size: 17px;
+      font-weight: 500;
+      color: var(--app-text);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .video-close {
+      flex-shrink: 0;
+      width: 38px;
+      height: 38px;
+      border: 1px solid var(--app-border-strong);
+      border-radius: 12px;
+      background: var(--app-card-bg);
+      color: var(--app-text);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+
+      ion-icon { font-size: 18px; }
+    }
+  }
+
+  /* A 16:9 box the iframe fills absolutely. */
+  .video-frame {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    border-radius: 16px;
+    overflow: hidden;
+    background: #000;
+
+    iframe {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      border: 0;
+    }
+  }
+
+  .video-credit {
+    margin: 10px 2px 0;
+    font-size: 11px;
+    color: var(--app-text-dim);
+
+    a {
+      color: var(--app-accent);
+      text-decoration: none;
+    }
+  }
+}
+
+/* ── Summit weather card (app-trail-weather) ────────────────────────────────
+   Restyled from here so the component's own .ts file stays untouched. Its
+   built-in styles are scoped by Angular, so the selectors below repeat a
+   class to be one step more specific than the originals. Colours that the
+   card reads from the theme tokens already follow the new palette. */
+
+app-trail-weather {
+  container-type: inline-size;
+
+  .tw-glyph.tw-glyph {
+    font-size: 32px;
+    color: var(--app-star);
+  }
+
+  .tw-temp.tw-temp {
+    font-family: var(--app-font-serif);
+    font-size: 25px;
+    font-weight: 500;
+  }
+
+  /* Hourly strip in one bordered card. */
+  .tw-hours.tw-hours {
+    gap: 0;
+    margin: 0;
+    padding: 4px;
+    border: 1px solid var(--app-border);
+    border-radius: 16px;
+    background: var(--app-bg-raised);
+  }
+
+  .tw-hours .tw-hour.tw-hour {
+    background: transparent;
+
+    ion-icon { color: var(--app-star); font-size: 17px; }
+
+    .d.d {
+      font-family: var(--app-font-serif);
+      font-size: 15px;
+      font-weight: 500;
+    }
+  }
+
+  /* Each day as its own bordered row. */
+  .tw .tw-day.tw-day {
+    gap: 10px;
+    padding: 10px 12px;
+    margin-bottom: 7px;
+    border: 1px solid var(--app-border);
+    border-radius: 13px;
+    background: var(--app-bg-raised);
+
+    ion-icon { color: var(--app-star); }
+  }
+
+  .tw .tw-day.tw-day:last-of-type {
+    border-bottom: 1px solid var(--app-border);
+  }
+}
+
+/* In a narrow slot (the Home weather panel) the icon already says what the
+   summary says, so drop the words and let the numbers fit. */
+@container (max-width: 330px) {
+  app-trail-weather .tw .tw-day.tw-day .s.s { display: none; }
+  app-trail-weather .tw .tw-day.tw-day .n.n { flex: 1; }
+}
+

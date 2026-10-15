@@ -1,27 +1,32 @@
 <div class="trail-card" (click)="onTap()">
-  <div class="trail-image" [style.backgroundImage]="'url(' + trail.image + ')'">
-    <!-- Hidden while the rating is 0. The 30-trail dataset ships with no
-         review scores, and "★ 0" reads as a bad rating rather than an
-         absent one. -->
-    <div class="rating-chip" *ngIf="trail.rating > 0">
-      <ion-icon name="star"></ion-icon>
-      <span>{{ trail.rating }}</span>
-    </div>
-  </div>
+  <div class="trail-image" [style.backgroundImage]="'url(' + trail.image + ')'"></div>
+  <div class="trail-shade"></div>
+
   <div class="trail-body">
+    <span class="diff-badge" [ngClass]="trail.difficulty.toLowerCase()">{{ trail.difficulty }}</span>
     <h3>{{ trail.name }}</h3>
     <p class="region">
       <ion-icon name="location-outline"></ion-icon>
       {{ trail.region }}
     </p>
-    <div class="trail-meta">
-      <span class="difficulty" [ngClass]="trail.difficulty.toLowerCase()">{{ trail.difficulty }}</span>
-      <span class="dot">&bull;</span>
-      <span>{{ trail.distance }}</span>
-    </div>
+
     <div class="trail-footer">
-      <span class="elevation">{{ trail.elevation }} elev.</span>
-      <ion-button size="small" class="details-btn" (click)="onDetails($event)">DETAILS</ion-button>
+      <div class="trail-meta">
+        <span class="meta"><ion-icon name="walk-outline"></ion-icon>{{ trail.distance }}</span>
+        <span class="sep"></span>
+        <span class="meta"><ion-icon name="trending-up-outline"></ion-icon>{{ trail.elevation }}</span>
+        <!-- Hidden while the rating is 0. The 30-trail dataset ships with no
+             review scores, and "★ 0" reads as a bad rating rather than an
+             absent one. -->
+        <ng-container *ngIf="trail.rating > 0">
+          <span class="sep"></span>
+          <span class="meta"><ion-icon name="star" class="star"></ion-icon>{{ trail.rating }}</span>
+        </ng-container>
+      </div>
+
+      <button class="details-btn" (click)="onDetails($event)" aria-label="Trail details">
+        <ion-icon name="chevron-forward-outline"></ion-icon>
+      </button>
     </div>
   </div>
 </div>

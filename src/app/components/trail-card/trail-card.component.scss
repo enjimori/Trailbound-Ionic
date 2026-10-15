@@ -1,103 +1,115 @@
+/* Featured mountain card — photo fills the card, text sits on a dark fade. */
+
+:host {
+  display: block;
+}
+
 .trail-card {
-  background: var(--app-card-bg);
-  border-radius: 22px;
+  position: relative;
+  height: 236px;
+  border-radius: var(--app-radius-lg, 24px);
   overflow: hidden;
-  margin-bottom: 16px;
+  border: 1px solid var(--app-border-strong);
+  background: var(--app-card-bg);
   cursor: pointer;
+  isolation: isolate;
 }
 
 .trail-image {
-  height: 160px;
+  position: absolute;
+  inset: 0;
   background-size: cover;
   background-position: center;
-  position: relative;
+  transition: transform 0.4s ease;
 }
 
-.rating-chip {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  background: rgba(0,0,0,0.55);
-  backdrop-filter: blur(4px);
-  border-radius: 20px;
-  padding: 4px 10px;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 12px;
-  font-weight: 600;
-  color: #fff;
+.trail-card:active .trail-image {
+  transform: scale(1.02);
+}
 
-  ion-icon {
-    color: #ffd257;
-    font-size: 13px;
-  }
+.trail-shade {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    180deg,
+    rgba(8, 13, 11, 0) 25%,
+    rgba(8, 13, 11, 0.55) 60%,
+    rgba(8, 13, 11, 0.94) 100%
+  );
 }
 
 .trail-body {
-  padding: 14px 16px 16px;
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 16px 16px 14px;
+  z-index: 1;
 }
 
 h3 {
-  margin: 0 0 4px;
-  font-size: 16px;
-  font-weight: 700;
-  color: var(--app-text);
+  margin: 8px 0 4px;
+  font-family: var(--app-font-serif);
+  font-size: 21px;
+  font-weight: 500;
+  line-height: 1.2;
+  color: #fff;
 }
 
 .region {
   margin: 0 0 10px;
   font-size: 12.5px;
-  color: var(--app-text-dim);
+  color: rgba(238, 240, 231, 0.78);
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 5px;
 
-  ion-icon { font-size: 13px; }
-}
-
-.trail-meta {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 12.5px;
-  color: var(--app-text-dim);
-  margin-bottom: 14px;
-
-  .difficulty {
-    padding: 2px 9px;
-    border-radius: 10px;
-    font-weight: 600;
-    font-size: 11.5px;
-
-    &.easy { background: rgba(95,217,122,0.18); color: #5FD97A; }
-    &.moderate { background: rgba(255,169,77,0.18); color: #ffa94d; }
-    &.hard { background: rgba(255,91,91,0.18); color: #ff5b5b; }
-  }
-
-  .dot { opacity: 0.5; }
+  ion-icon { font-size: 13px; flex-shrink: 0; }
 }
 
 .trail-footer {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 10px;
+}
 
-  .elevation {
-    font-size: 12px;
-    color: var(--app-text-dim);
+.trail-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  font-size: 12.5px;
+  color: rgba(238, 240, 231, 0.88);
+
+  .meta {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    white-space: nowrap;
+
+    ion-icon { font-size: 14px; color: rgba(238, 240, 231, 0.7); }
+    .star { color: var(--app-star); }
+  }
+
+  .sep {
+    width: 1px;
+    height: 12px;
+    background: rgba(255, 255, 255, 0.22);
   }
 }
 
 .details-btn {
-  --background: var(--app-green);
-  --background-activated: var(--app-green-dark);
-  --color: #08110a;
-  --border-radius: 18px;
-  --padding-start: 16px;
-  --padding-end: 16px;
-  height: 32px;
-  font-size: 11.5px;
-  font-weight: 700;
-  letter-spacing: 0.4px;
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(14, 20, 17, 0.5);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  ion-icon { font-size: 17px; color: #fff; }
 }
