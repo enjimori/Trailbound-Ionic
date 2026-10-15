@@ -4,15 +4,31 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import {
   IonContent, IonHeader, IonToolbar, IonButtons, IonButton, IonIcon, IonInput,
-  ToastController,
+  IonPopover, IonDatetime, ToastController,
 } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
-import { arrowBackOutline, eyeOutline, eyeOffOutline, leaf } from 'ionicons/icons';
+import { arrowBackOutline, calendarOutline, eyeOutline, eyeOffOutline, leaf } from 'ionicons/icons';
 import { UserService } from '../../services/user.service';
 import {
   emailValidator, fieldError, matchValidator, minAgeValidator, nameValidator,
   passwordValidator, phoneValidator,
 } from '../../validators/form.validators';
+
+/**
+ * PH mobile numbers have 11 digits when they start with 0 (0917 123 4567)
+ * or 12 digits when they start with 63 (+63 917 123 4567). Extra digits are
+ * cut off as they are typed or pasted; spaces and the + sign are kept.
+ */
+function capPhoneDigits(value: string): string {
+  const digits = value.replace(/\D/g, '');
+  const max = digits.startsWith('0') ? 11 : 12;
+  if (digits.length <= max) return value;
+  let count = 0;
+  for (let i = 0; i < value.length; i++) {
+    if (/\d/.test(value[i]) && ++count > max) return value.slice(0, i).trimEnd();
+  }
+  return value;
+}
 
 const LABELS: Record<string, string> = {
   name: 'Full name',
@@ -31,7 +47,7 @@ const LABELS: Record<string, string> = {
   styleUrls: ['./signup.page.scss'],
   imports: [
     CommonModule, ReactiveFormsModule, IonContent, IonHeader, IonToolbar,
-    IonButtons, IonButton, IonIcon, IonInput,
+    IonButtons, IonButton, IonIcon, IonInput, IonPopover, IonDatetime,
   ],
 })
 export class SignupPage {
@@ -60,7 +76,7 @@ export class SignupPage {
   );
 
   constructor() {
-    addIcons({ arrowBackOutline, eyeOutline, eyeOffOutline, leaf });
+    addIcons({ arrowBackOutline, calendarOutline, eyeOutline, eyeOffOutline, leaf });
   }
 
   err(name: string): string | null {
@@ -81,6 +97,41 @@ export class SignupPage {
       letter: /[A-Za-z]/.test(v),
       number: /\d/.test(v),
     };
+  }
+
+  /** Keeps the phone number to 11 digits (09…) or 12 digits (+63…). */
+  limitPhone(ev: Event) {
+    const el = ev.target as HTMLIonInputElement;
+    const value = String(el.value ?? '');
+    const capped = capPhoneDigits(value);
+    if (capped !== value) {
+      el.value = capped;
+      this.form.controls.phone.setValue(capped);
+    }
+  }
+
+  /**
+   * Birthday picked in the calendar. Saved as "YYYY-MM-DD" — the same format
+   * the old date input used — so the age check and sign-up data are unchanged.
+   */
+  setDob(ev: Event) {
+    const value = (ev as CustomEvent<{ value?: string | string[] | null }>).detail.value;
+    if (typeof value !== 'string') return;
+    const c = this.form.controls.dob;
+    c.setValue(value.split('T')[0]);
+    c.markAsDirty();
+    c.markAsTouched();
+  }
+
+  /**
+   * Closes the calendar once a day is tapped. Changing the month or year
+   * keeps it open, so the user can finish choosing.
+   */
+  closeOnDayTap(ev: Event, popover: IonPopover) {
+    const tappedDay = ev.composedPath().some(
+      (el) => el instanceof HTMLButtonElement && el.classList.contains('calendar-day'),
+    );
+    if (tappedDay) setTimeout(() => popover.dismiss(), 150);
   }
 
   setGender(g: string) {

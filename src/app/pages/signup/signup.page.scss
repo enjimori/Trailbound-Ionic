@@ -63,6 +63,12 @@
   font-size: 11px;
   color: var(--app-text-dim);
   margin: 0 4px;
+
+  // Required-field asterisk
+  .req {
+    color: var(--ion-color-danger);
+    margin-left: 2px;
+  }
 }
 
 .login-input {
@@ -78,6 +84,41 @@
   color: var(--app-text-dim);
   font-size: 20px;
   cursor: pointer;
+}
+
+// ---------- Date of birth picker ----------
+
+.dob-field {
+  cursor: pointer;
+}
+
+.dob-popover {
+  --width: 350px;
+  --max-width: calc(100vw - 32px);
+  --background: var(--app-card-bg);
+  --box-shadow: 0 12px 32px rgba(0, 0, 0, 0.55);
+
+  &::part(content) {
+    border-radius: 18px;
+    border: 1px solid var(--app-border);
+  }
+}
+
+.dob-picker {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  // Green accent: arrows, month/year chevron, today and the selected day
+  --ion-color-primary: var(--app-green);
+  --ion-color-primary-rgb: 74, 222, 128;
+  --ion-color-primary-contrast: #08110a;
+  --background: var(--app-card-bg);
+  --background-rgb: 26, 32, 26;
+  --title-color: var(--app-text);
+  --wheel-highlight-background: rgba(74, 222, 128, 0.12);
+  --wheel-highlight-border-radius: 10px;
+  --wheel-fade-background-rgb: 26, 32, 26;
+  color: var(--app-text);
 }
 
 .chips {

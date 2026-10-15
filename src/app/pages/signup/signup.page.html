@@ -22,31 +22,66 @@
       <p class="group-label">Personal Information</p>
 
       <div class="field-group">
-        <label class="lbl">Full Name</label>
+        <label class="lbl">Full Name<span class="req" aria-hidden="true">*</span></label>
         <ion-input formControlName="name" autocomplete="name" placeholder="Full name" class="login-input" fill="outline"></ion-input>
         <p class="err" *ngIf="err('name') as msg">{{ msg }}</p>
       </div>
 
       <div class="field-group">
-        <label class="lbl">Email Address</label>
+        <label class="lbl">Email Address<span class="req" aria-hidden="true">*</span></label>
         <ion-input formControlName="email" type="email" inputmode="email" autocomplete="email" placeholder="you@example.com" class="login-input" fill="outline"></ion-input>
         <p class="err" *ngIf="err('email') as msg">{{ msg }}</p>
       </div>
 
       <div class="field-group">
-        <label class="lbl">Phone Number</label>
-        <ion-input formControlName="phone" type="tel" autocomplete="tel" placeholder="+63 900 000 0000" class="login-input" fill="outline"></ion-input>
+        <label class="lbl">Phone Number<span class="req" aria-hidden="true">*</span></label>
+        <ion-input formControlName="phone" type="tel" autocomplete="tel" placeholder="+63 900 000 0000" class="login-input" fill="outline" (ionInput)="limitPhone($event)"></ion-input>
         <p class="err" *ngIf="err('phone') as msg">{{ msg }}</p>
       </div>
 
       <div class="field-group">
-        <label class="lbl">Date of Birth</label>
-        <ion-input formControlName="dob" type="date" [max]="today" class="login-input" fill="outline"></ion-input>
+        <label class="lbl">Date of Birth<span class="req" aria-hidden="true">*</span></label>
+        <!-- Tapping the field opens the calendar picker below -->
+        <ion-input
+          id="dob-trigger"
+          readonly
+          class="login-input dob-field"
+          fill="outline"
+          placeholder="Select your birthday"
+          [value]="form.controls.dob.value ? (form.controls.dob.value | date: 'MMMM d, y') : ''"
+          [class.ion-touched]="form.controls.dob.touched"
+          [class.ion-invalid]="form.controls.dob.invalid"
+        >
+          <ion-icon slot="end" class="eye" name="calendar-outline"></ion-icon>
+        </ion-input>
+        <ion-popover
+          #dobPopover
+          trigger="dob-trigger"
+          class="dob-popover"
+          side="bottom"
+          alignment="center"
+          [arrow]="false"
+          (didDismiss)="form.controls.dob.markAsTouched()"
+        >
+          <ng-template>
+            <ion-datetime
+              class="dob-picker"
+              mode="ios"
+              presentation="date"
+              locale="en-US"
+              [firstDayOfWeek]="1"
+              [max]="today"
+              [value]="form.controls.dob.value || null"
+              (ionChange)="setDob($event)"
+              (click)="closeOnDayTap($event, dobPopover)"
+            ></ion-datetime>
+          </ng-template>
+        </ion-popover>
         <p class="err" *ngIf="err('dob') as msg">{{ msg }}</p>
       </div>
 
       <div class="field-group">
-        <label class="lbl">Gender</label>
+        <label class="lbl">Gender<span class="req" aria-hidden="true">*</span></label>
         <div class="chips">
           <button
             type="button"
@@ -62,7 +97,7 @@
       <p class="group-label">Security</p>
 
       <div class="field-group">
-        <label class="lbl">Password</label>
+        <label class="lbl">Password<span class="req" aria-hidden="true">*</span></label>
         <ion-input formControlName="password" [type]="showPw ? 'text' : 'password'" autocomplete="new-password" placeholder="Create a password" class="login-input" fill="outline">
           <ion-icon slot="end" class="eye" [name]="showPw ? 'eye-off-outline' : 'eye-outline'" (click)="showPw = !showPw"></ion-icon>
         </ion-input>
@@ -75,7 +110,7 @@
       </div>
 
       <div class="field-group">
-        <label class="lbl">Confirm Password</label>
+        <label class="lbl">Confirm Password<span class="req" aria-hidden="true">*</span></label>
         <ion-input formControlName="confirmPassword" [type]="showPw2 ? 'text' : 'password'" autocomplete="new-password" placeholder="Re-enter password" class="login-input" fill="outline">
           <ion-icon slot="end" class="eye" [name]="showPw2 ? 'eye-off-outline' : 'eye-outline'" (click)="showPw2 = !showPw2"></ion-icon>
         </ion-input>
