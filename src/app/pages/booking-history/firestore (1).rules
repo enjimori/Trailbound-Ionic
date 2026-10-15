@@ -1,0 +1,81 @@
+rules_version = '2';
+
+// ═══════════════════════════════════════════════════════════════════════════
+// TRAILBOUND — FIRESTORE RULES, LOGIN-ONLY STAGE
+//
+// Just enough to let admin sign-in work, and nothing else. The bigger rules
+// file (bookings, trails, reviews, certificates, merch, packages,
+// subscriptions, audit log) replaces this one as those modules get built.
+//
+// WHY DEPLOY ANYTHING NOW?
+// The console's default "test mode" makes the whole database readable AND
+// writable by anyone on the internet for 30 days. For a project with real
+// names in it, that is worth 60 seconds of work to avoid.
+//
+// Deploy:
+//     firebase deploy --only firestore:rules
+//
+// Or paste into: Firebase console -> Firestore Database -> Rules -> Publish.
+//
+// ── ORDER MATTERS ─────────────────────────────────────────────────────────
+// isAdmin() reads a user document, so that document must exist first:
+//   1. Authentication -> Sign-in method -> enable Email/Password.
+//   2. Authentication -> Users -> Add user. Copy the generated UID.
+//   3. Firestore -> start collection `users`, document ID = that UID, with
+//      fields: name (string), email (string), role (string) = admin,
+//      status (string) = active.
+//   4. Then publish these rules.
+// Publishing before step 3 locks you out of your own database.
+// ═══════════════════════════════════════════════════════════════════════════
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isSelf(userId) {
+      return signedIn() && request.auth.uid == userId;
+    }
+
+    function myDoc() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    // An admin is a signed-in user whose own user document says so. The flag
+    // lives in Firestore rather than a custom auth claim because this project
+    // has no backend to mint claims from.
+    function isAdmin() {
+      return signedIn()
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        && myDoc().role == 'admin'
+        && myDoc().status == 'active';
+    }
+
+    match /users/{userId} {
+      // A user reads their own document; an admin reads anyone's. This single
+      // line is what makes admin login work: the app reads users/{uid} to
+      // check the role, and that read is a self-read.
+      allow read: if isSelf(userId) || isAdmin();
+
+      // A hiker may create their own record at sign-up but cannot hand
+      // themselves a role. Without this clause, anyone could register and
+      // write role:'admin' into their own document.
+      allow create: if isSelf(userId)
+        && request.resource.data.role == 'hiker'
+        && request.resource.data.status == 'active';
+
+      // Self-edits may not change role or status. Only an admin can.
+      allow update: if isAdmin()
+        || (isSelf(userId)
+            && request.resource.data.role == resource.data.role
+            && request.resource.data.status == resource.data.status);
+
+      allow delete: if isAdmin();
+    }
+
+    // Everything else stays closed until its module is built. Silence here is
+    // a locked door, not an open one — adding a collection means adding a rule.
+  }
+}

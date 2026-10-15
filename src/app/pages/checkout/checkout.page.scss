@@ -187,6 +187,12 @@ ion-title {
   font-size: 12px;
   font-weight: 500;
   color: var(--co-dim);
+
+  /* Required-field asterisk */
+  .req {
+    margin-left: 2px;
+    color: var(--ion-color-danger);
+  }
 }
 
 .co-input {
@@ -207,6 +213,150 @@ ion-title {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 12px;
+}
+
+/* ── QRPh / Apple Pay / Maya demo panels ────────────────────────────────── */
+
+.co-alt {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 14px;
+  padding: 18px 16px;
+  border-radius: 16px;
+  border: 1px solid var(--co-border);
+  background: var(--co-card);
+  text-align: center;
+}
+
+.co-alt-icon {
+  font-size: 30px;
+  color: var(--co-green);
+  margin-bottom: 8px;
+}
+
+.co-qr {
+  width: 172px;
+  height: 172px;
+  margin-bottom: 14px;
+  padding: 12px;
+  border-radius: 14px;
+  background: #ffffff;
+
+  svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+    shape-rendering: crispEdges;
+  }
+
+  path { fill: #111611; }
+}
+
+.co-alt-title {
+  margin: 0 0 4px;
+  font-family: var(--app-font-serif);
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--co-text);
+}
+
+.co-alt-text {
+  margin: 0;
+  max-width: 280px;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--co-dim);
+}
+
+/* QRPh proof of payment */
+
+.co-file { display: none; }
+
+.co-upload {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  margin-bottom: 14px;
+  padding: 20px 16px;
+  border-radius: 14px;
+  border: 1.5px dashed var(--co-border-strong);
+  background: var(--co-card);
+  color: var(--co-text);
+
+  ion-icon {
+    font-size: 26px;
+    margin-bottom: 4px;
+    color: var(--co-green);
+  }
+
+  .t { font-size: 13px; font-weight: 500; }
+  .s { font-size: 11.5px; color: var(--co-dim); }
+}
+
+.co-proof {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+  padding: 10px;
+  border-radius: 14px;
+  border: 1px solid var(--co-border);
+  background: var(--co-card);
+
+  img {
+    width: 52px;
+    height: 52px;
+    flex-shrink: 0;
+    border-radius: 10px;
+    object-fit: cover;
+    background: var(--co-inner);
+  }
+}
+
+.co-proof-meta {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+
+  .n {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    font-size: 13px;
+    color: var(--co-text);
+  }
+
+  .s {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11.5px;
+    color: var(--co-green);
+
+    ion-icon { font-size: 13px; }
+  }
+}
+
+.co-proof-remove {
+  flex-shrink: 0;
+  width: 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  border: 1px solid var(--co-border-strong);
+  background: transparent;
+
+  ion-icon {
+    font-size: 18px;
+    color: var(--co-text);
+  }
 }
 
 /* ── Demo notice ────────────────────────────────────────────────────────── */

@@ -62,6 +62,19 @@ export const routes: Routes = [
       import('./pages/booking-confirmed/booking-confirmed.page').then((m) => m.BookingConfirmedPage),
   },
 
+  // ── Admin ───────────────────────────────────────────────────────────────
+  // Staff area, guarded by its own adminGuard (not authGuard — a signed-in
+  // hiker is not an admin). Lazy-loaded, so none of this code ships to a
+  // hiker who never opens /admin.
+  //
+  // MUST stay above the '**' route below. Angular matches top to bottom, so
+  // a wildcard placed before this one would swallow /admin and redirect it
+  // to the home tab.
+  {
+    path: 'admin',
+    loadChildren: () => import('./pages/admin/admin.routes').then((m) => m.ADMIN_ROUTES),
+  },
+
   { path: '', redirectTo: 'tabs/home', pathMatch: 'full' },
   { path: '**', redirectTo: 'tabs/home' },
 ];

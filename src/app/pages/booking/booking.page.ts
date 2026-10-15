@@ -9,13 +9,15 @@ import {
   arrowBackOutline, arrowForward, locationOutline, checkmarkCircle, add, remove,
   leafOutline, waterOutline, trailSignOutline, keyOutline, magnetOutline,
   pricetagOutline, shieldOutline, cafeOutline, personCircleOutline, calendarOutline,
+  languageOutline,
 } from 'ionicons/icons';
 
 
 import { Trail } from '../../models/trail.model';
 import { BookingDraft, PackageId } from '../../models/booking.model';
 import { BookingService } from '../../services/booking.service';
-import { ACTIVITIES, GUIDES, MERCH, PACKAGES } from './booking-catalog';
+import { ACTIVITIES, GUIDES, MERCH, PACKAGES, packageById } from './booking-catalog';
+import { GUIDE_PROFILES, GuideProfile, guidePhotoPath, merchPhotoPath } from './guide-profiles';
 
 
 // Same lookup the Home page and the detail page use, so any of the 30 trails
@@ -28,6 +30,7 @@ addIcons({
   arrowBackOutline, arrowForward, locationOutline, checkmarkCircle, add, remove,
   leafOutline, waterOutline, trailSignOutline, keyOutline, magnetOutline,
   pricetagOutline, shieldOutline, cafeOutline, personCircleOutline, calendarOutline,
+  languageOutline,
 });
 
 
@@ -65,6 +68,26 @@ export class BookingPage implements OnInit {
   readonly guides = GUIDES;
   readonly merchItems = MERCH;
   readonly isClosed = isClosed;
+
+
+  /**
+   * Add-ons can only be picked when the package includes an activity
+   * (Day Hike + Activity, Overnight Hike, Group Hike).
+   */
+  addonsAllowed = computed(() => packageById(this.packageId()).includedActivities > 0);
+
+
+  /** "Day Hike + Activity, Overnight Hike or Group Hike" — for the add-ons hint. */
+  readonly activityPackageNames = (() => {
+    const names = PACKAGES.filter(p => p.includedActivities > 0).map(p => p.name);
+    return names.length > 1
+      ? `${names.slice(0, -1).join(', ')} or ${names[names.length - 1]}`
+      : names.join('');
+  })();
+
+
+  /** Guide and merchandise photos that failed to load (not added yet). */
+  brokenImages = signal<ReadonlySet<string>>(new Set());
 
 
   /**
@@ -157,6 +180,8 @@ export class BookingPage implements OnInit {
 
   selectPackage(id: PackageId) {
     this.packageId.set(id);
+    // Switching to a package without an activity drops any add-ons picked.
+    if (!this.addonsAllowed()) this.activityIds.set([]);
   }
 
 
@@ -164,6 +189,7 @@ export class BookingPage implements OnInit {
 
 
   toggleActivity(id: string) {
+    if (!this.addonsAllowed()) return;
     this.activityIds.update(list =>
       list.includes(id) ? list.filter(a => a !== id) : [...list, id],
     );
@@ -184,9 +210,32 @@ export class BookingPage implements OnInit {
   // ── guide ───────────────────────────────────────────────────────────────
 
 
+  /** A guide is required, so tapping the chosen guide again keeps them chosen. */
   selectGuide(id: string) {
-    // Tapping the selected guide again clears it, back to "no preference".
-    this.guideId.update(current => (current === id ? null : id));
+    this.guideId.set(id);
+  }
+
+
+  guideProfile(name: string): GuideProfile | undefined {
+    return GUIDE_PROFILES[name];
+  }
+
+
+  guidePhoto(name: string): string {
+    return guidePhotoPath(name);
+  }
+
+
+  // ── photos ──────────────────────────────────────────────────────────────
+
+
+  merchPhoto(id: string): string {
+    return merchPhotoPath(id);
+  }
+
+
+  markBroken(src: string) {
+    this.brokenImages.update(set => new Set(set).add(src));
   }
 
 
@@ -234,6 +283,10 @@ export class BookingPage implements OnInit {
     }
     if (!d.date) {
       this.toast('Pick a date first');
+      return;
+    }
+    if (!d.guideId) {
+      this.toast('Choose your expert guide');
       return;
     }
 

@@ -29,7 +29,7 @@
   <div class="bk-body">
 
     <!-- ── Date ────────────────────────────────────────────────────────── -->
-    <p class="bk-title">Select Date</p>
+    <p class="bk-title">Select Date<span class="req" aria-hidden="true">*</span></p>
 
     <button type="button" id="bk-date-field" class="bk-date-field">
       <span [class.placeholder]="!date()">{{ displayDate() }}</span>
@@ -55,7 +55,7 @@
     </ion-modal>
 
     <!-- ── Package ─────────────────────────────────────────────────────── -->
-    <p class="bk-title">Hiking package</p>
+    <p class="bk-title">Hiking package<span class="req" aria-hidden="true">*</span></p>
 
     <button
       class="bk-pack"
@@ -75,11 +75,17 @@
     <!-- ── Activities ──────────────────────────────────────────────────── -->
     <p class="bk-title">Add-ons</p>
 
-    <div class="bk-acts">
+    <p class="bk-hint tight" *ngIf="!addonsAllowed()">
+      Your package doesn't include an activity, so add-ons are unavailable.
+      Choose {{ activityPackageNames }} to add one.
+    </p>
+
+    <div class="bk-acts" [class.locked]="!addonsAllowed()">
       <button
         class="bk-act"
         *ngFor="let a of activities"
         [class.active]="isActivityOn(a.id)"
+        [disabled]="!addonsAllowed()"
         (click)="toggleActivity(a.id)"
       >
         <span class="bk-act-icon"><ion-icon [name]="a.icon"></ion-icon></span>
@@ -98,30 +104,57 @@
 
     <!-- ── Guide ───────────────────────────────────────────────────────── -->
     <div class="bk-section-head">
-      <p class="bk-title">Expert guide</p>
-      <span class="bk-caption">Optional</span>
+      <p class="bk-title">Expert guide<span class="req" aria-hidden="true">*</span></p>
     </div>
 
-    <button
-      class="bk-guide"
-      *ngFor="let g of guides"
-      [class.active]="g.id === guideId()"
-      (click)="selectGuide(g.id)"
-    >
-      <!-- An initial in a circle. No stock photos of people who never agreed
-           to front a hiking app. -->
-      <span class="bk-guide-avatar">{{ g.name.charAt(0) }}</span>
-      <span class="bk-guide-meta">
-        <span class="n">{{ g.name }}</span>
-        <span class="s">{{ g.years }} yrs experience · {{ g.summits }}+ summits</span>
-      </span>
-      <span class="bk-radio" [class.on]="g.id === guideId()"></span>
-    </button>
+    <div class="bk-guides">
+      <button
+        type="button"
+        class="bk-guide"
+        *ngFor="let g of guides"
+        [class.active]="g.id === guideId()"
+        [attr.aria-pressed]="g.id === guideId()"
+        (click)="selectGuide(g.id)"
+      >
+        <span class="bk-guide-top">
+          <!-- Photo from src/assets/guides/ — the initial shows until one is added -->
+          <span class="bk-guide-photo">
+            <img
+              *ngIf="!brokenImages().has(guidePhoto(g.name)); else guideInitial"
+              [src]="guidePhoto(g.name)"
+              [alt]="'Photo of ' + g.name"
+              loading="lazy"
+              (error)="markBroken(guidePhoto(g.name))"
+            />
+            <ng-template #guideInitial>
+              <span class="bk-guide-initial">{{ g.name.charAt(0) }}</span>
+            </ng-template>
+          </span>
 
-    <p class="bk-hint">
-      Leave this blank for no preference — your package already includes a guide,
-      and one will be assigned.
-    </p>
+          <span class="bk-guide-meta">
+            <span class="n">{{ g.name }}</span>
+            <span class="s">{{ guideProfile(g.name)?.title ?? 'Mountain guide' }}</span>
+            <span class="bk-guide-stats">
+              <span><strong>{{ g.years }}</strong> yrs exp.</span>
+              <span><strong>{{ g.summits }}+</strong> summits</span>
+            </span>
+          </span>
+
+          <span class="bk-radio" [class.on]="g.id === guideId()"></span>
+        </span>
+
+        <ng-container *ngIf="guideProfile(g.name) as gp">
+          <span class="bk-guide-bio">{{ gp.bio }}</span>
+          <span class="bk-guide-tags">
+            <span class="tag" *ngFor="let s of gp.specialties">{{ s }}</span>
+          </span>
+          <span class="bk-guide-lang">
+            <ion-icon name="language-outline"></ion-icon>
+            {{ gp.languages.join(' · ') }}
+          </span>
+        </ng-container>
+      </button>
+    </div>
 
     <!-- ── Merchandise ─────────────────────────────────────────────────── -->
     <div class="bk-section-head">
@@ -130,28 +163,41 @@
     </div>
     <p class="bk-hint tight">Designs are location-specific and provided by guides.</p>
 
-    <div class="bk-merch" *ngFor="let m of merchItems">
-      <ion-icon [name]="m.icon"></ion-icon>
-      <span class="bk-merch-meta">
-        <span class="n">{{ m.name }}</span>
-        <span class="p">₱{{ m.price | number }}</span>
-      </span>
+    <div class="bk-merch-grid">
+      <div class="bk-merch" *ngFor="let m of merchItems" [class.picked]="merchQty(m.id) > 0">
+        <!-- Photo from src/assets/merch/ — the icon shows until one is added -->
+        <span class="bk-merch-photo">
+          <img
+            *ngIf="!brokenImages().has(merchPhoto(m.id)); else merchIcon"
+            [src]="merchPhoto(m.id)"
+            [alt]="m.name"
+            loading="lazy"
+            (error)="markBroken(merchPhoto(m.id))"
+          />
+          <ng-template #merchIcon><ion-icon [name]="m.icon"></ion-icon></ng-template>
+        </span>
 
-      <span class="bk-stepper">
-        <button
-          class="step"
-          [disabled]="merchQty(m.id) === 0"
-          (click)="removeMerch(m.id)"
-          [attr.aria-label]="'Remove one ' + m.name"
-        >
-          <ion-icon name="remove"></ion-icon>
-        </button>
-        <span class="qty">{{ merchQty(m.id) }}</span>
-        <button class="step add" (click)="addMerch(m.id)"
-          [attr.aria-label]="'Add one ' + m.name">
-          <ion-icon name="add"></ion-icon>
-        </button>
-      </span>
+        <span class="bk-merch-meta">
+          <span class="n">{{ m.name }}</span>
+          <span class="p">₱{{ m.price | number }}</span>
+        </span>
+
+        <span class="bk-stepper">
+          <button
+            class="step"
+            [disabled]="merchQty(m.id) === 0"
+            (click)="removeMerch(m.id)"
+            [attr.aria-label]="'Remove one ' + m.name"
+          >
+            <ion-icon name="remove"></ion-icon>
+          </button>
+          <span class="qty">{{ merchQty(m.id) }}</span>
+          <button class="step add" (click)="addMerch(m.id)"
+            [attr.aria-label]="'Add one ' + m.name">
+            <ion-icon name="add"></ion-icon>
+          </button>
+        </span>
+      </div>
     </div>
 
     <!-- ── Running total ───────────────────────────────────────────────── -->

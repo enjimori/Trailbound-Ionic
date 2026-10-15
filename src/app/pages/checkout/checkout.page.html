@@ -82,44 +82,124 @@
 
     <!-- ── Card form ───────────────────────────────────────────────────── -->
     <ng-container *ngIf="method() === 'card'">
-      <label class="co-label">Card number</label>
+      <label class="co-label">Card number<span class="req" aria-hidden="true">*</span></label>
       <ion-input
         class="co-input"
         inputmode="numeric"
         placeholder="0000 0000 0000 0000"
+        maxlength="19"
         [value]="cardNumber"
         (ionInput)="onCardNumber($event)"
       ></ion-input>
 
       <div class="co-split">
         <div>
-          <label class="co-label">Expiry date</label>
+          <label class="co-label">Expiry date<span class="req" aria-hidden="true">*</span></label>
           <ion-input
             class="co-input"
             inputmode="numeric"
             placeholder="MM/YY"
+            maxlength="5"
             [value]="expiry"
             (ionInput)="onExpiry($event)"
           ></ion-input>
         </div>
         <div>
-          <label class="co-label">CVV</label>
+          <label class="co-label">CVV<span class="req" aria-hidden="true">*</span></label>
           <ion-input
             class="co-input"
             type="password"
             inputmode="numeric"
             placeholder="123"
+            maxlength="3"
             [value]="cvv"
             (ionInput)="onCvv($event)"
           ></ion-input>
         </div>
       </div>
 
-      <label class="co-label">Cardholder name</label>
+      <label class="co-label">Cardholder name<span class="req" aria-hidden="true">*</span></label>
       <ion-input
         class="co-input"
         placeholder="Name on card"
         [(ngModel)]="cardName"
+      ></ion-input>
+    </ng-container>
+
+    <!-- ── QRPh (demo) ─────────────────────────────────────────────────── -->
+    <ng-container *ngIf="method() === 'qrph'">
+      <div class="co-alt">
+        <div class="co-qr">
+          <svg viewBox="0 0 25 25" role="img" aria-label="Sample QR code for the demo. It cannot be scanned.">
+            <path [attr.d]="qrPath" />
+          </svg>
+        </div>
+        <p class="co-alt-title">Scan to pay ₱{{ q.total | number }}</p>
+        <p class="co-alt-text">
+          Open any bank or e-wallet app that supports QRPh, scan the code and
+          pay. Then upload a screenshot of your receipt below and tap Pay.
+        </p>
+      </div>
+
+      <label class="co-label" for="qrph-proof">Proof of payment<span class="req" aria-hidden="true">*</span></label>
+      <input
+        #proofInput
+        id="qrph-proof"
+        class="co-file"
+        type="file"
+        accept="image/*"
+        (change)="onProof($event)"
+      />
+
+      <button type="button" class="co-upload" *ngIf="!proof()" (click)="proofInput.click()">
+        <ion-icon name="cloud-upload-outline"></ion-icon>
+        <span class="t">Upload a screenshot of your payment</span>
+        <span class="s">Image only (JPG or PNG), up to 5 MB</span>
+      </button>
+
+      <div class="co-proof" *ngIf="proof() as pf">
+        <img [src]="pf.url" alt="Proof of payment preview" />
+        <div class="co-proof-meta">
+          <span class="n">{{ pf.name }}</span>
+          <span class="s"><ion-icon name="checkmark-circle"></ion-icon> Uploaded · {{ pf.size }}</span>
+        </div>
+        <button type="button" class="co-proof-remove" aria-label="Remove proof of payment" (click)="removeProof()">
+          <ion-icon name="close-outline"></ion-icon>
+        </button>
+      </div>
+    </ng-container>
+
+    <!-- ── Apple Pay (demo) ────────────────────────────────────────────── -->
+    <ng-container *ngIf="method() === 'apple'">
+      <div class="co-alt">
+        <ion-icon class="co-alt-icon" name="logo-apple"></ion-icon>
+        <p class="co-alt-title">Pay with Apple Pay</p>
+        <p class="co-alt-text">
+          Tap Pay below, then confirm with Face ID or Touch ID on your device.
+        </p>
+      </div>
+    </ng-container>
+
+    <!-- ── Maya (demo) ─────────────────────────────────────────────────── -->
+    <ng-container *ngIf="method() === 'maya'">
+      <div class="co-alt">
+        <ion-icon class="co-alt-icon" name="wallet-outline"></ion-icon>
+        <p class="co-alt-title">Pay with Maya</p>
+        <p class="co-alt-text">
+          Enter the mobile number linked to your Maya account. You will approve
+          the payment in the Maya app.
+        </p>
+      </div>
+
+      <label class="co-label">Maya mobile number<span class="req" aria-hidden="true">*</span></label>
+      <ion-input
+        class="co-input"
+        type="tel"
+        inputmode="numeric"
+        placeholder="0917 123 4567"
+        maxlength="13"
+        [value]="mayaNumber"
+        (ionInput)="onMayaNumber($event)"
       ></ion-input>
     </ng-container>
 
