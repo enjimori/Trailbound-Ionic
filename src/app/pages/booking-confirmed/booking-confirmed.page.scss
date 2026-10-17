@@ -188,6 +188,14 @@
   ion-icon { flex-shrink: 0; font-size: 15px; margin-top: 1px; }
 }
 
+:host-context(html[data-theme='light']) .bc-reminder {
+  background: #fff8e7;
+  border-color: #d8b75d;
+  color: #59451a;
+
+  ion-icon { color: #765710; }
+}
+
 /* ── Actions ────────────────────────────────────────────────────────────── */
 
 .bc-home {

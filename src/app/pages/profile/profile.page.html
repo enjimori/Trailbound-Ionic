@@ -11,6 +11,23 @@
 </ion-header>
 
 <ion-content [fullscreen]="true">
+  <ng-template #themeSetting>
+    <div class="account-item theme-item">
+      <span class="ai-icon">
+        <ion-icon [name]="themeService.isLight() ? 'sunny-outline' : 'moon-outline'"></ion-icon>
+      </span>
+      <span class="theme-label">
+        Light mode
+        <small>Applies across TrailBound</small>
+      </span>
+      <ion-toggle
+        [checked]="themeService.isLight()"
+        (ionChange)="setLightMode($event.detail.checked)"
+        aria-label="Use light mode across TrailBound"
+      ></ion-toggle>
+    </div>
+  </ng-template>
+
   <!-- Wait until we know whether someone is signed in -->
   <ng-container *ngIf="authReady()">
 
@@ -107,6 +124,7 @@
         <span>Help Center</span>
         <ion-icon name="chevron-forward-outline" class="chevron"></ion-icon>
       </div>
+      <ng-container *ngTemplateOutlet="themeSetting"></ng-container>
     </div>
 
     <button class="signout-btn" (click)="confirmSignOut()">
@@ -136,6 +154,13 @@
           <span>New to TrailBound?</span>
           <button type="button" class="link-btn" (click)="goSignUp()">Sign Up</button>
         </div>
+      </div>
+
+      <div class="section-header appearance-header">
+        <span class="section-title">Appearance</span>
+      </div>
+      <div class="account-list">
+        <ng-container *ngTemplateOutlet="themeSetting"></ng-container>
       </div>
     </div>
   </ng-template>

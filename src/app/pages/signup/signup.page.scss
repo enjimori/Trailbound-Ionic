@@ -36,7 +36,7 @@
     font-family: var(--app-font-serif);
     font-size: 16px;
     font-style: italic;
-    color: rgba(238, 240, 231, 0.82);
+    color: var(--app-text-soft);
   }
 }
 
@@ -113,16 +113,12 @@
   width: 100%;
   min-width: 0;
   max-width: 100%;
-  // Green accent: arrows, month/year chevron, today and the selected day
-  --ion-color-primary: var(--app-green);
-  --ion-color-primary-rgb: 74, 222, 128;
-  --ion-color-primary-contrast: #08110a;
   --background: var(--app-card-bg);
-  --background-rgb: 26, 32, 26;
+  --background-rgb: var(--app-card-bg-rgb);
   --title-color: var(--app-text);
-  --wheel-highlight-background: rgba(74, 222, 128, 0.12);
+  --wheel-highlight-background: var(--app-accent-soft);
   --wheel-highlight-border-radius: 10px;
-  --wheel-fade-background-rgb: 26, 32, 26;
+  --wheel-fade-background-rgb: var(--app-card-bg-rgb);
   color: var(--app-text);
 }
 

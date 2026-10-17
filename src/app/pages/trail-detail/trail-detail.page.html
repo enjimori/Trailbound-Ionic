@@ -1,25 +1,9 @@
 <ion-content [fullscreen]="true" *ngIf="trail() as t">
 
   <!-- ── Hero ──────────────────────────────────────────────────────────────
-       Photo with back + save over the top, and the trail's headline facts
-       laid over the bottom fade. -->
+       Photo with the trail's headline facts laid over the bottom fade. -->
   <div class="hero" [style.backgroundImage]="'url(' + t.image + ')'">
     <div class="hero-gradient"></div>
-
-    <div class="hero-top">
-      <button class="glass-btn" (click)="goBack()" aria-label="Go back">
-        <ion-icon name="arrow-back-outline"></ion-icon>
-      </button>
-
-      <button
-        class="glass-btn save-btn"
-        [class.on]="saved()"
-        (click)="toggleSave()"
-        [attr.aria-label]="saved() ? 'Remove from planner' : 'Add to planner'"
-      >
-        <ion-icon [name]="saved() ? 'heart' : 'heart-outline'"></ion-icon>
-      </button>
-    </div>
 
     <div class="hero-body">
       <span class="diff-badge" [ngClass]="t.difficulty.toLowerCase()">{{ t.difficulty }}</span>
@@ -190,9 +174,22 @@
     be a DIRECT child of ion-content for that slot to work.
   -->
   <div class="action-bar" slot="fixed">
+    <button class="glass-btn" (click)="goBack()" aria-label="Go back">
+      <ion-icon name="arrow-back-outline"></ion-icon>
+    </button>
+
     <button class="cta-pill act-book" (click)="bookNow()">
       Book This Hike
       <ion-icon name="chevron-forward-outline"></ion-icon>
+    </button>
+
+    <button
+      class="glass-btn save-btn"
+      [class.on]="saved()"
+      (click)="toggleSave()"
+      [attr.aria-label]="saved() ? 'Remove from planner' : 'Add to planner'"
+    >
+      <ion-icon [name]="saved() ? 'heart' : 'heart-outline'"></ion-icon>
     </button>
   </div>
 </ion-content>

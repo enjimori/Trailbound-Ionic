@@ -158,26 +158,26 @@ button {
   ion-icon { font-size: 17px; color: var(--app-accent); }
 }
 
-/* Round translucent icon button that sits over photos. */
+/* Round translucent icon button that sits over photos or map content. */
 .glass-btn {
   width: 44px;
   height: 44px;
-  border: 1px solid rgba(255, 255, 255, 0.16);
+  border: 1px solid var(--app-glass-border);
   border-radius: 14px;
-  background: rgba(14, 20, 17, 0.45);
+  background: var(--app-glass-bg);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
-  color: #fff;
+  color: var(--app-glass-text);
   display: flex;
   align-items: center;
   justify-content: center;
 
-  ion-icon { font-size: 20px; color: #fff; }
+  ion-icon { font-size: 20px; color: var(--app-glass-text); }
 }
 
-/* ── Searchbar: one rounded field, dark glass ────────────────────────────── */
+/* ── Searchbar: one rounded field ────────────────────────────────────────── */
 ion-searchbar.tb-search {
-  --background: rgba(24, 36, 31, 0.86);
+  --background: var(--app-input-bg);
   --border-radius: 18px;
   --box-shadow: none;
   --placeholder-color: var(--app-text-dim);
@@ -438,4 +438,3 @@ app-trail-weather {
   app-trail-weather .tw .tw-day.tw-day .s.s { display: none; }
   app-trail-weather .tw .tw-day.tw-day .n.n { flex: 1; }
 }
-

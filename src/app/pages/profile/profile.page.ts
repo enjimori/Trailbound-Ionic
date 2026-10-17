@@ -3,12 +3,13 @@ import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import {
   IonContent, IonHeader, IonToolbar, IonTitle, IonIcon, IonButtons, IonButton,
-  AlertController, ToastController,
+  IonToggle, AlertController, ToastController,
 } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
-import { person } from 'ionicons/icons';
+import { moonOutline, person, sunnyOutline } from 'ionicons/icons';
 import { UserService } from '../../services/user.service';
 import { NotificationService } from '../../services/notification.service';
+import { ThemeService } from '../../services/theme.service';
 import { UpcomingAdventure } from '../../models/user.model';
 
 @Component({
@@ -18,7 +19,7 @@ import { UpcomingAdventure } from '../../models/user.model';
   styleUrls: ['./profile.page.scss'],
   imports: [
     CommonModule, IonContent, IonHeader, IonToolbar, IonTitle, IonIcon,
-    IonButtons, IonButton,
+    IonButtons, IonButton, IonToggle,
   ],
 })
 export class ProfilePage {
@@ -36,13 +37,18 @@ export class ProfilePage {
   constructor(
     public userService: UserService,
     public notificationService: NotificationService,
+    public themeService: ThemeService,
     private router: Router,
     private alertCtrl: AlertController,
     private toastCtrl: ToastController,
   ) {
     // Silhouette for the default avatar (guests, or users without a photo)
-    addIcons({ person });
+    addIcons({ person, moonOutline, sunnyOutline });
     this.userService.ready.then(() => this.authReady.set(true));
+  }
+
+  setLightMode(enabled: boolean): void {
+    this.themeService.setLightMode(enabled);
   }
 
   goLogin() {

@@ -179,6 +179,35 @@ ion-title {
   }
 }
 
+:host-context(html[data-theme='light']) .co-method.active {
+  border: 2px solid #536d42;
+  padding: 15px 9px;
+  background: linear-gradient(145deg, #e5eee0 0%, #f5f8f2 100%);
+  box-shadow: 0 4px 14px rgba(53, 82, 44, 0.18);
+  color: #354c2f;
+  font-weight: 600;
+
+  &::after {
+    content: '✓';
+    position: absolute;
+    top: 7px;
+    right: 8px;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #536d42;
+    color: #ffffff;
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 18px;
+    text-align: center;
+  }
+
+  ion-icon {
+    color: #536d42;
+  }
+}
+
 /* ── Card form ──────────────────────────────────────────────────────────── */
 
 .co-label {
@@ -382,6 +411,18 @@ ion-title {
   strong { color: #f3e2b4; }
 }
 
+:host-context(html[data-theme='light']) .co-demo {
+  background: #fff8e7;
+  border-color: #d8b75d;
+  color: #59451a;
+  box-shadow: 0 3px 10px rgba(91, 68, 17, 0.08);
+
+  ion-icon,
+  strong {
+    color: #765710;
+  }
+}
+
 .co-spacer { height: 116px; }
 
 /* ── Sticky pay bar ─────────────────────────────────────────────────────── */
@@ -396,7 +437,7 @@ ion-title {
   align-items: center;
   gap: 10px;
   padding: 12px 18px calc(12px + env(safe-area-inset-bottom));
-  background: rgba(13, 21, 18, 0.95);
+  background: var(--app-bg);
   border-top: 1px solid var(--co-border);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);

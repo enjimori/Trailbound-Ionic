@@ -1,15 +1,16 @@
 /* ═══════════════════════════════════════════════════════════════════════════
    TRAILBOUND THEME — "evening ridge"
 
-   Near-black forest greens, a warm cream accent, serif headings over a clean
-   sans body. Every page reads its colours from the tokens below, so a change
-   here restyles the whole app.
+   Forest greens, warm cream accents, serif headings over a clean sans body.
+   Theme-aware surfaces are shared by every page through the tokens below.
 
    The --app-green name is kept (half the pages reference it) but it now holds
    the cream accent rather than a bright green.
    ═════════════════════════════════════════════════════════════════════════ */
 
 :root {
+  color-scheme: dark;
+
   /* ── Type ── */
   --app-font-serif: 'Lora', Georgia, 'Times New Roman', serif;
   --app-font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -17,17 +18,38 @@
 
   /* ── Surfaces ── */
   --app-bg: #0b1210;
+  --app-bg-rgb: 11, 18, 16;
   --app-bg-raised: #0f1815;
   --app-card-bg: #131d19;
+  --app-card-bg-rgb: 19, 29, 25;
+  --app-input-bg: rgba(24, 36, 31, 0.86);
+  --app-home-search-bg: rgba(19, 29, 25, 0.82);
   --app-card-bg-2: #18241f;
   --app-card-hi: #1e2c26;
   --app-border: rgba(222, 232, 206, 0.09);
   --app-border-strong: rgba(222, 232, 206, 0.16);
+  --app-glass-bg: rgba(14, 20, 17, 0.45);
+  --app-glass-border: rgba(255, 255, 255, 0.16);
+  --app-glass-text: #ffffff;
+  --app-overlay-shadow: 0 10px 24px rgba(0, 0, 0, 0.35);
+  --app-raised-shadow: 0 6px 16px rgba(0, 0, 0, 0.35);
+  --app-action-bar-gradient: linear-gradient(
+    180deg,
+    rgba(11, 18, 16, 0) 0%,
+    rgba(11, 18, 16, 0.92) 30%,
+    var(--app-bg) 100%
+  );
+  --app-map-scrim: linear-gradient(
+    rgba(11, 18, 16, 0.55),
+    transparent 22% 70%,
+    rgba(11, 18, 16, 0.6)
+  );
 
   /* ── Text ── */
   --app-text: #eef0e7;
   --app-text-dim: #97a299;
   --app-text-faint: #6c776f;
+  --app-text-soft: rgba(238, 240, 231, 0.82);
 
   /* ── Accent ── */
   --app-accent: #e8d99c;              /* links, active tab, active chip */
@@ -55,11 +77,55 @@
   --app-radius-lg: 24px;
 }
 
+html[data-theme='light'] {
+  color-scheme: light;
+
+  --app-bg: #f4f6f2;
+  --app-bg-rgb: 244, 246, 242;
+  --app-bg-raised: #ffffff;
+  --app-card-bg: #ffffff;
+  --app-card-bg-rgb: 255, 255, 255;
+  --app-input-bg: #ffffff;
+  --app-home-search-bg: #ffffff;
+  --app-card-bg-2: #edf1eb;
+  --app-card-hi: #e2e9e0;
+  --app-border: rgba(31, 47, 36, 0.1);
+  --app-border-strong: rgba(31, 47, 36, 0.17);
+  --app-glass-bg: rgba(255, 255, 255, 0.94);
+  --app-glass-border: rgba(31, 47, 36, 0.13);
+  --app-glass-text: #26352b;
+  --app-overlay-shadow: 0 8px 22px rgba(31, 47, 36, 0.14);
+  --app-raised-shadow: 0 5px 14px rgba(31, 47, 36, 0.16);
+  --app-action-bar-gradient: linear-gradient(
+    180deg,
+    rgba(244, 246, 242, 0) 0%,
+    rgba(244, 246, 242, 0.94) 32%,
+    var(--app-bg) 100%
+  );
+  --app-map-scrim: linear-gradient(
+    rgba(11, 18, 16, 0.22),
+    transparent 22% 70%,
+    rgba(11, 18, 16, 0.25)
+  );
+
+  --app-text: #202a23;
+  --app-text-dim: #5f6c62;
+  --app-text-faint: #7a867d;
+  --app-text-soft: rgba(32, 42, 35, 0.82);
+
+  --app-accent: #536d42;
+  --app-accent-soft: rgba(83, 109, 66, 0.12);
+  --app-green: #60794b;
+  --app-green-dark: #4f673d;
+  --app-on-accent: #ffffff;
+  --app-cta: linear-gradient(180deg, #718b59 0%, #536d42 100%);
+  --app-cta-shadow: 0 8px 22px rgba(55, 77, 45, 0.18);
+}
+
 /* ── Ionic palette ──────────────────────────────────────────────────────────
-   Ionic's dark palette (imported in global.scss, which loads AFTER this file)
-   sets these same variables on :root and :root.ios / :root.md. The selectors
-   below are one step more specific, so the app's colours win — this is what
-   stops Ionic's default blue from leaking into back arrows and toggles. */
+   Ionic's palette (imported in global.scss, which loads AFTER this file) sets
+   these variables on :root and :root.ios / :root.md. The selectors below are
+   more specific so the app theme wins. */
 html:root,
 html.ios:root,
 html.md:root {
@@ -113,11 +179,61 @@ html.md:root {
   --ion-placeholder-color: #97a299;
 }
 
+html[data-theme='light']:root,
+html.ios[data-theme='light']:root,
+html.md[data-theme='light']:root {
+  --ion-color-primary: #536d42;
+  --ion-color-primary-rgb: 83, 109, 66;
+  --ion-color-primary-contrast: #ffffff;
+  --ion-color-primary-contrast-rgb: 255, 255, 255;
+  --ion-color-primary-shade: #496039;
+  --ion-color-primary-tint: #648057;
+
+  --ion-color-secondary: #e2e9e0;
+  --ion-color-success: #397a4d;
+  --ion-color-success-rgb: 57, 122, 77;
+  --ion-color-success-contrast: #ffffff;
+  --ion-color-success-contrast-rgb: 255, 255, 255;
+  --ion-color-success-shade: #326b44;
+  --ion-color-success-tint: #4d8960;
+
+  --ion-color-danger: #c83f48;
+  --ion-color-danger-rgb: 200, 63, 72;
+  --ion-color-danger-contrast: #ffffff;
+  --ion-color-danger-contrast-rgb: 255, 255, 255;
+  --ion-color-danger-shade: #b0373f;
+  --ion-color-danger-tint: #ce535b;
+
+  --ion-color-dark: #26352b;
+  --ion-color-dark-rgb: 38, 53, 43;
+  --ion-color-dark-contrast: #ffffff;
+  --ion-color-dark-contrast-rgb: 255, 255, 255;
+  --ion-color-dark-shade: #212e26;
+  --ion-color-dark-tint: #3b493f;
+
+  --ion-color-medium: #68776d;
+  --ion-color-medium-rgb: 104, 119, 109;
+  --ion-background-color: #f4f6f2;
+  --ion-background-color-rgb: 244, 246, 242;
+  --ion-text-color: #202a23;
+  --ion-text-color-rgb: 32, 42, 35;
+  --ion-toolbar-background: #f4f6f2;
+  --ion-item-background: transparent;
+  --ion-card-background: #ffffff;
+  --ion-tab-bar-background: #ffffff;
+  --ion-tab-bar-color: #748077;
+  --ion-tab-bar-color-selected: #536d42;
+  --ion-toolbar-color: #202a23;
+  --ion-toolbar-border-color: rgba(31, 47, 36, 0.1);
+  --ion-border-color: rgba(31, 47, 36, 0.1);
+  --ion-placeholder-color: #68776d;
+}
+
 html.ios:root ion-modal,
 html.md:root ion-modal {
-  --ion-background-color: #0f1815;
-  --ion-toolbar-background: #0f1815;
-  --ion-toolbar-border-color: rgba(222, 232, 206, 0.09);
+  --ion-background-color: var(--app-bg-raised);
+  --ion-toolbar-background: var(--app-bg-raised);
+  --ion-toolbar-border-color: var(--app-border);
 }
 
 /* ── Tab bar ─────────────────────────────────────────────────────────────── */

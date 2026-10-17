@@ -52,7 +52,7 @@
     font-family: var(--app-font-serif);
     font-size: 16px;
     font-style: italic;
-    color: rgba(238, 240, 231, 0.82);
+    color: var(--app-text-soft);
   }
 }
 
@@ -63,7 +63,7 @@
 }
 
 .login-input {
-  --background: rgba(19, 29, 25, 0.9);
+  --background: var(--app-card-bg);
   --color: var(--app-text);
   --placeholder-color: var(--app-text-dim);
   --placeholder-opacity: 1;

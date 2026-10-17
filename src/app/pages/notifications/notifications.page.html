@@ -27,11 +27,13 @@
       <div class="notif-body">
         <div class="notif-title-row">
           <span class="notif-title">{{ n.title }}</span>
-          <span class="notif-time">{{ n.time }}</span>
+          <div class="notif-meta">
+            <span class="notif-time">{{ n.time }}</span>
+            <span class="unread-dot" *ngIf="!n.read" aria-label="Unread"></span>
+          </div>
         </div>
         <p class="notif-message">{{ n.message }}</p>
       </div>
-      <span class="unread-dot" *ngIf="!n.read"></span>
     </div>
 
     <div class="bottom-spacer"></div>

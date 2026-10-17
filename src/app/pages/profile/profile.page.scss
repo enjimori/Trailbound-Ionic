@@ -110,7 +110,7 @@ ion-title {
   margin: 12px 0 0;
   font-size: 13.5px;
   line-height: 1.55;
-  color: rgba(238, 240, 231, 0.82);
+  color: var(--app-text-soft);
 }
 
 .add-prompt {
@@ -285,6 +285,37 @@ ion-title {
   }
 }
 
+.theme-item {
+  cursor: default;
+
+  &:active { background: transparent; }
+
+  .theme-label {
+    flex: 1;
+    font-size: 14px;
+    color: var(--app-text);
+
+    small {
+      display: block;
+      margin-top: 3px;
+      font-size: 11.5px;
+      color: var(--app-text-dim);
+    }
+  }
+
+  ion-toggle {
+    flex-shrink: 0;
+    --track-background: var(--app-card-hi);
+    --track-background-checked: var(--app-accent);
+    --handle-background: var(--app-bg-raised);
+    --handle-background-checked: #ffffff;
+  }
+}
+
+.appearance-header {
+  margin-top: 24px;
+}
+
 .signout-btn {
   display: flex;
   align-items: center;
@@ -293,10 +324,10 @@ ion-title {
   width: 100%;
   min-height: 50px;
   margin-top: 18px;
-  border: 1px solid rgba(240, 80, 90, 0.3);
+  border: 1px solid rgba(200, 63, 72, 0.3);
   border-radius: 999px;
-  background: rgba(240, 80, 90, 0.08);
-  color: #ff8a91;
+  background: rgba(200, 63, 72, 0.08);
+  color: var(--ion-color-danger);
   font-size: 14px;
   font-weight: 500;
 

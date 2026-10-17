@@ -136,7 +136,8 @@
   position: relative;
 
   ion-searchbar.tb-search {
-    --background: rgba(19, 29, 25, 0.82);
+    --background: var(--app-home-search-bg);
+    --box-shadow: none;
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
     padding-right: 0;
@@ -144,6 +145,15 @@
     /* Room for the filter button inside the field. */
     ::ng-deep .searchbar-input { padding-inline-end: 54px !important; }
   }
+}
+
+:host-context(html[data-theme='light']) .home-content .search-shell ion-searchbar.tb-search {
+  --color: var(--app-text);
+  --placeholder-color: var(--app-text-dim);
+  --icon-color: var(--app-accent);
+  --clear-button-color: var(--app-text-dim);
+  --border-radius: 16px;
+  --box-shadow: 0 8px 22px rgba(31, 47, 36, 0.16);
 }
 
 .filter-btn {
@@ -167,6 +177,11 @@
     background: var(--app-accent);
     ion-icon { color: var(--app-on-accent); }
   }
+}
+
+:host-context(html[data-theme='light']) .home-content .filter-btn:not(.open) {
+  background: var(--app-card-bg-2);
+  box-shadow: 0 2px 8px rgba(31, 47, 36, 0.1);
 }
 
 .filter-dot {

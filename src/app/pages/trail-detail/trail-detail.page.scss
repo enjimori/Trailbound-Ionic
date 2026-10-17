@@ -25,16 +25,6 @@
   );
 }
 
-.hero-top {
-  position: absolute;
-  top: calc(12px + env(safe-area-inset-top));
-  left: 18px;
-  right: 18px;
-  z-index: 2;
-  display: flex;
-  justify-content: space-between;
-}
-
 .save-btn.on {
   background: rgba(240, 80, 90, 0.22);
   border-color: rgba(240, 80, 90, 0.5);
@@ -119,7 +109,7 @@
 .description {
   font-size: 14px;
   line-height: 1.65;
-  color: rgba(238, 240, 231, 0.82);
+  color: var(--app-text-soft);
   margin: 0 0 18px;
 }
 
@@ -207,7 +197,7 @@
     margin-bottom: 9px;
     font-size: 13.5px;
     line-height: 1.6;
-    color: rgba(238, 240, 231, 0.82);
+    color: var(--app-text-soft);
 
     &::before {
       content: '';
@@ -225,7 +215,7 @@
 .story-text {
   font-size: 14px;
   line-height: 1.75;
-  color: rgba(238, 240, 231, 0.82);
+  color: var(--app-text-soft);
   white-space: pre-line;
   margin: 0;
 }
@@ -420,7 +410,7 @@
   .review-text {
     font-size: 13px;
     line-height: 1.55;
-    color: rgba(238, 240, 231, 0.8);
+    color: var(--app-text-soft);
     margin: 0;
     padding-right: 36px;
   }
@@ -450,10 +440,15 @@
   left: 0;
   right: 0;
   padding: 14px 20px calc(14px + env(safe-area-inset-bottom));
-  background: linear-gradient(180deg, rgba(11, 18, 16, 0) 0%, rgba(11, 18, 16, 0.92) 30%, var(--app-bg) 100%);
+  background: var(--app-action-bar-gradient);
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
 .act-book {
+  flex: 1;
+  min-width: 0;
   min-height: 56px;
   font-size: 15.5px;
 }
