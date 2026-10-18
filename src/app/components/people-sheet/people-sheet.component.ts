@@ -6,12 +6,32 @@ import {
   IonSpinner, IonToolbar, ToastController,
 } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
-import { chevronBack, closeCircle, person, peopleOutline, searchOutline } from 'ionicons/icons';
+import {
+  chevronBack, chevronForwardOutline, closeCircle, locationOutline, person, peopleOutline,
+  searchOutline, star,
+} from 'ionicons/icons';
 import { FollowService, PersonSummary } from '../../services/follow.service';
 import { PostService } from '../../services/post.service';
 import { fuzzyFilter } from '../../services/fuzzy.util';
 
 type ListTab = 'following' | 'followers';
+type ProfileTab = 'posts' | 'trails';
+
+/** One trail in someone's trail log, built from their trail-tagged posts. */
+interface TrailLogEntry {
+  id: string;
+  name: string;
+  /** Posts they've written about this trail. */
+  count: number;
+  /** Average of the ratings they gave this trail (1 decimal), if any post has one. */
+  rating?: number;
+  /** Running totals behind the average. */
+  ratingSum: number;
+  ratingCount: number;
+  /** When their latest post about it was written. */
+  timeAgo: string;
+  at: number;
+}
 
 /**
  * Bottom sheet with two screens:
@@ -56,6 +76,8 @@ export class PeopleSheetComponent {
   readonly directory = signal<PersonSummary[]>([]);
   readonly loading = signal(false);
   readonly loadFailed = signal(false);
+  /** Which list the profile shows under the counts. */
+  readonly profileTab = signal<ProfileTab>('posts');
   readonly counts = signal<{ followers: number; following: number } | null>(null);
 
   private readonly byUid = computed(() => new Map(this.directory().map((p) => [p.uid, p])));
@@ -95,17 +117,55 @@ export class PeopleSheetComponent {
     return this.postService.posts().filter((p) => p.authorUid === uid && !p.isRepost).slice(0, 5);
   });
 
+  /**
+   * Trails this person has posted about (one row per trail, newest first).
+   * Built from the posts the feed has loaded, so it covers their recent activity.
+   */
+  readonly personTrails = computed<TrailLogEntry[]>(() => {
+    const uid = this.selectedUid();
+    if (!uid) return [];
+    const byTrail = new Map<string, TrailLogEntry>();
+    for (const p of this.postService.posts()) {
+      if (p.authorUid !== uid || p.isRepost || !p.trailId) continue;
+      const at = p.createdAt?.getTime() ?? 0;
+      const cur = byTrail.get(p.trailId);
+      if (!cur) {
+        byTrail.set(p.trailId, {
+          id: p.trailId, name: p.trailName || 'Trail', count: 1,
+          ratingSum: p.rating ?? 0, ratingCount: p.rating ? 1 : 0,
+          timeAgo: p.timeAgo, at,
+        });
+      } else {
+        cur.count++;
+        if (p.rating) { cur.ratingSum += p.rating; cur.ratingCount++; }
+        if (at > cur.at) Object.assign(cur, { timeAgo: p.timeAgo, at });
+      }
+    }
+    return [...byTrail.values()]
+      .map((t) => ({
+        ...t,
+        // Posts without a rating are left out of the average.
+        rating: t.ratingCount ? Math.round((t.ratingSum / t.ratingCount) * 10) / 10 : undefined,
+      }))
+      .sort((a, b) => b.at - a.at)
+      .slice(0, 8);
+  });
+
   readonly isMe = computed(() => !!this.selectedUid() && this.selectedUid() === this.follows.myUid());
   readonly signedIn = computed(() => !!this.follows.myUid());
 
   constructor() {
-    addIcons({ chevronBack, closeCircle, person, peopleOutline, searchOutline });
+    addIcons({
+      chevronBack, chevronForwardOutline, closeCircle, locationOutline, person, peopleOutline,
+      searchOutline, star,
+    });
 
     // Fetch the counts whenever a profile is shown.
     effect(() => {
       const uid = this.selectedUid();
       untracked(() => {
         this.counts.set(null);
+        this.profileTab.set('posts');
         if (uid) this.follows.countsFor(uid).then((c) => {
           if (this.selectedUid() === uid) this.counts.set(c);
         });
@@ -147,6 +207,16 @@ export class PeopleSheetComponent {
     this.tab.set(ev.detail.value as ListTab);
   }
 
+  onProfileTab(ev: CustomEvent) {
+    this.profileTab.set(ev.detail.value as ProfileTab);
+  }
+
+  /** A trail in the log was tapped: close the sheet and open its page. */
+  openTrail(id: string) {
+    this.closed.emit();
+    this.router.navigate(['/trail', id]);
+  }
+
   openPerson(p: PersonSummary) {
     if (this.pick) {
       this.picked.emit(p);
@@ -182,6 +252,7 @@ export class PeopleSheetComponent {
 
   trackByUid = (_: number, p: PersonSummary) => p.uid;
   trackById = (_: number, item: { id: string }) => item.id;
+  trackByTrail = (_: number, t: TrailLogEntry) => t.id;
 
   private async toast(message: string, error = false) {
     const t = await this.toastCtrl.create({

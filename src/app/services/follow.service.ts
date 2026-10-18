@@ -25,6 +25,8 @@ export interface PersonSummary {
   name: string;
   /** Small photo data URL, or '' for the default avatar. */
   avatar: string;
+  /** Short bio from their public profile, or '' if they haven't written one. */
+  bio?: string;
 }
 
 /** Profiles loaded for search. Beyond this, swap to a server-side search. */
@@ -124,8 +126,13 @@ export class FollowService {
     this.directoryLoad = getDocs(query(collection(db, 'profiles'), limit(DIRECTORY_MAX)))
       .then((snap) => {
         this.directory = snap.docs.map((d) => {
-          const data = d.data() as { name?: string; avatar?: string };
-          return { uid: d.id, name: (data.name || 'Trail Hiker').trim(), avatar: data.avatar || '' };
+          const data = d.data() as { name?: string; avatar?: string; bio?: string };
+          return {
+            uid: d.id,
+            name: (data.name || 'Trail Hiker').trim(),
+            avatar: data.avatar || '',
+            bio: (data.bio || '').trim(),
+          };
         });
         return this.directory;
       })

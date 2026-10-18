@@ -135,6 +135,7 @@
           <ng-template #profNoAvatar><span class="avatar xl default"><ion-icon name="person"></ion-icon></span></ng-template>
 
           <h2>{{ p.name }}</h2>
+          <p class="bio" *ngIf="p.bio">{{ p.bio }}</p>
 
           <div class="counts">
             <div><strong>{{ counts()?.followers ?? '–' }}</strong><span>Followers</span></div>
@@ -154,8 +155,12 @@
           </button>
           <p class="you" *ngIf="isMe()">This is how others see you.</p>
 
-          <section class="posts">
-            <h3>Recent posts</h3>
+          <ion-segment [value]="profileTab()" (ionChange)="onProfileTab($event)" class="segment profile-tabs">
+            <ion-segment-button value="posts"><ion-label>Recent posts</ion-label></ion-segment-button>
+            <ion-segment-button value="trails"><ion-label>Trail log</ion-label></ion-segment-button>
+          </ion-segment>
+
+          <section class="posts" *ngIf="profileTab() === 'posts'">
             <ul *ngIf="personPosts().length; else noPosts">
               <li *ngFor="let post of personPosts(); trackBy: trackById">
                 <p>{{ post.content || 'Shared a photo' }}</p>
@@ -163,6 +168,23 @@
               </li>
             </ul>
             <ng-template #noPosts><p class="muted">No recent posts.</p></ng-template>
+          </section>
+
+          <section class="posts" *ngIf="profileTab() === 'trails'">
+            <ul *ngIf="personTrails().length; else noTrails">
+              <li *ngFor="let t of personTrails(); trackBy: trackByTrail">
+                <button class="trail-row" (click)="openTrail(t.id)">
+                  <ion-icon name="location-outline" class="pin"></ion-icon>
+                  <span class="trail-main">
+                    <span class="trail-name">{{ t.name }}</span>
+                    <span class="trail-sub">{{ t.timeAgo }}<ng-container *ngIf="t.count > 1"> · {{ t.count }} posts</ng-container></span>
+                  </span>
+                  <span class="rate" *ngIf="t.rating"><ion-icon name="star"></ion-icon>{{ t.rating }}</span>
+                  <ion-icon name="chevron-forward-outline" class="go"></ion-icon>
+                </button>
+              </li>
+            </ul>
+            <ng-template #noTrails><p class="muted">No trails tagged in recent posts.</p></ng-template>
           </section>
         </ng-container>
         <ng-template #profileLoading>

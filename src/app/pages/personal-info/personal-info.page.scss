@@ -146,3 +146,7 @@
     text-align: right;
   }
 }
+
+// View mode: gender picker can't be opened, and the avatar isn't tappable.
+ion-select.view-only { pointer-events: none; }
+.avatar-wrap:not(.editable) { cursor: default; }

@@ -5,6 +5,8 @@ import {
   IonContent, IonHeader, IonToolbar, IonTitle, IonIcon, IonButtons, IonButton,
   IonItem, IonInput, IonLabel, IonSelect, IonSelectOption, IonTextarea, ToastController,
 } from '@ionic/angular/standalone';
+import { addIcons } from 'ionicons';
+import { pencilOutline } from 'ionicons/icons';
 import { UserService } from '../../services/user.service';
 import {
   fieldError, minAgeValidator, nameValidator, phoneValidator,
@@ -36,6 +38,8 @@ export class PersonalInfoPage implements OnInit {
   form!: FormGroup;
   avatarPreview = '';
   saving = false;
+  /** False = read-only view. The pencil in the header switches this on. */
+  editing = false;
   today = new Date().toISOString().split('T')[0];
 
   constructor(
@@ -43,7 +47,9 @@ export class PersonalInfoPage implements OnInit {
     public userService: UserService,
     private location: Location,
     private toastCtrl: ToastController,
-  ) {}
+  ) {
+    addIcons({ pencilOutline });
+  }
 
   ngOnInit() {
     const p = this.userService.profile();
@@ -62,11 +68,43 @@ export class PersonalInfoPage implements OnInit {
     });
   }
 
+  /** In edit mode, back discards the changes and returns to the read-only view. */
   goBack() {
+    if (this.editing) {
+      this.cancelEdit();
+      return;
+    }
     this.location.back();
   }
 
+  startEdit() {
+    this.editing = true;
+  }
+
+  private cancelEdit() {
+    const p = this.userService.profile();
+    this.form.reset({
+      name: p.name,
+      email: p.email,
+      phone: p.phone,
+      dob: p.dob,
+      gender: p.gender,
+      location: p.location,
+      bio: p.bio,
+      emergencyContactName: p.emergencyContactName,
+      emergencyContactPhone: p.emergencyContactPhone,
+    });
+    this.avatarPreview = p.avatar;
+    this.editing = false;
+  }
+
+  /** Empty fields read "Not set" in view mode and show the hint while editing. */
+  ph(hint: string): string {
+    return this.editing ? hint : 'Not set';
+  }
+
   triggerFileInput() {
+    if (!this.editing) return;
     (document.getElementById('avatarFileInput') as HTMLInputElement | null)?.click();
   }
 
@@ -139,8 +177,16 @@ export class PersonalInfoPage implements OnInit {
         emergencyContactPhone: (v.emergencyContactPhone ?? '').trim(),
         avatar: this.avatarPreview,
       });
+      this.form.patchValue({
+        name: v.name.trim(),
+        phone: v.phone.trim(),
+        location: (v.location ?? '').trim(),
+        bio: (v.bio ?? '').trim(),
+        emergencyContactName: (v.emergencyContactName ?? '').trim(),
+        emergencyContactPhone: (v.emergencyContactPhone ?? '').trim(),
+      });
+      this.editing = false;
       await this.toast('Profile updated successfully!', 'success');
-      this.location.back();
     } catch (e) {
       console.error(e);
       await this.toast('Could not save changes. Please try again.', 'danger');

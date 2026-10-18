@@ -197,6 +197,16 @@ ion-content { --background: var(--app-bg); }
     color: var(--app-text);
     text-align: center;
   }
+  .bio {
+    margin: 8px 0 0;
+    max-width: 32ch;
+    font-size: 14px;
+    line-height: 1.45;
+    color: var(--app-text-dim);
+    text-align: center;
+    white-space: pre-line;
+    overflow-wrap: anywhere;
+  }
   .counts {
     display: flex;
     gap: 40px;
@@ -208,9 +218,11 @@ ion-content { --background: var(--app-bg); }
   .you { margin: 0; font-size: 13px; color: var(--app-text-dim); }
 }
 
+.profile-tabs { width: 100%; margin-top: 28px; }
+
 .posts {
   width: 100%;
-  margin-top: 32px;
+  margin-top: 12px;
   h3 {
     margin: 0 0 8px;
     font-size: 13px;
@@ -237,4 +249,40 @@ ion-content { --background: var(--app-bg); }
     span { font-size: 12.5px; color: var(--app-text-dim); }
   }
   .muted { margin: 0; font-size: 14px; color: var(--app-text-dim); }
+
+  // Trail log rows
+  .trail-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    padding: 0;
+    border: none;
+    background: none;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+
+    .pin { font-size: 20px; flex-shrink: 0; color: var(--app-accent); }
+    .trail-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+    .trail-name {
+      font-size: 15px;
+      font-weight: 500;
+      color: var(--app-text);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .trail-sub { font-size: 12.5px; color: var(--app-text-dim); }
+    .rate {
+      display: flex;
+      align-items: center;
+      gap: 3px;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--app-text);
+      ion-icon { font-size: 14px; color: var(--app-accent); }
+    }
+    .go { font-size: 16px; flex-shrink: 0; color: var(--app-text-dim); }
+  }
 }

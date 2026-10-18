@@ -1,12 +1,6 @@
 <ion-header class="ion-no-border">
   <ion-toolbar>
     <ion-title>Profile</ion-title>
-    <!-- Edit button only for signed-in users -->
-    <ion-buttons slot="end" *ngIf="signedInProfile()">
-      <ion-button (click)="goPersonalInfo()" class="edit-icon-btn" aria-label="Edit profile">
-        <ion-icon name="pencil-outline" slot="icon-only"></ion-icon>
-      </ion-button>
-    </ion-buttons>
   </ion-toolbar>
 </ion-header>
 
@@ -154,13 +148,6 @@
           <span>New to TrailBound?</span>
           <button type="button" class="link-btn" (click)="goSignUp()">Sign Up</button>
         </div>
-      </div>
-
-      <div class="section-header appearance-header">
-        <span class="section-title">Appearance</span>
-      </div>
-      <div class="account-list">
-        <ng-container *ngTemplateOutlet="themeSetting"></ng-container>
       </div>
     </div>
   </ng-template>

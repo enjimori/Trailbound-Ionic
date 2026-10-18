@@ -225,7 +225,12 @@ export class PostService {
   /** Name and photo the signed-in user posts with. */
   readonly me = computed(() => {
     const p = this.userService.profile();
-    return { name: (p.name || '').trim() || DEFAULT_NAME, avatar: p.avatar || '' };
+    return {
+      name: (p.name || '').trim() || DEFAULT_NAME,
+      avatar: p.avatar || '',
+      // Shown on your public profile when other hikers open it.
+      bio: (p.bio || '').trim().slice(0, 160),
+    };
   });
 
   // ── the feed, as the pages see it ───────────────────────────────────────
@@ -875,8 +880,8 @@ export class PostService {
   private checkedUid: string | null = null;
   private profileSync: Promise<void> = Promise.resolve();
 
-  private profileKey(me: { name: string; avatar: string }) {
-    return `${me.name}|${me.avatar.length}|${me.avatar.slice(-48)}`;
+  private profileKey(me: { name: string; avatar: string; bio?: string }) {
+    return `${me.name}|${me.avatar.length}|${me.avatar.slice(-48)}|${me.bio ?? ''}`;
   }
 
   private queueProfileSync(uid: string | null, me: { name: string; avatar: string }) {
@@ -912,6 +917,7 @@ export class PostService {
       await setDoc(doc(db, 'profiles', uid), {
         name: this.publicName(),
         avatar,
+        bio: me.bio,
         updatedAt: serverTimestamp(),
       });
       this.publishedKey = key;
