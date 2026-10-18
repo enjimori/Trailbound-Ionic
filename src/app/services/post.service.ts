@@ -1,23 +1,31 @@
 import { Injectable, computed, effect, inject, signal, untracked } from '@angular/core';
 import {
   DocumentData, FirestoreError, Timestamp, Unsubscribe,
-  addDoc, arrayRemove, arrayUnion, collection, deleteField, doc, getDoc, getDocs,
+  addDoc, arrayRemove, arrayUnion, collection, deleteDoc, deleteField, doc, getDoc, getDocs,
   increment, limit, onSnapshot, orderBy, query, serverTimestamp, setDoc, updateDoc,
   writeBatch,
 } from 'firebase/firestore';
 import { auth, db } from './firebase.client';
 import { UserService } from './user.service';
-import { Post, PostComment, PostDraft } from '../models/post.model';
+import { Post, PostComment, PostDraft, PostVersion } from '../models/post.model';
 import { makeAvatarThumb } from './photo.util';
+import { MentionRef, pruneMentions } from './mention.util';
 
 /**
  * ═══════════════════════════════════════════════════════════════════════════
  * POST SERVICE — the community feed, stored in Firestore
  *
- *   posts/{postId}                     one post (text, photos, likes)
+ *   posts/{postId}                     one post (text, photos, rating, votes)
+ *                                      A repost is also a post doc, with
+ *                                      repostOf = the original's id.
  *   posts/{postId}/comments/{id}       its comments
+ *   posts/{postId}/history/{id}        a previous version of the post, saved
+ *                                      each time its author edits it
  *   profiles/{uid}                     public name + small photo of anyone
  *                                      who has posted or commented
+ *
+ * A post can also carry guideUid / guideName: the person the author hiked
+ * with ("Guided by …"). Their name and photo are read live from profiles.
  *
  * Every post and comment records the uid of the account that wrote it, and
  * firestore.rules refuses a write whose uid isn't the signed-in user — so a
@@ -43,6 +51,15 @@ const POST_CHARS_MAX = 960_000;
 /** After this long without a server reply, stop the spinner — the write keeps going. */
 const WRITE_TIMEOUT_MS = 20_000;
 const DEFAULT_NAME = 'Trail Hiker';
+const MENTIONS_MAX = 10;
+
+/** Tidy a mention list before saving: valid entries only, still in the text, no repeats, capped. */
+function cleanMentions(text: string, list?: MentionRef[]): MentionRef[] {
+  const valid = (list ?? [])
+    .filter((m) => m && typeof m.uid === 'string' && m.uid && typeof m.name === 'string' && m.name)
+    .map((m) => ({ uid: m.uid, name: m.name.slice(0, 60) }));
+  return pruneMentions(text, valid).slice(0, MENTIONS_MAX);
+}
 
 interface PostDoc {
   authorUid: string;
@@ -51,16 +68,47 @@ interface PostDoc {
   images?: string[];
   trailId?: string;
   trailName?: string;
+  /** uids who upvoted. (Named likedBy because it started life as the like list.) */
   likedBy?: string[];
+  /** uids who downvoted. */
+  downvotedBy?: string[];
+  /** uids who reposted. */
+  repostedBy?: string[];
+  /** 1–5 stars for the tagged trail. */
+  rating?: number;
+  /** uid of the guide the author tagged, and their name as a fallback. */
+  guideUid?: string;
+  guideName?: string;
+  /** People tagged with @ in the text. */
+  mentions?: MentionRef[];
+  /** Set on a repost: the id of the post being reposted. */
+  repostOf?: string;
   commentCount?: number;
   createdAt?: Timestamp | null;
   editedAt?: Timestamp | null;
+}
+
+/** A past version of a post, written just before an edit replaces it. */
+interface HistoryDoc {
+  authorUid: string;
+  text?: string;
+  trailId?: string;
+  trailName?: string;
+  rating?: number;
+  imageCount?: number;
+  /** Only stored when the photos changed in the edit that replaced this version. */
+  images?: string[];
+  /** When this version became the live one. */
+  savedAt?: Timestamp | null;
+  /** When an edit replaced it. */
+  replacedAt?: Timestamp | null;
 }
 
 interface CommentDoc {
   authorUid: string;
   authorName?: string;
   text?: string;
+  mentions?: MentionRef[];
   createdAt?: Timestamp | null;
 }
 
@@ -79,7 +127,7 @@ export class CommunityError extends Error {
   }
 }
 
-function friendlyError(e: unknown, fallback: string): CommunityError {
+export function friendlyError(e: unknown, fallback: string): CommunityError {
   if (e instanceof CommunityError) return e;
   const code = (e as FirestoreError)?.code ?? '';
   console.error('[community]', e);
@@ -115,6 +163,18 @@ async function withTimeout(p: Promise<unknown>): Promise<WriteResult> {
   }
 }
 
+function sameList(a: string[], b: string[]): boolean {
+  return a.length === b.length && a.every((v, i) => v === b[i]);
+}
+
+/** "Oct 18, 2026, 3:42 PM" */
+function formatWhen(date: Date | null): string {
+  if (!date) return 'Just now';
+  return date.toLocaleString(undefined, {
+    month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit',
+  });
+}
+
 function toDate(ts: Timestamp | null | undefined): Date | null {
   return ts && typeof ts.toDate === 'function' ? ts.toDate() : null;
 }
@@ -142,6 +202,8 @@ export class PostService {
   // ── raw Firestore state ─────────────────────────────────────────────────
   private readonly _postDocs = signal<{ id: string; data: PostDoc }[]>([]);
   private readonly _profiles = signal<Record<string, PublicProfile>>({});
+  /** Posts that reposts point at but that aren't in the loaded feed. null = deleted. */
+  private readonly _originals = signal<Record<string, PostDoc | null>>({});
   /** Ticks every minute so "5m ago" keeps counting without new data. */
   private readonly _now = signal(Date.now());
   private readonly _pageSize = signal(PAGE_SIZE);
@@ -152,6 +214,7 @@ export class PostService {
 
   private feedUnsub?: Unsubscribe;
   private readonly profileUnsubs = new Map<string, Unsubscribe>();
+  private readonly originalUnsubs = new Map<string, Unsubscribe>();
 
   // ── who is signed in ────────────────────────────────────────────────────
   /** uid of the signed-in user, or null for guests. */
@@ -167,36 +230,40 @@ export class PostService {
 
   // ── the feed, as the pages see it ───────────────────────────────────────
   readonly posts = computed<Post[]>(() => {
-    const now = this._now();
-    const uid = this.myUid();
-    const me = this.me();
-    const profiles = this._profiles();
+    const ctx = this.buildContext();
+    const feed = this._postDocs();
+    const originals = this._originals();
+    const out: Post[] = [];
 
-    return this._postDocs().map(({ id, data }) => {
-      const mine = !!uid && data.authorUid === uid;
-      const profile = profiles[data.authorUid];
-      const likedBy = data.likedBy ?? [];
-      const createdAt = toDate(data.createdAt);
-      return {
-        id,
-        authorUid: data.authorUid,
-        // Your own posts use your live profile, so edits show immediately.
-        author: mine ? me.name : (profile?.name || data.authorName || DEFAULT_NAME),
-        avatar: mine ? me.avatar : (profile?.avatar || ''),
-        timeAgo: timeAgo(createdAt, now),
-        createdAt,
-        edited: !!data.editedAt,
-        content: data.text ?? '',
-        images: data.images ?? [],
-        trailId: data.trailId || undefined,
-        trailName: data.trailName || undefined,
-        likes: likedBy.length,
-        liked: !!uid && likedBy.includes(uid),
-        commentCount: Math.max(0, data.commentCount ?? 0),
-        isMine: mine,
-      };
-    });
+    for (const { id, data } of feed) {
+      if (!data.repostOf) {
+        out.push(this.buildPost(id, data, ctx));
+        continue;
+      }
+      // A repost: show the original inside it. undefined = still loading.
+      const origData = feed.find((p) => p.id === data.repostOf)?.data ?? originals[data.repostOf];
+      if (origData === undefined) continue;
+      const wrapper = this.buildPost(id, data, ctx);
+      wrapper.isRepost = true;
+      wrapper.original = origData ? this.buildPost(data.repostOf, origData, ctx) : null;
+      out.push(wrapper);
+    }
+    return out;
   });
+
+  /** Every post the screens can see, including originals inside reposts. */
+  private readonly byId = computed(() => {
+    const map = new Map<string, Post>();
+    for (const p of this.posts()) {
+      map.set(p.id, p);
+      if (p.original) map.set(p.original.id, p.original);
+    }
+    return map;
+  });
+
+  postById(id: string | null | undefined): Post | null {
+    return id ? this.byId().get(id) ?? null : null;
+  }
 
   // ── the open comment thread ─────────────────────────────────────────────
   private readonly _threadPostId = signal<string | null>(null);
@@ -213,7 +280,7 @@ export class PostService {
     const me = this.me();
     const profiles = this._profiles();
     const postId = this._threadPostId();
-    const postAuthor = this._postDocs().find((p) => p.id === postId)?.data.authorUid;
+    const postAuthor = this.docOf(postId)?.authorUid;
 
     return this._commentDocs().map(({ id, data }) => {
       const mine = !!uid && data.authorUid === uid;
@@ -225,12 +292,61 @@ export class PostService {
         author: mine ? me.name : (profile?.name || data.authorName || DEFAULT_NAME),
         avatar: mine ? me.avatar : (profile?.avatar || ''),
         text: data.text ?? '',
+        mentions: data.mentions?.length ? data.mentions : undefined,
         timeAgo: timeAgo(createdAt, now),
         createdAt,
         isMine: mine,
         isPostAuthor: !!postAuthor && data.authorUid === postAuthor,
       };
     });
+  });
+
+  // ── the open edit history ───────────────────────────────────────────────
+  private readonly _historyPostId = signal<string | null>(null);
+  private readonly _historyDocs = signal<{ id: string; data: HistoryDoc }[]>([]);
+  readonly historyLoading = signal(false);
+  readonly historyError = signal<string | null>(null);
+  private historyUnsub?: Unsubscribe;
+
+  readonly historyPostId = this._historyPostId.asReadonly();
+
+  /** Newest first: the current version, then each earlier one. */
+  readonly versions = computed<PostVersion[]>(() => {
+    const postId = this._historyPostId();
+    const post = this.postById(postId);
+    if (!post) return [];
+    const raw = this.docOf(postId);
+    const docs = this._historyDocs();
+
+    const out: PostVersion[] = [{
+      id: 'current',
+      isCurrent: true,
+      isOriginal: docs.length === 0,
+      text: post.content,
+      images: post.images,
+      trailName: post.trailName,
+      rating: post.rating,
+      whenLabel: formatWhen(toDate(raw?.editedAt) ?? post.createdAt),
+    }];
+
+    // Photos are only stored on a history entry when they changed, so an
+    // entry without them shows the same photos as the version that replaced it.
+    let newerImages = post.images;
+    docs.forEach(({ id, data }, i) => {
+      const images = data.images ?? newerImages;
+      out.push({
+        id,
+        isCurrent: false,
+        isOriginal: i === docs.length - 1,
+        text: data.text ?? '',
+        images,
+        trailName: data.trailName || undefined,
+        rating: data.rating || undefined,
+        whenLabel: formatWhen(toDate(data.savedAt)),
+      });
+      newerImages = images;
+    });
+    return out;
   });
 
   constructor() {
@@ -269,7 +385,11 @@ export class PostService {
         this.hasMore.set(snap.size >= size);
         this.loading.set(false);
         this.loadError.set(null);
-        docs.forEach((d) => this.watchProfile(d.data.authorUid));
+        docs.forEach((d) => {
+          this.watchProfile(d.data.authorUid);
+          this.watchProfile(d.data.guideUid);
+          if (d.data.repostOf) this.watchOriginal(d.data.repostOf);
+        });
       },
       (err) => {
         console.error('[community] feed listener failed', err);
@@ -291,6 +411,99 @@ export class PostService {
   loadMore() {
     this._pageSize.update((n) => n + PAGE_SIZE);
     this.listenToFeed();
+  }
+
+  /** Streams the post a repost points at (once per post). */
+  private watchOriginal(id: string) {
+    if (this.originalUnsubs.has(id)) return;
+    const unsub = onSnapshot(
+      doc(db, 'posts', id),
+      (snap) => {
+        const data = snap.exists()
+          ? (snap.data({ serverTimestamps: 'estimate' }) as PostDoc)
+          : null;
+        this._originals.update((all) => ({ ...all, [id]: data }));
+        if (data) {
+          this.watchProfile(data.authorUid);
+          this.watchProfile(data.guideUid);
+        }
+      },
+      () => {
+        this._originals.update((all) => ({ ...all, [id]: null }));
+        this.originalUnsubs.delete(id);
+      },
+    );
+    this.originalUnsubs.set(id, unsub);
+  }
+
+  /** The raw document for a post id: from the feed, else a watched original. */
+  private docOf(id: string | null | undefined): PostDoc | null | undefined {
+    if (!id) return undefined;
+    return this._postDocs().find((p) => p.id === id)?.data ?? this._originals()[id];
+  }
+
+  private buildContext() {
+    return {
+      now: this._now(),
+      uid: this.myUid(),
+      me: this.me(),
+      profiles: this._profiles(),
+    };
+  }
+
+  /** Turns one Firestore post document into what the screens render. */
+  private buildPost(id: string, data: PostDoc, ctx: ReturnType<PostService['buildContext']>): Post {
+    const { uid, me, profiles, now } = ctx;
+    const mine = !!uid && data.authorUid === uid;
+    const profile = profiles[data.authorUid];
+    const up = data.likedBy ?? [];
+    const down = data.downvotedBy ?? [];
+    const reposted = data.repostedBy ?? [];
+    const vote: 1 | -1 | 0 = uid && up.includes(uid) ? 1 : uid && down.includes(uid) ? -1 : 0;
+    const createdAt = toDate(data.createdAt);
+    const rating =
+      typeof data.rating === 'number' && data.rating >= 1 && data.rating <= 5
+        ? Math.round(data.rating)
+        : undefined;
+
+    const guideProfile = data.guideUid ? profiles[data.guideUid] : undefined;
+    const guide = data.guideUid
+      ? {
+          uid: data.guideUid,
+          name: data.guideUid === uid ? me.name : (guideProfile?.name || data.guideName || DEFAULT_NAME),
+          avatar: data.guideUid === uid ? me.avatar : (guideProfile?.avatar || ''),
+        }
+      : undefined;
+
+    return {
+      id,
+      authorUid: data.authorUid,
+      // Your own posts use your live profile, so edits show immediately.
+      author: mine ? me.name : (profile?.name || data.authorName || DEFAULT_NAME),
+      avatar: mine ? me.avatar : (profile?.avatar || ''),
+      timeAgo: timeAgo(createdAt, now),
+      createdAt,
+      edited: !!data.editedAt,
+      content: data.text ?? '',
+      mentions: data.mentions?.length ? data.mentions : undefined,
+      images: data.images ?? [],
+      trailId: data.trailId || undefined,
+      trailName: data.trailName || undefined,
+      rating,
+      guide,
+      upvotes: up.length,
+      downvotes: down.length,
+      score: up.length - down.length,
+      vote,
+      likes: up.length,
+      liked: vote === 1,
+      commentCount: Math.max(0, data.commentCount ?? 0),
+      repostCount: reposted.length,
+      reposted: !!uid && reposted.includes(uid),
+      isRepost: false,
+      original: null,
+      isMine: mine,
+    };
   }
 
   /** Streams an author's public name + photo (once per author). */
@@ -327,13 +540,22 @@ export class PostService {
       text: clean.text,
       images: clean.images,
       likedBy: [],
+      downvotedBy: [],
+      repostedBy: [],
       commentCount: 0,
       createdAt: serverTimestamp(),
     };
     if (clean.trailId) {
       payload['trailId'] = clean.trailId;
       payload['trailName'] = clean.trailName ?? '';
+      if (clean.rating) payload['rating'] = clean.rating;
     }
+    if (clean.guideUid) {
+      if (clean.guideUid === uid) throw new CommunityError("You can't tag yourself as your own guide.");
+      payload['guideUid'] = clean.guideUid;
+      payload['guideName'] = clean.guideName ?? '';
+    }
+    if (clean.mentions?.length) payload['mentions'] = clean.mentions;
     this.checkSize(payload);
 
     void this.publishMyProfile();
@@ -345,8 +567,33 @@ export class PostService {
   }
 
   async updatePost(postId: string, draft: PostDraft): Promise<WriteResult> {
-    this.requireUid();
+    const uid = this.requireUid();
     const clean = this.validateDraft(draft);
+
+    // The version being replaced, kept in the post's edit history.
+    let prev = this.docOf(postId);
+    if (!prev) {
+      try {
+        const snap = await getDoc(doc(db, 'posts', postId));
+        prev = snap.exists() ? (snap.data() as PostDoc) : null;
+      } catch (e) {
+        throw friendlyError(e, 'Couldn\'t save your changes. Please try again.');
+      }
+    }
+    if (!prev) throw new CommunityError('This post has been deleted.', 'not-found');
+
+    const prevImages = prev.images ?? [];
+    const sameImages = sameList(prevImages, clean.images);
+    const newRating = clean.trailId ? (clean.rating ?? 0) : 0;
+    const unchanged =
+      (prev.text ?? '') === clean.text &&
+      sameImages &&
+      (prev.trailId ?? '') === (clean.trailId ?? '') &&
+      (prev.rating ?? 0) === newRating &&
+      (prev.guideUid ?? '') === (clean.guideUid ?? '') &&
+      sameList((prev.mentions ?? []).map((m) => m.uid), (clean.mentions ?? []).map((m) => m.uid));
+    // Nothing to save, so don't mark the post "edited" or add a history entry.
+    if (unchanged) return 'saved';
 
     const payload: DocumentData = {
       authorName: this.publicName(),
@@ -354,23 +601,49 @@ export class PostService {
       images: clean.images,
       trailId: clean.trailId ? clean.trailId : deleteField(),
       trailName: clean.trailId ? (clean.trailName ?? '') : deleteField(),
+      rating: clean.trailId && clean.rating ? clean.rating : deleteField(),
+      guideUid: clean.guideUid ? clean.guideUid : deleteField(),
+      guideName: clean.guideUid ? (clean.guideName ?? '') : deleteField(),
+      mentions: clean.mentions?.length ? clean.mentions : deleteField(),
       editedAt: serverTimestamp(),
     };
+    if (clean.guideUid === uid) throw new CommunityError("You can't tag yourself as your own guide.");
     this.checkSize({ ...payload, trailId: clean.trailId ?? '', trailName: clean.trailName ?? '' });
 
+    const entry: DocumentData = {
+      authorUid: uid,
+      text: prev.text ?? '',
+      imageCount: prevImages.length,
+      savedAt: prev.editedAt ?? prev.createdAt ?? serverTimestamp(),
+      replacedAt: serverTimestamp(),
+    };
+    if (prev.trailId) {
+      entry['trailId'] = prev.trailId;
+      entry['trailName'] = prev.trailName ?? '';
+    }
+    if (prev.rating) entry['rating'] = prev.rating;
+    if (!sameImages) entry['images'] = prevImages;
+
+    const batch = writeBatch(db);
+    batch.set(doc(collection(db, 'posts', postId, 'history')), entry);
+    batch.update(doc(db, 'posts', postId), payload);
+
     try {
-      return await withTimeout(updateDoc(doc(db, 'posts', postId), payload));
+      return await withTimeout(batch.commit());
     } catch (e) {
       throw friendlyError(e, 'Couldn\'t save your changes. Please try again.');
     }
   }
 
-  /** Deletes a post and all of its comments. */
+  /** Deletes a post, its comments and its edit history. */
   async deletePost(postId: string): Promise<void> {
     this.requireUid();
     try {
-      const comments = await getDocs(collection(db, 'posts', postId, 'comments'));
-      const refs = comments.docs.map((d) => d.ref);
+      const [comments, history] = await Promise.all([
+        getDocs(collection(db, 'posts', postId, 'comments')),
+        getDocs(collection(db, 'posts', postId, 'history')),
+      ]);
+      const refs = [...comments.docs, ...history.docs].map((d) => d.ref);
       // A batch holds at most 500 writes.
       for (let i = 0; i < refs.length; i += 450) {
         const batch = writeBatch(db);
@@ -385,15 +658,126 @@ export class PostService {
     }
   }
 
-  async toggleLike(post: Post): Promise<void> {
+  /**
+   * Upvote (dir = 1) or downvote (dir = -1). Tapping the vote you already
+   * have takes it back; tapping the other arrow switches your vote.
+   */
+  async vote(post: Post, dir: 1 | -1): Promise<void> {
     const uid = this.requireUid();
+    const next: 1 | -1 | 0 = post.vote === dir ? 0 : dir;
     try {
       await updateDoc(doc(db, 'posts', post.id), {
-        likedBy: post.liked ? arrayRemove(uid) : arrayUnion(uid),
+        likedBy: next === 1 ? arrayUnion(uid) : arrayRemove(uid),
+        downvotedBy: next === -1 ? arrayUnion(uid) : arrayRemove(uid),
       });
     } catch (e) {
-      throw friendlyError(e, 'Couldn\'t update the like. Please try again.');
+      throw friendlyError(e, 'Couldn\'t register your vote. Please try again.');
     }
+  }
+
+  /** @deprecated Likes are now upvotes. */
+  toggleLike(post: Post): Promise<void> {
+    return this.vote(post, 1);
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════
+  //  Reposts
+  // ═══════════════════════════════════════════════════════════════════════
+
+  /**
+   * Reposts `post` to the feed under the signed-in user's name, or takes the
+   * repost back if they already did. One repost per person per post: the
+   * repost's id is built from both ids, so a double tap can't duplicate it.
+   */
+  async toggleRepost(post: Post): Promise<'reposted' | 'removed'> {
+    const uid = this.requireUid();
+    const originalRef = doc(db, 'posts', post.id);
+    const repostRef = doc(db, 'posts', `repost_${uid}_${post.id}`);
+
+    try {
+      if (post.reposted) {
+        await deleteDoc(repostRef);
+        await updateDoc(originalRef, { repostedBy: arrayRemove(uid) }).catch(() => {});
+        return 'removed';
+      }
+      const batch = writeBatch(db);
+      batch.set(repostRef, {
+        authorUid: uid,
+        authorName: this.publicName(),
+        repostOf: post.id,
+        text: '',
+        images: [],
+        likedBy: [],
+        downvotedBy: [],
+        repostedBy: [],
+        commentCount: 0,
+        createdAt: serverTimestamp(),
+      });
+      batch.update(originalRef, { repostedBy: arrayUnion(uid) });
+      void this.publishMyProfile();
+      await batch.commit();
+      return 'reposted';
+    } catch (e) {
+      throw friendlyError(e, 'Couldn\'t repost. Please try again.');
+    }
+  }
+
+  /** Removes one of your reposts (works even if the original was deleted). */
+  async removeRepost(repost: Post): Promise<void> {
+    const uid = this.requireUid();
+    try {
+      await deleteDoc(doc(db, 'posts', repost.id));
+      if (repost.original) {
+        await updateDoc(doc(db, 'posts', repost.original.id), {
+          repostedBy: arrayRemove(uid),
+        }).catch(() => {});
+      }
+    } catch (e) {
+      throw friendlyError(e, 'Couldn\'t remove the repost. Please try again.');
+    }
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════
+  //  Edit history
+  // ═══════════════════════════════════════════════════════════════════════
+
+  /** Starts streaming a post's earlier versions (closing any previous sheet). */
+  openHistory(postId: string) {
+    this.closeHistory();
+    this._historyPostId.set(postId);
+    this.historyLoading.set(true);
+    this.historyError.set(null);
+
+    const q = query(
+      collection(db, 'posts', postId, 'history'),
+      orderBy('replacedAt', 'desc'),
+      limit(50),
+    );
+    this.historyUnsub = onSnapshot(
+      q,
+      (snap) => {
+        this._historyDocs.set(
+          snap.docs.map((d) => ({
+            id: d.id,
+            data: d.data({ serverTimestamps: 'estimate' }) as HistoryDoc,
+          })),
+        );
+        this.historyLoading.set(false);
+      },
+      (err) => {
+        console.error('[community] history listener failed', err);
+        this.historyLoading.set(false);
+        this.historyError.set('Couldn\'t load the edit history.');
+      },
+    );
+  }
+
+  closeHistory() {
+    this.historyUnsub?.();
+    this.historyUnsub = undefined;
+    this._historyPostId.set(null);
+    this._historyDocs.set([]);
+    this.historyError.set(null);
   }
 
   // ═══════════════════════════════════════════════════════════════════════
@@ -440,7 +824,7 @@ export class PostService {
     this.commentsError.set(null);
   }
 
-  async addComment(postId: string, text: string): Promise<WriteResult> {
+  async addComment(postId: string, text: string, mentions?: MentionRef[]): Promise<WriteResult> {
     const uid = this.requireUid();
     const body = text.trim();
     if (!body) throw new CommunityError('Write something first.');
@@ -448,13 +832,17 @@ export class PostService {
       throw new CommunityError(`Comments can be up to ${COMMENT_TEXT_MAX} characters.`);
     }
 
-    const batch = writeBatch(db);
-    batch.set(doc(collection(db, 'posts', postId, 'comments')), {
+    const tagged = cleanMentions(body, mentions);
+    const commentDoc: DocumentData = {
       authorUid: uid,
       authorName: this.publicName(),
       text: body,
       createdAt: serverTimestamp(),
-    });
+    };
+    if (tagged.length) commentDoc['mentions'] = tagged;
+
+    const batch = writeBatch(db);
+    batch.set(doc(collection(db, 'posts', postId, 'comments')), commentDoc);
     batch.update(doc(db, 'posts', postId), { commentCount: increment(1) });
 
     void this.publishMyProfile();
@@ -503,19 +891,13 @@ export class PostService {
   }
 
   /**
-   * People who have never posted or commented get no public profile. For
-   * people who have, re-publish once per session and on every change.
+   * Everyone who signs in gets a public profile (name + small photo only, never
+   * email or phone), so other people can find and follow them. It is written
+   * once per session and again whenever the name or photo changes.
    */
   private async syncProfile(uid: string, me: { name: string; avatar: string }) {
     if (this.myUid() !== uid) return;
-    if (this.checkedUid !== uid) {
-      this.checkedUid = uid;
-      const snap = await getDoc(doc(db, 'profiles', uid));
-      if (!snap.exists()) return;
-      this.publishedKey = null; // force one refresh
-    } else if (this.publishedKey === null) {
-      return; // not a community member yet
-    }
+    this.checkedUid = uid;
     if (this.profileKey(me) !== this.publishedKey) await this.publishMyProfile();
   }
 
@@ -561,7 +943,16 @@ export class PostService {
     if (text.length > POST_TEXT_MAX) {
       throw new CommunityError(`Posts can be up to ${POST_TEXT_MAX} characters.`);
     }
-    return { text, images, trailId: draft.trailId, trailName: draft.trailName };
+    const rating =
+      draft.trailId && Number.isInteger(draft.rating) && draft.rating! >= 1 && draft.rating! <= 5
+        ? draft.rating
+        : undefined;
+    return {
+      text, images, trailId: draft.trailId, trailName: draft.trailName, rating,
+      guideUid: draft.guideUid || undefined,
+      guideName: draft.guideUid ? (draft.guideName ?? '').slice(0, 60) : undefined,
+      mentions: cleanMentions(text, draft.mentions),
+    };
   }
 
   private checkSize(payload: DocumentData) {

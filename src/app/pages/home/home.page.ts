@@ -16,7 +16,9 @@ import { Trail, TrailCategory } from '../../models/trail.model';
 import { AppLogoComponent } from '../../components/app-logo/app-logo.component';
 
 // The same 30 Philippine trails the Explore map shows, with photos resolved.
-import { searchAll } from '../explore/trail-lookup';
+import { allTrails, searchAll } from '../explore/trail-lookup';
+// Typo-tolerant matching, the same util used elsewhere in the app.
+import { fuzzyFilter } from '../../services/fuzzy.util';
 // Real per-mountain forecasts, the same card the Explore sheet and the detail
 // page use. One cache behind all three.
 import { TrailWeatherComponent } from '../explore/trail-weather.component';
@@ -110,7 +112,12 @@ export class HomePage {
    * trails because user.service.ts points at t2 and t4 by id.
    */
   filteredTrails = computed(() => {
-    let list = searchAll(this.searchTerm(), this.activeCategory());
+    // Typing searches all 30 trails with typo tolerance ("ulap", "mt ulpa",
+    // "cordilera"). It matches name and region, ranked best match first.
+    // With no search text, the category chip decides what shows.
+    let list = this.isSearching()
+      ? fuzzyFilter(allTrails(), this.searchTerm(), t => `${t.name} ${t.region}`)
+      : searchAll('', this.activeCategory());
 
     if (this.difficulty() !== 'All') {
       list = list.filter(t => t.difficulty === this.difficulty());

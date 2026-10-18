@@ -2,9 +2,7 @@ import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
-import { IonContent, IonIcon, IonInput, ToastController } from '@ionic/angular/standalone';
-import { addIcons } from 'ionicons';
-import { eyeOutline, eyeOffOutline, leaf } from 'ionicons/icons';
+import { IonCheckbox, IonContent, IonInput, ToastController } from '@ionic/angular/standalone';
 import { UserService } from '../../services/user.service';
 import { emailValidator, fieldError } from '../../validators/form.validators';
 
@@ -13,7 +11,7 @@ import { emailValidator, fieldError } from '../../validators/form.validators';
   standalone: true,
   templateUrl: './login.page.html',
   styleUrls: ['./login.page.scss'],
-  imports: [CommonModule, ReactiveFormsModule, IonContent, IonIcon, IonInput],
+  imports: [CommonModule, ReactiveFormsModule, IonCheckbox, IonContent, IonInput],
 })
 export class LoginPage {
   private fb = inject(FormBuilder);
@@ -25,15 +23,14 @@ export class LoginPage {
   form = this.fb.nonNullable.group({
     email: ['', [Validators.required, emailValidator()]],
     password: ['', [Validators.required]],
+    remember: [false],
   });
 
   loading = false;
-  showPw = false;
   /** Result of the account check (wrong password, unknown account, etc.). */
   loginError = '';
 
   constructor() {
-    addIcons({ eyeOutline, eyeOffOutline, leaf });
     this.form.valueChanges.subscribe(() => (this.loginError = ''));
   }
 
@@ -51,8 +48,8 @@ export class LoginPage {
     // 2) Account check against Firebase
     this.loading = true;
     try {
-      const { email, password } = this.form.getRawValue();
-      await this.userService.signIn(email, password);
+      const { email, password, remember } = this.form.getRawValue();
+      await this.userService.signIn(email, password, remember);
       const toast = await this.toastCtrl.create({
         message: 'Welcome back!',
         duration: 1400,

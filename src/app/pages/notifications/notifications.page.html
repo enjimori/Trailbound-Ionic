@@ -36,6 +36,10 @@
       </div>
     </div>
 
+    <p class="empty-state" *ngIf="notificationService.notifications().length === 0">
+      No notifications yet. New posts from people you follow will show up here.
+    </p>
+
     <div class="bottom-spacer"></div>
   </div>
 </ion-content>

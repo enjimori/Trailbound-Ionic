@@ -10,9 +10,17 @@ import {
 import { addIcons } from 'ionicons';
 import {
   imagesOutline, closeCircle, refreshOutline, copyOutline, chevronDownOutline, createOutline,
-  cloudOfflineOutline,
+  cloudOfflineOutline, star, starOutline, repeatOutline, timeOutline, searchOutline, personOutline,
 } from 'ionicons/icons';
 import { PostCardComponent } from '../../components/post-card/post-card.component';
+import { PeopleSheetComponent } from '../../components/people-sheet/people-sheet.component';
+import { FollowService, PersonSummary } from '../../services/follow.service';
+import { MentionService } from '../../services/mention.service';
+import {
+  ActiveMention, MentionRef, activeMention, insertMention, pruneMentions,
+} from '../../services/mention.util';
+import { MentionTextComponent } from '../../components/mention-text/mention-text.component';
+import { MentionSuggestionsComponent } from '../../components/mention-suggestions/mention-suggestions.component';
 import {
   PostService, CommunityError, POST_TEXT_MAX, COMMENT_TEXT_MAX, POST_PHOTO_MAX,
 } from '../../services/post.service';
@@ -24,7 +32,7 @@ import { compressPhoto, looksLikeImage } from '../../services/photo.util';
 // The same 30 trails as Explore, so a tagged post links to a real trail page.
 import { TRAILS_30 } from '../explore/explore-trails.data';
 
-type FeedFilter = 'latest' | 'top' | 'mine';
+type FeedFilter = 'latest' | 'top' | 'following' | 'mine';
 
 @Component({
   selector: 'app-community',
@@ -33,44 +41,57 @@ type FeedFilter = 'latest' | 'top' | 'mine';
   styleUrls: ['./community.page.scss'],
   imports: [
     CommonModule, FormsModule, IonContent, IonHeader, IonFooter, IonToolbar, IonIcon, IonBadge,
-    IonModal, IonTextarea, IonSpinner, PostCardComponent, AppLogoComponent,
+    IonModal, IonTextarea, IonSpinner, PostCardComponent, PeopleSheetComponent, AppLogoComponent,
+    MentionSuggestionsComponent, MentionTextComponent,
   ],
 })
 export class CommunityPage {
   readonly postService = inject(PostService);
   readonly notificationService = inject(NotificationService);
   readonly userService = inject(UserService);
+  readonly follows = inject(FollowService);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
   private readonly toastCtrl = inject(ToastController);
   private readonly alertCtrl = inject(AlertController);
   private readonly actionSheetCtrl = inject(ActionSheetController);
+  private readonly mentionService = inject(MentionService);
 
   @ViewChild(IonContent) private content?: IonContent;
   @ViewChild('composerModal') private composerModal?: IonModal;
   @ViewChild('photoInput') private photoInput?: ElementRef<HTMLInputElement>;
+  @ViewChild('composerText') private composerText?: IonTextarea;
 
   readonly POST_TEXT_MAX = POST_TEXT_MAX;
   readonly COMMENT_TEXT_MAX = COMMENT_TEXT_MAX;
   readonly POST_PHOTO_MAX = POST_PHOTO_MAX;
+  readonly ratingStars = [1, 2, 3, 4, 5];
 
   // ── feed ────────────────────────────────────────────────────────────────
   readonly filter = signal<FeedFilter>('latest');
 
-  /** "My posts" falls back to Latest once nobody is signed in. */
-  readonly activeFilter = computed<FeedFilter>(() =>
-    this.filter() === 'mine' && !this.userService.isAuthenticated() ? 'latest' : this.filter(),
-  );
+  /** "My posts" and "Following" fall back to Latest once nobody is signed in. */
+  readonly activeFilter = computed<FeedFilter>(() => {
+    const f = this.filter();
+    return (f === 'mine' || f === 'following') && !this.userService.isAuthenticated() ? 'latest' : f;
+  });
 
   readonly visiblePosts = computed<Post[]>(() => {
     const posts = this.postService.posts();
     switch (this.activeFilter()) {
       case 'mine':
         return posts.filter((p) => p.isMine);
+      case 'following': {
+        const following = this.follows.followingUids();
+        return posts.filter((p) => following.has(p.authorUid));
+      }
       case 'top':
-        return [...posts].sort(
-          (a, b) => b.likes + b.commentCount - (a.likes + a.commentCount),
-        );
+        // A repost ranks by the post it shares.
+        return [...posts].sort((a, b) => {
+          const pa = a.original ?? a;
+          const pb = b.original ?? b;
+          return pb.score + pb.commentCount - (pa.score + pa.commentCount);
+        });
       default:
         return posts;
     }
@@ -86,6 +107,10 @@ export class CommunityPage {
   draftText = '';
   draftImages: string[] = [];
   draftTrail: { id: string; name: string } | null = null;
+  /** 0 = no rating, otherwise 1–5 stars for the tagged trail. */
+  draftRating = 0;
+  /** The guide being tagged on this post, if any. */
+  draftGuide: { uid: string; name: string } | null = null;
   processingPhotos = false;
   publishing = false;
   showTrailPicker = false;
@@ -95,15 +120,31 @@ export class CommunityPage {
   /** Photos picked before the composer was open (camera shortcut). */
   private pendingFiles: File[] = [];
 
+  // ── @mentions ───────────────────────────────────────────────────────────
+  postMentions: MentionRef[] = [];
+  commentMentions: MentionRef[] = [];
+  composerSuggestions: PersonSummary[] = [];
+  commentSuggestions: PersonSummary[] = [];
+  private composerMention: ActiveMention | null = null;
+  private commentMention: ActiveMention | null = null;
+  private commentBoxEl: HTMLInputElement | null = null;
+
   // ── comments ────────────────────────────────────────────────────────────
   showComments = false;
   newComment = '';
   sendingComment = false;
 
-  readonly activePost = computed(() => {
-    const id = this.postService.threadPostId();
-    return id ? this.postService.posts().find((p) => p.id === id) ?? null : null;
-  });
+  // ── people (search + profiles) ──────────────────────────────────────────
+  showPeople = false;
+  peopleUid: string | null = null;
+  /** The sheet is picking a guide for the composer instead of browsing people. */
+  peoplePick = false;
+
+  // ── edit history ────────────────────────────────────────────────────────
+  showHistory = false;
+  readonly historyPost = computed(() => this.postService.postById(this.postService.historyPostId()));
+
+  readonly activePost = computed(() => this.postService.postById(this.postService.threadPostId()));
 
   // ── photo viewer ────────────────────────────────────────────────────────
   viewer: { images: string[]; index: number } | null = null;
@@ -111,7 +152,7 @@ export class CommunityPage {
   constructor() {
     addIcons({
       imagesOutline, closeCircle, refreshOutline, copyOutline, chevronDownOutline, createOutline,
-      cloudOfflineOutline,
+      cloudOfflineOutline, star, starOutline, repeatOutline, timeOutline, searchOutline, personOutline,
     });
 
     this.route.queryParamMap.subscribe((params) => {
@@ -147,25 +188,81 @@ export class CommunityPage {
 
   trackById = (_: number, item: { id: string }) => item.id;
 
+  /** Search button in the header. */
+  openPeople() {
+    this.peoplePick = false;
+    this.peopleUid = null;
+    this.showPeople = true;
+  }
+
+  /** A name or photo on a post was tapped. */
+  openProfile(uid: string) {
+    this.peoplePick = false;
+    this.peopleUid = uid;
+    this.showPeople = true;
+  }
+
+  onPeopleClosed() {
+    this.showPeople = false;
+    this.peopleUid = null;
+    this.peoplePick = false;
+  }
+
+  /** What the feed says when the current filter has no posts. */
+  get emptyMessage(): string {
+    switch (this.activeFilter()) {
+      case 'mine':
+        return 'You haven\'t posted yet.';
+      case 'following':
+        return this.follows.followingCount() === 0
+          ? 'You\'re not following anyone yet. Find hikers to follow!'
+          : 'No recent posts from the people you follow.';
+      default:
+        return 'No posts yet. Be the first to share a hike!';
+    }
+  }
+
   setFilter(f: FeedFilter) {
-    if (f === 'mine' && !this.isSignedIn) {
-      this.askToSignIn('see your posts');
+    if ((f === 'mine' || f === 'following') && !this.isSignedIn) {
+      this.askToSignIn(f === 'mine' ? 'see your posts' : 'see posts from people you follow');
       return;
     }
     this.filter.set(f);
   }
 
   // ═══════════════════════════════════════════════════════════════════════
-  //  Likes / share / menu
+  //  Votes / reposts / share / menu
   // ═══════════════════════════════════════════════════════════════════════
 
-  async onLike(post: Post) {
+  async onVote(ev: { post: Post; dir: 1 | -1 }) {
     if (!this.isSignedIn) {
-      this.askToSignIn('like posts');
+      this.askToSignIn(ev.dir === 1 ? 'upvote posts' : 'downvote posts');
       return;
     }
     try {
-      await this.postService.toggleLike(post);
+      await this.postService.vote(ev.post, ev.dir);
+    } catch (e) {
+      this.toast(this.message(e), 'danger');
+    }
+  }
+
+  async onRepost(post: Post) {
+    if (!this.isSignedIn) {
+      this.askToSignIn('repost');
+      return;
+    }
+    try {
+      const result = await this.postService.toggleRepost(post);
+      this.toast(result === 'reposted' ? 'Reposted to the community' : 'Repost removed', 'success');
+    } catch (e) {
+      this.toast(this.message(e), 'danger');
+    }
+  }
+
+  private async removeRepost(repost: Post) {
+    try {
+      await this.postService.removeRepost(repost);
+      this.toast('Repost removed');
     } catch (e) {
       this.toast(this.message(e), 'danger');
     }
@@ -189,29 +286,44 @@ export class CommunityPage {
   }
 
   async onMenu(post: Post) {
+    // For a repost, post = the repost and target = the post it shares.
+    const target = post.original ?? post;
+    const hasContent = !post.isRepost || !!post.original;
     const buttons: any[] = [];
-    if (post.isMine) {
+
+    if (post.isRepost && post.isMine) {
+      buttons.push({ text: 'Remove repost', icon: 'repeat-outline', role: 'destructive', handler: () => { this.removeRepost(post); } });
+    }
+    if (!post.isRepost && post.isMine) {
       buttons.push(
         { text: 'Edit post', icon: 'create-outline', handler: () => { this.openEditor(post); } },
         { text: 'Delete post', icon: 'trash-outline', role: 'destructive', handler: () => { this.confirmDeletePost(post); } },
       );
     }
-    buttons.push({ text: 'Share post', icon: 'share-social-outline', handler: () => { this.onShare(post); } });
-    if (post.content) {
-      buttons.push({
-        text: 'Copy text',
-        icon: 'copy-outline',
-        handler: () => {
-          this.copy(post.content).then((ok) => this.toast(ok ? 'Text copied' : 'Couldn\'t copy on this device.'));
-        },
-      });
-    }
-    if (post.trailId) {
-      buttons.push({ text: `View ${post.trailName || 'trail'}`, icon: 'location-outline', handler: () => { this.openTrail(post); } });
+    if (hasContent) {
+      buttons.push({ text: 'Share post', icon: 'share-social-outline', handler: () => { this.onShare(target); } });
+      if (target.content) {
+        buttons.push({
+          text: 'Copy text',
+          icon: 'copy-outline',
+          handler: () => {
+            this.copy(target.content).then((ok) => this.toast(ok ? 'Text copied' : 'Couldn\'t copy on this device.'));
+          },
+        });
+      }
+      if (target.edited) {
+        buttons.push({ text: 'View edit history', icon: 'time-outline', handler: () => { this.openHistory(target); } });
+      }
+      if (target.trailId) {
+        buttons.push({ text: `View ${target.trailName || 'trail'}`, icon: 'location-outline', handler: () => { this.openTrail(target); } });
+      }
     }
     buttons.push({ text: 'Cancel', role: 'cancel' });
 
-    const sheet = await this.actionSheetCtrl.create({ header: post.isMine ? 'Your post' : post.author, buttons });
+    const header = post.isRepost
+      ? (post.isMine ? 'Your repost' : `${post.author}'s repost`)
+      : (post.isMine ? 'Your post' : post.author);
+    const sheet = await this.actionSheetCtrl.create({ header, buttons });
     await sheet.present();
   }
 
@@ -271,6 +383,8 @@ export class CommunityPage {
     this.draftText = post.content;
     this.draftImages = [...post.images];
     this.draftTrail = post.trailId ? { id: post.trailId, name: post.trailName || 'Trail' } : null;
+    this.draftRating = post.trailId ? (post.rating ?? 0) : 0;
+    this.draftGuide = post.guide ? { uid: post.guide.uid, name: post.guide.name } : null;
     this.showComposer = true;
   }
 
@@ -281,7 +395,7 @@ export class CommunityPage {
   }
 
   private get isDirty(): boolean {
-    return !!(this.draftText.trim() || this.draftImages.length || this.draftTrail);
+    return !!(this.draftText.trim() || this.draftImages.length || this.draftTrail || this.draftGuide);
   }
 
   /** Runs before the composer closes (Cancel button or swipe down). */
@@ -324,6 +438,10 @@ export class CommunityPage {
     this.draftText = '';
     this.draftImages = [];
     this.draftTrail = null;
+    this.draftRating = 0;
+    this.draftGuide = null;
+    this.postMentions = [];
+    this.composerSuggestions = [];
     this.showTrailPicker = false;
     this.trailQuery = '';
   }
@@ -416,8 +534,85 @@ export class CommunityPage {
     this.trailQuery = '';
   }
 
+  /** "Tag a guide": the people sheet opens on top of the composer in pick mode. */
+  openGuidePicker() {
+    this.peopleUid = null;
+    this.peoplePick = true;
+    this.showPeople = true;
+  }
+
+  onGuidePicked(p: { uid: string; name: string }) {
+    if (p.uid === this.postService.myUid()) {
+      this.toast("You can't tag yourself as your own guide.", 'danger');
+      return;
+    }
+    this.draftGuide = { uid: p.uid, name: p.name };
+  }
+
+  clearGuide() {
+    this.draftGuide = null;
+  }
+
   clearTrail() {
     this.draftTrail = null;
+    this.draftRating = 0;
+  }
+
+  /** Tapping the star you already chose clears the rating. */
+  setRating(stars: number) {
+    this.draftRating = this.draftRating === stars ? 0 : stars;
+  }
+
+  // ── @mentions ───────────────────────────────────────────────────────────
+
+  /** New posts: only people you follow (a new post has no author or commenters yet). */
+  async onComposerInput() {
+    const el = await this.composerText?.getInputElement();
+    const caret = el?.selectionStart ?? this.draftText.length;
+    this.composerMention = activeMention(this.draftText, caret);
+    this.composerSuggestions = this.composerMention
+      ? await this.mentionService.suggest(this.composerMention.query)
+      : [];
+  }
+
+  async pickComposerMention(p: PersonSummary) {
+    if (!this.composerMention) return;
+    const el = await this.composerText?.getInputElement();
+    const caret = el?.selectionStart ?? this.draftText.length;
+    const r = insertMention(this.draftText, this.composerMention, caret, p.name);
+    this.draftText = r.text;
+    this.postMentions = [...this.postMentions, { uid: p.uid, name: p.name }];
+    this.composerSuggestions = [];
+    this.composerMention = null;
+    setTimeout(() => { el?.focus(); el?.setSelectionRange(r.caret, r.caret); });
+  }
+
+  /** Comments: the post's author, its commenters, and people you follow. */
+  async onCommentInput(box: HTMLInputElement) {
+    this.commentBoxEl = box;
+    this.commentMention = activeMention(this.newComment, box.selectionStart ?? this.newComment.length);
+    const post = this.activePost();
+    const t = post?.original ?? post;
+    const extra = t
+      ? [
+          { uid: t.authorUid, name: t.author, avatar: t.avatar },
+          ...this.postService.comments().map((c) => ({ uid: c.authorUid, name: c.author, avatar: c.avatar })),
+        ]
+      : [];
+    this.commentSuggestions = this.commentMention
+      ? await this.mentionService.suggest(this.commentMention.query, extra)
+      : [];
+  }
+
+  pickCommentMention(p: PersonSummary) {
+    const box = this.commentBoxEl;
+    if (!this.commentMention || !box) return;
+    const r = insertMention(this.newComment, this.commentMention, box.selectionStart ?? this.newComment.length, p.name);
+    this.newComment = r.text;
+    this.commentMentions = [...this.commentMentions, { uid: p.uid, name: p.name }];
+    this.commentSuggestions = [];
+    this.commentMention = null;
+    setTimeout(() => { box.focus(); box.setSelectionRange(r.caret, r.caret); });
   }
 
   // ── publish ─────────────────────────────────────────────────────────────
@@ -432,6 +627,10 @@ export class CommunityPage {
         images: this.draftImages,
         trailId: this.draftTrail?.id,
         trailName: this.draftTrail?.name,
+        rating: this.draftTrail && this.draftRating ? this.draftRating : undefined,
+        guideUid: this.draftGuide?.uid,
+        guideName: this.draftGuide?.name,
+        mentions: pruneMentions(this.draftText, this.postMentions),
       };
       const result = editing
         ? await this.postService.updatePost(editing, draft)
@@ -470,6 +669,8 @@ export class CommunityPage {
   onCommentsDismissed() {
     this.showComments = false;
     this.newComment = '';
+    this.commentMentions = [];
+    this.commentSuggestions = [];
     this.postService.closeThread();
   }
 
@@ -488,8 +689,10 @@ export class CommunityPage {
     }
     this.sendingComment = true;
     try {
-      const result = await this.postService.addComment(post.id, text);
+      const result = await this.postService.addComment(post.id, text, pruneMentions(text, this.commentMentions));
       this.newComment = '';
+      this.commentMentions = [];
+      this.commentSuggestions = [];
       if (result === 'pending') this.toast('Slow connection — your comment will send in the background.');
       setTimeout(() => list?.scrollToBottom(250), 60);
     } catch (e) {
@@ -518,6 +721,32 @@ export class CommunityPage {
       ],
     });
     await alert.present();
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════
+  //  Edit history
+  // ═══════════════════════════════════════════════════════════════════════
+
+  openHistory(post: Post) {
+    this.postService.openHistory(post.id);
+    this.showHistory = true;
+  }
+
+  onHistoryDismissed() {
+    this.showHistory = false;
+    this.postService.closeHistory();
+  }
+
+  /** Edited before history was recorded, so only the current version exists. */
+  get historyIsPartial(): boolean {
+    return !!this.historyPost()?.edited
+      && !this.postService.historyLoading()
+      && !this.postService.historyError()
+      && this.postService.versions().length <= 1;
+  }
+
+  openVersionPhoto(images: string[], index: number) {
+    this.viewer = { images, index };
   }
 
   // ═══════════════════════════════════════════════════════════════════════

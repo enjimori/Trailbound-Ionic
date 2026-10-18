@@ -98,7 +98,7 @@
 
       <div class="field-group">
         <label class="lbl">Password<span class="req" aria-hidden="true">*</span></label>
-        <ion-input formControlName="password" [type]="showPw ? 'text' : 'password'" autocomplete="new-password" placeholder="Create a password" class="login-input" fill="outline">
+        <ion-input formControlName="password" [clearOnEdit]="false" [type]="showPw ? 'text' : 'password'" autocomplete="new-password" placeholder="Create a password" class="login-input" fill="outline">
           <ion-icon slot="end" class="eye" [name]="showPw ? 'eye-off-outline' : 'eye-outline'" (click)="showPw = !showPw"></ion-icon>
         </ion-input>
         <ul class="pw-rules">
@@ -111,7 +111,7 @@
 
       <div class="field-group">
         <label class="lbl">Confirm Password<span class="req" aria-hidden="true">*</span></label>
-        <ion-input formControlName="confirmPassword" [type]="showPw2 ? 'text' : 'password'" autocomplete="new-password" placeholder="Re-enter password" class="login-input" fill="outline">
+        <ion-input formControlName="confirmPassword" [clearOnEdit]="false" [type]="showPw2 ? 'text' : 'password'" autocomplete="new-password" placeholder="Re-enter password" class="login-input" fill="outline">
           <ion-icon slot="end" class="eye" [name]="showPw2 ? 'eye-off-outline' : 'eye-outline'" (click)="showPw2 = !showPw2"></ion-icon>
         </ion-input>
         <p class="err" *ngIf="err('confirmPassword') as msg">{{ msg }}</p>

@@ -281,6 +281,129 @@ service cloud.firestore {
     }
 
     /* ==========================================================
+       COMMUNITY — posts, comments, public profiles
+       ADDED. The rules file you sent had no block for these, so the
+       catch-all at the bottom was denying them. If your LIVE rules
+       already have posts/profiles blocks (e.g. in another file),
+       merge this in instead of pasting it twice.
+
+       posts/{id}  one post. A repost is also a post (repostOf = the
+                   original's id; its id is repost_<uid>_<originalId>).
+         likedBy      uids who UPVOTED (the old "likes" list)
+         downvotedBy  uids who downvoted
+         repostedBy   uids who reposted
+         rating       1-5 stars for the tagged trail (optional)
+       ========================================================== */
+
+    // Every uid in `after` that is not in `before`, and every uid that
+    // was removed, must be the signed-in user. So you can only add or
+    // remove YOURSELF from a vote / repost list.
+    function onlySelfChanged(before, after) {
+      return after.toSet().difference(before.toSet()).hasOnly([request.auth.uid])
+          && before.toSet().difference(after.toSet()).hasOnly([request.auth.uid]);
+    }
+
+    // What any signed-in user may do to someone else's post: vote,
+    // repost, and move the comment counter by one.
+    function engagementOnly() {
+      return signedIn()
+        && request.resource.data.diff(resource.data).affectedKeys()
+             .hasOnly(['likedBy', 'downvotedBy', 'repostedBy', 'commentCount'])
+        && onlySelfChanged(resource.data.get('likedBy', []),
+                           request.resource.data.get('likedBy', []))
+        && onlySelfChanged(resource.data.get('downvotedBy', []),
+                           request.resource.data.get('downvotedBy', []))
+        && onlySelfChanged(resource.data.get('repostedBy', []),
+                           request.resource.data.get('repostedBy', []))
+        && (request.resource.data.get('commentCount', 0)
+            - resource.data.get('commentCount', 0)) in [-1, 0, 1];
+    }
+
+    function validRating() {
+      return !('rating' in request.resource.data)
+        || (request.resource.data.rating is int
+            && request.resource.data.rating >= 1
+            && request.resource.data.rating <= 5);
+    }
+
+    // A tagged guide must be somebody else who has a public profile.
+    function validGuide() {
+      return !('guideUid' in request.resource.data)
+        || (request.resource.data.guideUid is string
+            && request.resource.data.guideUid != request.resource.data.authorUid
+            && exists(/databases/$(database)/documents/profiles/$(request.resource.data.guideUid)));
+    }
+
+    match /profiles/{uid} {
+      allow read: if true;
+      allow create, update: if isOwner(uid);
+      allow delete: if isOwner(uid) || isAdmin();
+    }
+
+    match /posts/{postId} {
+      allow read: if true;
+
+      allow create: if signedIn()
+                    && request.resource.data.authorUid == request.auth.uid
+                    && validRating()
+                    && validGuide();
+
+      // The author edits their own post (but can never reassign it);
+      // anyone signed in may vote / repost / bump the comment counter.
+      allow update: if (signedIn()
+                        && resource.data.authorUid == request.auth.uid
+                        && request.resource.data.authorUid == resource.data.authorUid
+                        && validRating()
+                        && validGuide())
+                    || engagementOnly();
+
+      allow delete: if isOwner(resource.data.authorUid) || isAdmin();
+
+      match /comments/{commentId} {
+        allow read: if true;
+        allow create: if signedIn()
+                      && request.resource.data.authorUid == request.auth.uid;
+        allow update: if false;
+        // You can delete your own comment, and the post's author can
+        // delete any comment on their post.
+        allow delete: if signedIn()
+                      && (resource.data.authorUid == request.auth.uid
+                          || get(/databases/$(database)/documents/posts/$(postId))
+                               .data.authorUid == request.auth.uid);
+      }
+
+      // Earlier versions of the post. Anyone can read them; only the
+      // post's author can add one (when editing) or remove them (when
+      // deleting the post). They can never be changed.
+      match /history/{versionId} {
+        allow read: if true;
+        allow create: if signedIn()
+                      && request.resource.data.authorUid == request.auth.uid
+                      && get(/databases/$(database)/documents/posts/$(postId))
+                           .data.authorUid == request.auth.uid;
+        allow update: if false;
+        allow delete: if signedIn()
+                      && get(/databases/$(database)/documents/posts/$(postId))
+                           .data.authorUid == request.auth.uid;
+      }
+    }
+
+    // ---- follows ----
+    // follows/{followerUid}_{followeeUid}. You can only create or delete a
+    // follow where YOU are the follower, and never follow yourself. The id
+    // must match the two uids, so there can be only one per pair.
+    match /follows/{followId} {
+      allow read: if true;
+      allow create: if signedIn()
+                    && request.resource.data.followerUid == request.auth.uid
+                    && request.resource.data.followeeUid is string
+                    && request.resource.data.followeeUid != request.auth.uid
+                    && followId == request.auth.uid + '_' + request.resource.data.followeeUid;
+      allow update: if false;
+      allow delete: if signedIn() && resource.data.followerUid == request.auth.uid;
+    }
+
+    /* ==========================================================
        ANYTHING ELSE
        Denied. If you add a collection, add a block for it above —
        this line is what would otherwise silently break it.

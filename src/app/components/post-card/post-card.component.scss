@@ -92,6 +92,17 @@
     color: var(--app-text-dim);
   }
 
+  /* "edited" opens the edit history */
+  .edited-link {
+    padding: 0;
+    background: none;
+    border: none;
+    font-size: inherit;
+    color: var(--app-accent);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+
   .more-btn {
     flex-shrink: 0;
     width: 36px;
@@ -113,12 +124,36 @@
   }
 }
 
+.trail-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  margin: 0 0 10px;
+}
+
+/* Star rating of the tagged trail */
+.rating {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+
+  ion-icon { font-size: 15px; color: var(--app-accent); }
+
+  b {
+    margin-left: 5px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--app-text-soft);
+  }
+}
+
 .trail-tag {
   display: inline-flex;
   align-items: center;
   gap: 5px;
   max-width: 100%;
-  margin: 0 0 10px;
+  margin: 0;
   padding: 5px 10px 5px 8px;
   border-radius: 999px;
   border: 1px solid var(--app-border-strong);
@@ -135,6 +170,53 @@
 
   ion-icon { font-size: 14px; flex-shrink: 0; }
   .chev { font-size: 12px; color: var(--app-text-dim); }
+}
+
+/* "Guided by" line */
+.guide-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0 0 10px;
+  font-size: 13px;
+}
+
+.guide-label { color: var(--app-text-dim); }
+
+.guide-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 28px;
+  max-width: 100%;
+  padding: 0;
+  background: none;
+  border: none;
+  color: var(--app-text);
+  font-weight: 600;
+}
+
+.guide-avatar {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+
+  &.default {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--app-accent-soft);
+    ion-icon { font-size: 13px; color: var(--app-accent); }
+  }
+}
+
+.guide-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .content {
@@ -237,11 +319,146 @@
 
   &:active ion-icon { transform: scale(0.85); }
 
-  &.liked {
-    color: var(--app-heart);
+  &.repost.on {
+    color: var(--app-accent);
 
-    ion-icon { color: var(--app-heart); }
+    ion-icon { color: var(--app-accent); }
   }
 
   &.share { margin-left: auto; }
+}
+
+/* ---- votes ---- */
+.vote-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 0 4px;
+  border: 1px solid var(--app-border-strong);
+  border-radius: 999px;
+  background: var(--app-card-bg);
+}
+
+.vote-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  background: none;
+  border: none;
+
+  ion-icon {
+    font-size: 22px;
+    color: var(--app-text-dim);
+    transition: transform 0.15s ease, color 0.15s ease;
+  }
+
+  &:active ion-icon { transform: scale(0.85); }
+}
+
+.score {
+  min-width: 22px;
+  text-align: center;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--app-text);
+}
+
+.vote-pill.up {
+  .score { color: var(--app-accent); }
+  .vote-btn.up ion-icon { color: var(--app-accent); }
+}
+
+.vote-pill.down {
+  .score { color: var(--ion-color-danger); }
+  .vote-btn.down ion-icon { color: var(--ion-color-danger); }
+}
+
+/* ---- reposts ---- */
+.repost-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  color: var(--app-text-dim);
+  font-size: 12.5px;
+
+  .rp-avatar {
+    flex-shrink: 0;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 1px solid var(--app-border-strong);
+    background: var(--app-card-hi);
+
+    &.default-avatar {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      ion-icon { font-size: 14px; color: var(--app-text-dim); }
+    }
+  }
+
+  .rp-icon { flex-shrink: 0; font-size: 16px; color: var(--app-accent); }
+
+  .rp-text {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+
+    strong { color: var(--app-text); font-weight: 600; }
+  }
+
+  .more-btn {
+    flex-shrink: 0;
+    width: 32px;
+    height: 32px;
+    margin-right: -6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: none;
+    border: none;
+    border-radius: 50%;
+
+    &:active { background: var(--app-card-bg); }
+  }
+
+  .more-icon { color: var(--app-text-dim); font-size: 18px; }
+}
+
+/* The original post, framed inside a repost */
+.post-body.quoted {
+  padding: 12px 12px 6px;
+  border: 1px solid var(--app-border-strong);
+  border-radius: var(--app-radius);
+  background: var(--app-card-bg);
+
+  .post-header { margin-bottom: 8px; }
+}
+
+.repost-missing {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 12px;
+  border: 1px dashed var(--app-border-strong);
+  border-radius: var(--app-radius);
+  color: var(--app-text-dim);
+  font-size: 13px;
+
+  ion-icon { font-size: 18px; flex-shrink: 0; }
+}
+
+/* Names and photos open that person's profile */
+.post-header .avatar,
+.post-header .name,
+.repost-banner .rp-avatar,
+.repost-banner strong {
+  cursor: pointer;
 }

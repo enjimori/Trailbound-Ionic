@@ -130,3 +130,11 @@ ion-title { font-size: 21px; }
 .bottom-spacer {
   height: 24px;
 }
+
+.empty-state {
+  margin: 48px 24px;
+  text-align: center;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--app-text-dim);
+}

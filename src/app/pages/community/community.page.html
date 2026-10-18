@@ -6,6 +6,9 @@
         <span class="subtitle">Stories from the trail</span>
       </div>
       <div class="header-actions">
+        <button class="icon-btn" (click)="openPeople()" aria-label="Find people">
+          <ion-icon name="search-outline"></ion-icon>
+        </button>
         <button class="icon-btn" (click)="goNotifications()" aria-label="Notifications">
           <ion-icon name="notifications-outline"></ion-icon>
           <ion-badge *ngIf="notificationService.unreadCount() > 0" class="badge-dot">{{ notificationService.unreadCount() }}</ion-badge>
@@ -48,6 +51,7 @@
     <div class="filter-row" role="tablist">
       <button role="tab" class="chip" [class.active]="activeFilter() === 'latest'" [attr.aria-selected]="activeFilter() === 'latest'" (click)="setFilter('latest')">Latest</button>
       <button role="tab" class="chip" [class.active]="activeFilter() === 'top'" [attr.aria-selected]="activeFilter() === 'top'" (click)="setFilter('top')">Top</button>
+      <button role="tab" class="chip" [class.active]="activeFilter() === 'following'" [attr.aria-selected]="activeFilter() === 'following'" (click)="setFilter('following')">Following</button>
       <button role="tab" class="chip" [class.active]="activeFilter() === 'mine'" [attr.aria-selected]="activeFilter() === 'mine'" (click)="setFilter('mine')">My posts</button>
     </div>
 
@@ -71,7 +75,10 @@
         *ngFor="let post of visiblePosts(); trackBy: trackById"
         [post]="post"
         [highlight]="highlightId() === post.id"
-        (like)="onLike($event)"
+        (vote)="onVote($event)"
+        (repost)="onRepost($event)"
+        (history)="openHistory($event)"
+        (openUser)="openProfile($event)"
         (comment)="openComments($event)"
         (share)="onShare($event)"
         (menu)="onMenu($event)"
@@ -81,12 +88,10 @@
 
       <!-- Empty feed -->
       <div class="feed-state" *ngIf="!visiblePosts().length">
-        <ion-icon name="chatbubble-ellipses-outline"></ion-icon>
-        <ng-container *ngIf="activeFilter() === 'mine'; else emptyAll">
-          <p>You haven't posted yet.</p>
-        </ng-container>
-        <ng-template #emptyAll><p>No posts yet. Be the first to share a hike!</p></ng-template>
-        <button class="state-btn primary" (click)="openComposer()">Create a post</button>
+        <ion-icon [name]="activeFilter() === 'following' ? 'people-outline' : 'chatbubble-ellipses-outline'"></ion-icon>
+        <p>{{ emptyMessage }}</p>
+        <button *ngIf="activeFilter() === 'following'; else createBtn" class="state-btn primary" (click)="openPeople()">Find people</button>
+        <ng-template #createBtn><button class="state-btn primary" (click)="openComposer()">Create a post</button></ng-template>
       </div>
 
       <button class="load-more" *ngIf="postService.hasMore() && activeFilter() !== 'mine'" (click)="postService.loadMore()">
@@ -133,7 +138,10 @@
         </div>
       </div>
 
+      <app-mention-suggestions [people]="composerSuggestions" (pick)="pickComposerMention($event)"></app-mention-suggestions>
       <ion-textarea
+        #composerText
+        (ionInput)="onComposerInput()"
         [(ngModel)]="draftText"
         placeholder="Share something with the trail community..."
         [autoGrow]="true"
@@ -174,6 +182,32 @@
         <button (click)="clearTrail()" aria-label="Remove trail tag"><ion-icon name="close"></ion-icon></button>
       </div>
 
+      <!-- Star rating for the tagged trail -->
+      <div class="rating-picker" *ngIf="draftTrail">
+        <span class="rating-label">Rate this trail</span>
+        <div class="rating-stars" role="radiogroup" aria-label="Star rating">
+          <button
+            *ngFor="let n of ratingStars"
+            type="button"
+            role="radio"
+            [attr.aria-checked]="draftRating === n"
+            [attr.aria-label]="n + (n === 1 ? ' star' : ' stars')"
+            [class.on]="n <= draftRating"
+            (click)="setRating(n)"
+          >
+            <ion-icon [name]="n <= draftRating ? 'star' : 'star-outline'"></ion-icon>
+          </button>
+        </div>
+        <span class="rating-value" *ngIf="draftRating">{{ draftRating }}.0</span>
+      </div>
+
+      <!-- Tagged guide -->
+      <div class="trail-chip" *ngIf="draftGuide">
+        <ion-icon name="person-outline"></ion-icon>
+        <span>Guide: {{ draftGuide.name }}</span>
+        <button (click)="clearGuide()" aria-label="Remove guide tag"><ion-icon name="close"></ion-icon></button>
+      </div>
+
       <!-- Add to post -->
       <div class="attach-row">
         <button class="attach-btn" (click)="choosePhotos()" [disabled]="processingPhotos || draftImages.length >= POST_PHOTO_MAX">
@@ -184,6 +218,13 @@
         <button class="attach-btn" [class.on]="showTrailPicker" (click)="toggleTrailPicker()">
           <ion-icon name="location-outline"></ion-icon>
           <span>{{ draftTrail ? 'Change trail' : 'Tag a trail' }}</span>
+        </button>
+      </div>
+
+      <div class="attach-row">
+        <button class="attach-btn" [class.on]="!!draftGuide" (click)="openGuidePicker()">
+          <ion-icon name="person-outline"></ion-icon>
+          <span>{{ draftGuide ? 'Change guide' : 'Tag your guide' }}</span>
         </button>
       </div>
 
@@ -252,7 +293,7 @@
                 <span class="c-badge" *ngIf="c.isPostAuthor">Author</span>
                 <span class="c-badge you" *ngIf="c.isMine">You</span>
               </div>
-              <p>{{ c.text }}</p>
+              <p><app-mention-text [text]="c.text" [mentions]="c.mentions" (openUser)="openProfile($event)"></app-mention-text></p>
               <div class="c-meta">
                 <span class="c-time">{{ c.timeAgo }}</span>
                 <button class="c-delete" *ngIf="canDeleteComment(c)" (click)="confirmDeleteComment(c)">Delete</button>
@@ -272,12 +313,17 @@
     <ion-footer class="ion-no-border">
     <ion-toolbar class="comment-input-bar">
       <!-- Signed in: comment as yourself -->
+      <div class="mention-wrap" *ngIf="isSignedIn && commentSuggestions.length">
+        <app-mention-suggestions [people]="commentSuggestions" (pick)="pickCommentMention($event)"></app-mention-suggestions>
+      </div>
       <div class="comment-input-row" *ngIf="isSignedIn; else commentGuest">
         <img *ngIf="me.avatar; else inputNoAvatar" [src]="me.avatar" alt="" class="me-avatar" />
         <ng-template #inputNoAvatar>
           <span class="me-avatar default"><ion-icon name="person"></ion-icon></span>
         </ng-template>
         <input
+          #commentBox
+          (input)="onCommentInput(commentBox)"
           class="comment-input"
           [(ngModel)]="newComment"
           [placeholder]="'Comment as ' + me.name + '...'"
@@ -304,6 +350,71 @@
     </ion-footer>
   </ng-template>
 </ion-modal>
+
+<!-- ═══════════════════════ Edit history ═══════════════════════ -->
+<ion-modal
+  [isOpen]="showHistory"
+  (didDismiss)="onHistoryDismissed()"
+  [breakpoints]="[0, 0.7, 0.95]"
+  [initialBreakpoint]="0.7"
+  [expandToScroll]="false"
+>
+  <ng-template>
+    <ion-header class="ion-no-border">
+      <ion-toolbar>
+        <div class="modal-header">
+          <span class="modal-title">Edit history</span>
+          <button class="text-btn" (click)="showHistory = false">Close</button>
+        </div>
+      </ion-toolbar>
+    </ion-header>
+
+    <ion-content class="ion-padding">
+      <div class="feed-state small" *ngIf="postService.historyLoading()">
+        <ion-spinner name="crescent"></ion-spinner>
+      </div>
+      <p class="no-comments" *ngIf="postService.historyError() as err">{{ err }}</p>
+
+      <div class="version-list" *ngIf="!postService.historyLoading()">
+        <div class="version" *ngFor="let v of postService.versions(); trackBy: trackById" [class.current]="v.isCurrent">
+          <div class="v-head">
+            <span class="v-tag" [class.current]="v.isCurrent">{{ v.isCurrent ? 'Current version' : (v.isOriginal ? 'Original' : 'Earlier version') }}</span>
+            <span class="v-when">{{ v.whenLabel }}</span>
+          </div>
+
+          <p class="v-text" *ngIf="v.text">{{ v.text }}</p>
+          <p class="v-text muted" *ngIf="!v.text">No text</p>
+
+          <div class="v-meta" *ngIf="v.trailName || v.rating">
+            <span *ngIf="v.trailName"><ion-icon name="location-outline"></ion-icon> {{ v.trailName }}</span>
+            <span class="v-stars" *ngIf="v.rating">
+              <ion-icon *ngFor="let n of ratingStars" [name]="n <= v.rating! ? 'star' : 'star-outline'"></ion-icon>
+            </span>
+          </div>
+
+          <div class="v-photos" *ngIf="v.images.length">
+            <button *ngFor="let img of v.images; let i = index" (click)="openVersionPhoto(v.images, i)" [attr.aria-label]="'Open photo ' + (i + 1)">
+              <img [src]="img" alt="" loading="lazy" />
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <p class="no-comments" *ngIf="historyIsPartial">
+        This post was edited before history was recorded, so earlier versions aren't available.
+      </p>
+    </ion-content>
+  </ng-template>
+</ion-modal>
+
+<!-- ═══════════════════════ People: search + profiles ═══════════════════════ -->
+<app-people-sheet
+  [open]="showPeople"
+  [uid]="peopleUid"
+  [pick]="peoplePick"
+  (picked)="onGuidePicked($event)"
+  (closed)="onPeopleClosed()"
+></app-people-sheet>
 
 <!-- ═══════════════════════ Photo viewer ═══════════════════════ -->
 <ion-modal class="viewer-modal" [isOpen]="!!viewer" (didDismiss)="viewer = null" (didPresent)="onViewerPresented()">

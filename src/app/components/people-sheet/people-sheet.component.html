@@ -1,0 +1,174 @@
+<ion-modal
+  [isOpen]="open"
+  [breakpoints]="[0, 0.92]"
+  [initialBreakpoint]="0.92"
+  [expandToScroll]="false"
+  (didPresent)="onPresented()"
+  (didDismiss)="onDismissed()"
+>
+  <ng-template>
+    <ion-header class="ion-no-border">
+      <ion-toolbar>
+        <div class="bar">
+          <!-- Left: Back (from a profile you reached by searching) -->
+          <div class="bar-side">
+            <button class="bar-btn" *ngIf="selectedUid() && !openedOnProfile" (click)="back()">
+              <ion-icon name="chevron-back"></ion-icon> Search
+            </button>
+          </div>
+          <span class="bar-title">{{ selectedUid() ? 'Profile' : (pick ? 'Tag your guide' : 'Find people') }}</span>
+          <div class="bar-side end">
+            <button class="bar-btn" (click)="closed.emit()">{{ pick ? 'Cancel' : 'Done' }}</button>
+          </div>
+        </div>
+      </ion-toolbar>
+    </ion-header>
+
+    <ion-content>
+      <!-- ══════════════ Screen 1: search ══════════════ -->
+      <div class="screen" *ngIf="!selectedUid()">
+        <div class="search-field">
+          <ion-icon name="search-outline"></ion-icon>
+          <input
+            #searchInput
+            type="search"
+            enterkeyhint="search"
+            autocomplete="off"
+            autocapitalize="off"
+            spellcheck="false"
+            [placeholder]="pick ? 'Search for your guide' : 'Search by name'"
+            aria-label="Search people by name"
+            [value]="query()"
+            (input)="onSearchInput($event)"
+          />
+          <button class="clear" *ngIf="query()" (click)="clearSearch(searchInput)" aria-label="Clear search">
+            <ion-icon name="close-circle"></ion-icon>
+          </button>
+        </div>
+
+        <div class="state" *ngIf="loading()">
+          <ion-spinner name="crescent"></ion-spinner>
+        </div>
+
+        <div class="state" *ngIf="!loading() && loadFailed()">
+          <p>Couldn't load people. Check your connection and try again.</p>
+          <button class="btn secondary" (click)="onPresented()">Try again</button>
+        </div>
+
+        <!-- Typing: fuzzy results -->
+        <ng-container *ngIf="!loading() && !loadFailed() && query().trim()">
+          <ul class="people" *ngIf="results().length; else noMatch">
+            <li *ngFor="let p of results(); trackBy: trackByUid">
+              <button class="row" (click)="openPerson(p)">
+                <img *ngIf="p.avatar; else rowNoAvatar" class="avatar" [src]="p.avatar" alt="" />
+                <ng-template #rowNoAvatar><span class="avatar default"><ion-icon name="person"></ion-icon></span></ng-template>
+                <span class="name">{{ p.name }}</span>
+              </button>
+              <button
+                *ngIf="!pick"
+                class="btn follow"
+                [class.on]="follows.isFollowing(p.uid)"
+                [disabled]="follows.isBusy(p.uid)"
+                [attr.aria-pressed]="follows.isFollowing(p.uid)"
+                [attr.aria-label]="(follows.isFollowing(p.uid) ? 'Unfollow ' : 'Follow ') + p.name"
+                (click)="toggleFollow(p, $event)"
+              >{{ follows.isFollowing(p.uid) ? 'Following' : 'Follow' }}</button>
+            </li>
+          </ul>
+          <ng-template #noMatch>
+            <div class="state">
+              <ion-icon name="search-outline"></ion-icon>
+              <p>No one found for “{{ query().trim() }}”.<br />Names are matched loosely, so a close spelling works.</p>
+            </div>
+          </ng-template>
+        </ng-container>
+
+        <!-- Idle: your Following / Followers -->
+        <ng-container *ngIf="!loading() && !loadFailed() && !query().trim()">
+          <ng-container *ngIf="signedIn(); else guestIdle">
+            <ion-segment *ngIf="!pick" [value]="tab()" (ionChange)="onTab($event)" class="segment">
+              <ion-segment-button value="following"><ion-label>Following {{ follows.followingCount() }}</ion-label></ion-segment-button>
+              <ion-segment-button value="followers"><ion-label>Followers {{ follows.followerCount() }}</ion-label></ion-segment-button>
+            </ion-segment>
+
+            <p class="list-label" *ngIf="pick && connections().length">People you follow</p>
+            <ul class="people" *ngIf="connections().length; else emptyList">
+              <li *ngFor="let p of connections(); trackBy: trackByUid">
+                <button class="row" (click)="openPerson(p)">
+                  <img *ngIf="p.avatar; else connNoAvatar" class="avatar" [src]="p.avatar" alt="" />
+                  <ng-template #connNoAvatar><span class="avatar default"><ion-icon name="person"></ion-icon></span></ng-template>
+                  <span class="name">{{ p.name }}</span>
+                </button>
+                <button
+                  *ngIf="!pick"
+                  class="btn follow"
+                  [class.on]="follows.isFollowing(p.uid)"
+                  [disabled]="follows.isBusy(p.uid)"
+                  [attr.aria-pressed]="follows.isFollowing(p.uid)"
+                  [attr.aria-label]="(follows.isFollowing(p.uid) ? 'Unfollow ' : 'Follow ') + p.name"
+                  (click)="toggleFollow(p, $event)"
+                >{{ follows.isFollowing(p.uid) ? 'Following' : 'Follow' }}</button>
+              </li>
+            </ul>
+            <ng-template #emptyList>
+              <div class="state">
+                <ion-icon name="people-outline"></ion-icon>
+                <p *ngIf="pick">Search a name above to find your guide.</p>
+                <p *ngIf="!pick && tab() === 'following'">You're not following anyone yet.<br />Search a name above to find your guide or fellow hikers.</p>
+                <p *ngIf="!pick && tab() === 'followers'">No followers yet.</p>
+              </div>
+            </ng-template>
+          </ng-container>
+          <ng-template #guestIdle>
+            <div class="state">
+              <ion-icon name="people-outline"></ion-icon>
+              <p>Search a name to find hikers. Sign in to follow them.</p>
+            </div>
+          </ng-template>
+        </ng-container>
+      </div>
+
+      <!-- ══════════════ Screen 2: profile ══════════════ -->
+      <div class="screen profile" *ngIf="selectedUid()">
+        <ng-container *ngIf="person() as p; else profileLoading">
+          <img *ngIf="p.avatar; else profNoAvatar" class="avatar xl" [src]="p.avatar" alt="" />
+          <ng-template #profNoAvatar><span class="avatar xl default"><ion-icon name="person"></ion-icon></span></ng-template>
+
+          <h2>{{ p.name }}</h2>
+
+          <div class="counts">
+            <div><strong>{{ counts()?.followers ?? '–' }}</strong><span>Followers</span></div>
+            <div><strong>{{ counts()?.following ?? '–' }}</strong><span>Following</span></div>
+          </div>
+
+          <button
+            *ngIf="!isMe()"
+            class="btn follow big"
+            [class.on]="follows.isFollowing(p.uid)"
+            [disabled]="follows.isBusy(p.uid)"
+            [attr.aria-pressed]="follows.isFollowing(p.uid)"
+            (click)="toggleFollow(p)"
+          >
+            <ng-container *ngIf="signedIn(); else signInLabel">{{ follows.isFollowing(p.uid) ? 'Following' : 'Follow' }}</ng-container>
+            <ng-template #signInLabel>Sign in to follow</ng-template>
+          </button>
+          <p class="you" *ngIf="isMe()">This is how others see you.</p>
+
+          <section class="posts">
+            <h3>Recent posts</h3>
+            <ul *ngIf="personPosts().length; else noPosts">
+              <li *ngFor="let post of personPosts(); trackBy: trackById">
+                <p>{{ post.content || 'Shared a photo' }}</p>
+                <span>{{ post.timeAgo }}<ng-container *ngIf="post.trailName"> · {{ post.trailName }}</ng-container></span>
+              </li>
+            </ul>
+            <ng-template #noPosts><p class="muted">No recent posts.</p></ng-template>
+          </section>
+        </ng-container>
+        <ng-template #profileLoading>
+          <div class="state"><ion-spinner name="crescent"></ion-spinner></div>
+        </ng-template>
+      </div>
+    </ion-content>
+  </ng-template>
+</ion-modal>

@@ -1,68 +1,140 @@
 <div class="post-card" [class.highlight]="highlight" [attr.id]="'post-' + post.id">
-  <div class="post-header">
-    <!-- The photo the author uploaded, or the default silhouette -->
-    <img *ngIf="post.avatar; else defaultAvatar" class="avatar" [src]="post.avatar" [alt]="post.author" />
-    <ng-template #defaultAvatar>
-      <span class="avatar default-avatar" role="img" [attr.aria-label]="post.author">
+
+  <!-- Repost banner: who shared this post to the feed -->
+  <div class="repost-banner" *ngIf="post.isRepost">
+    <img *ngIf="post.avatar; else repostDefaultAvatar" class="rp-avatar" [src]="post.avatar" [alt]="post.author" (click)="openUser.emit(post.authorUid)" />
+    <ng-template #repostDefaultAvatar>
+      <span class="rp-avatar default-avatar" role="img" [attr.aria-label]="post.author" (click)="openUser.emit(post.authorUid)">
         <ion-icon name="person"></ion-icon>
       </span>
     </ng-template>
-
-    <div class="who">
-      <div class="name-row">
-        <span class="name">{{ post.author }}</span>
-        <ion-badge *ngIf="post.isPro" class="pro-badge">PRO</ion-badge>
-        <span *ngIf="post.isMine" class="you-tag">You</span>
-      </div>
-      <span class="handle">
-        {{ post.timeAgo }}<ng-container *ngIf="post.edited"> &middot; edited</ng-container><ng-container *ngIf="post.handle"> &middot; {{ post.handle }}</ng-container>
-      </span>
-    </div>
-    <button class="more-btn" (click)="menu.emit(post)" aria-label="Post options">
+    <ion-icon name="repeat-outline" class="rp-icon"></ion-icon>
+    <span class="rp-text">
+      <strong (click)="openUser.emit(post.authorUid)">{{ post.isMine ? 'You' : post.author }}</strong> reposted &middot; {{ post.timeAgo }}
+    </span>
+    <button class="more-btn" (click)="menu.emit(post)" aria-label="Repost options">
       <ion-icon name="ellipsis-horizontal" class="more-icon"></ion-icon>
     </button>
   </div>
 
-  <button *ngIf="post.trailId" class="trail-tag" (click)="openTrail.emit(post)">
-    <ion-icon name="location-outline"></ion-icon>
-    <span>{{ post.trailName || 'View trail' }}</span>
-    <ion-icon name="chevron-forward-outline" class="chev"></ion-icon>
-  </button>
-
-  <p class="content" *ngIf="post.content">
-    <span class="text">{{ shownText }}</span>
-    <button *ngIf="isLong" class="see-more" (click)="expanded = !expanded">{{ expanded ? 'See less' : 'See more' }}</button>
-  </p>
-  <div class="tags" *ngIf="post.tags?.length">
-    <span class="tag" *ngFor="let t of post.tags">{{ t }}</span>
+  <!-- The original was deleted -->
+  <div class="repost-missing" *ngIf="post.isRepost && !post.original">
+    <ion-icon name="alert-circle-outline"></ion-icon>
+    <span>This post is no longer available.</span>
   </div>
 
-  <div
-    class="media"
-    *ngIf="post.images.length"
-    [ngClass]="'count-' + (post.images.length > 4 ? 4 : post.images.length)"
-  >
-    <button
-      class="media-item"
-      *ngFor="let img of post.images.slice(0, 4); let i = index"
-      (click)="openImage.emit({ post: post, index: i })"
-      [attr.aria-label]="'Open photo ' + (i + 1)"
+  <div class="post-body" [class.quoted]="post.isRepost" *ngIf="!post.isRepost || post.original">
+    <div class="post-header">
+      <!-- The photo the author uploaded, or the default silhouette -->
+      <img *ngIf="target.avatar; else defaultAvatar" class="avatar" [src]="target.avatar" [alt]="target.author" (click)="openUser.emit(target.authorUid)" />
+      <ng-template #defaultAvatar>
+        <span class="avatar default-avatar" role="img" [attr.aria-label]="target.author" (click)="openUser.emit(target.authorUid)">
+          <ion-icon name="person"></ion-icon>
+        </span>
+      </ng-template>
+
+      <div class="who">
+        <div class="name-row">
+          <span class="name" (click)="openUser.emit(target.authorUid)">{{ target.author }}</span>
+          <ion-badge *ngIf="target.isPro" class="pro-badge">PRO</ion-badge>
+          <span *ngIf="target.isMine" class="you-tag">You</span>
+        </div>
+        <span class="handle">
+          {{ target.timeAgo }}<ng-container *ngIf="target.edited"> &middot; <button type="button" class="edited-link" (click)="history.emit(target)" aria-label="View edit history">edited</button></ng-container><ng-container *ngIf="target.handle"> &middot; {{ target.handle }}</ng-container>
+        </span>
+      </div>
+      <button *ngIf="!post.isRepost" class="more-btn" (click)="menu.emit(post)" aria-label="Post options">
+        <ion-icon name="ellipsis-horizontal" class="more-icon"></ion-icon>
+      </button>
+    </div>
+
+    <!-- Guide the author hiked with -->
+    <div class="guide-row" *ngIf="target.guide as g">
+      <span class="guide-label">Guided by</span>
+      <button type="button" class="guide-link" (click)="openUser.emit(g.uid)" [attr.aria-label]="'View profile of ' + g.name">
+        <img *ngIf="g.avatar; else guideNoAvatar" class="guide-avatar" [src]="g.avatar" alt="" />
+        <ng-template #guideNoAvatar><span class="guide-avatar default"><ion-icon name="person"></ion-icon></span></ng-template>
+        <span class="guide-name">{{ g.name }}</span>
+      </button>
+    </div>
+
+    <!-- Tagged location + star rating -->
+    <div class="trail-row" *ngIf="target.trailId || target.rating">
+      <button *ngIf="target.trailId" class="trail-tag" (click)="openTrail.emit(target)">
+        <ion-icon name="location-outline"></ion-icon>
+        <span>{{ target.trailName || 'View trail' }}</span>
+        <ion-icon name="chevron-forward-outline" class="chev"></ion-icon>
+      </button>
+      <span class="rating" *ngIf="target.rating" role="img" [attr.aria-label]="'Rated ' + target.rating + ' out of 5 stars'">
+        <ion-icon *ngFor="let s of stars" [name]="s <= target.rating! ? 'star' : 'star-outline'"></ion-icon>
+        <b>{{ target.rating }}.0</b>
+      </span>
+    </div>
+
+    <p class="content" *ngIf="target.content">
+      <app-mention-text class="text" [text]="shownText" [mentions]="target.mentions" (openUser)="openUser.emit($event)"></app-mention-text>
+      <button *ngIf="isLong" class="see-more" (click)="expanded = !expanded">{{ expanded ? 'See less' : 'See more' }}</button>
+    </p>
+    <div class="tags" *ngIf="target.tags?.length">
+      <span class="tag" *ngFor="let t of target.tags">{{ t }}</span>
+    </div>
+
+    <div
+      class="media"
+      *ngIf="target.images.length"
+      [ngClass]="'count-' + (target.images.length > 4 ? 4 : target.images.length)"
     >
-      <img [src]="img" alt="" loading="lazy" />
-    </button>
-  </div>
+      <button
+        class="media-item"
+        *ngFor="let img of target.images.slice(0, 4); let i = index"
+        (click)="openImage.emit({ post: target, index: i })"
+        [attr.aria-label]="'Open photo ' + (i + 1)"
+      >
+        <img [src]="img" alt="" loading="lazy" />
+      </button>
+    </div>
 
-  <div class="actions">
-    <button class="action-btn" [class.liked]="post.liked" (click)="like.emit(post)" [attr.aria-pressed]="post.liked" aria-label="Like">
-      <ion-icon [name]="post.liked ? 'heart' : 'heart-outline'"></ion-icon>
-      <span>{{ formatLikes(post.likes) }}</span>
-    </button>
-    <button class="action-btn" (click)="comment.emit(post)" aria-label="Comments">
-      <ion-icon name="chatbubble-outline"></ion-icon>
-      <span>{{ post.commentCount }}</span>
-    </button>
-    <button class="action-btn share" (click)="share.emit(post)" aria-label="Share">
-      <ion-icon name="share-social-outline"></ion-icon>
-    </button>
+    <div class="actions">
+      <!-- Upvote / score / downvote -->
+      <div class="vote-pill" [class.up]="target.vote === 1" [class.down]="target.vote === -1">
+        <button
+          class="vote-btn up"
+          (click)="vote.emit({ post: target, dir: 1 })"
+          [attr.aria-pressed]="target.vote === 1"
+          aria-label="Upvote"
+        >
+          <ion-icon [name]="target.vote === 1 ? 'arrow-up-circle' : 'arrow-up-circle-outline'"></ion-icon>
+        </button>
+        <span class="score" aria-label="Score">{{ formatCount(target.score) }}</span>
+        <button
+          class="vote-btn down"
+          (click)="vote.emit({ post: target, dir: -1 })"
+          [attr.aria-pressed]="target.vote === -1"
+          aria-label="Downvote"
+        >
+          <ion-icon [name]="target.vote === -1 ? 'arrow-down-circle' : 'arrow-down-circle-outline'"></ion-icon>
+        </button>
+      </div>
+
+      <button class="action-btn" (click)="comment.emit(target)" aria-label="Comments">
+        <ion-icon name="chatbubble-outline"></ion-icon>
+        <span>{{ target.commentCount }}</span>
+      </button>
+
+      <button
+        class="action-btn repost"
+        [class.on]="target.reposted"
+        (click)="repost.emit(target)"
+        [attr.aria-pressed]="target.reposted"
+        aria-label="Repost"
+      >
+        <ion-icon [name]="target.reposted ? 'repeat' : 'repeat-outline'"></ion-icon>
+        <span>{{ target.repostCount }}</span>
+      </button>
+
+      <button class="action-btn share" (click)="share.emit(target)" aria-label="Share">
+        <ion-icon name="share-social-outline"></ion-icon>
+      </button>
+    </div>
   </div>
 </div>

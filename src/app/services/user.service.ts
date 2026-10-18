@@ -9,6 +9,7 @@ import {
 } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { auth, db } from './firebase.client';
+import { startSession, clearSession, isSessionExpired } from './session-expiry';
 import { UserProfile, UpcomingAdventure } from '../models/user.model';
 
 /** Error with a Firebase code and a user-friendly message. */
@@ -98,6 +99,13 @@ export class UserService {
           resolve();
           return;
         }
+        if (user && isSessionExpired()) {
+          // Session window has passed (or no record exists): sign out.
+          await fbSignOut(auth).catch(() => {});
+          this.resetState();
+          resolve();
+          return;
+        }
         if (user) {
           await this.loadProfile(user);
           this._isAuthenticated.set(true);
@@ -115,6 +123,7 @@ export class UserService {
     this.manualAuth = true;
     try {
       const cred = await createUserWithEmailAndPassword(auth, data.email.trim(), data.password);
+      startSession(false);
       const profile: UserProfile = {
         ...EMPTY_PROFILE,
         name: data.name.trim(),
@@ -129,6 +138,7 @@ export class UserService {
       } catch (e) {
         // Don't leave an auth account without a profile document.
         await deleteUser(cred.user).catch(() => {});
+        clearSession();
         throw e;
       }
       this._profile.set(profile);
@@ -141,10 +151,11 @@ export class UserService {
     }
   }
 
-  async signIn(email: string, password: string): Promise<void> {
+  async signIn(email: string, password: string, remember = false): Promise<void> {
     this.manualAuth = true;
     try {
       const cred = await signInWithEmailAndPassword(auth, email.trim(), password);
+      startSession(remember);
       await this.loadProfile(cred.user);
       this._isAuthenticated.set(true);
     } catch (e: any) {
@@ -155,8 +166,18 @@ export class UserService {
   }
 
   async signOut(): Promise<void> {
+    clearSession();
     await fbSignOut(auth);
     this.resetState();
+  }
+
+  /** Signs the user out if their session window has passed. Returns true if it did. */
+  async enforceSessionExpiry(): Promise<boolean> {
+    if (this._isAuthenticated() && isSessionExpired()) {
+      await this.signOut();
+      return true;
+    }
+    return false;
   }
 
   // ---------- Profile data ----------

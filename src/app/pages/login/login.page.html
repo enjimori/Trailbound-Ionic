@@ -23,21 +23,22 @@
       <div class="field-group">
         <ion-input
           formControlName="password"
-          [type]="showPw ? 'text' : 'password'"
+          type="password"
+          [clearOnEdit]="false"
           autocomplete="current-password"
           placeholder="Password"
           class="login-input"
           fill="outline"
         >
-          <ion-icon
-            slot="end"
-            class="eye"
-            [name]="showPw ? 'eye-off-outline' : 'eye-outline'"
-            (click)="showPw = !showPw"
-          ></ion-icon>
         </ion-input>
         <p class="err" *ngIf="err('password') as msg">{{ msg }}</p>
       </div>
+
+      <label class="remember-row">
+        <ion-checkbox formControlName="remember" labelPlacement="end" justify="start">
+          Remember me for 7 days
+        </ion-checkbox>
+      </label>
 
       <p class="err form-err" *ngIf="loginError">{{ loginError }}</p>
 
