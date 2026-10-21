@@ -66,6 +66,15 @@
         <ion-icon name="warning-outline"></ion-icon>
         <span>Check the summit weather 24 hours before your climb.</span>
       </div>
+
+      <!-- Medical certificate + barangay clearance, reviewed by TrailBound -->
+      <button type="button" class="bc-reminder bc-docs" *ngIf="certs.loaded() && !certs.summary().allApproved" (click)="goDocuments()">
+        <ion-icon name="document-attach-outline"></ion-icon>
+        <span>
+          {{ certs.summary().missing ? 'Upload your medical certificate and barangay clearance for your hiking permit.' : 'Your hiking documents: ' + certs.summary().label.toLowerCase() + '.' }}
+        </span>
+        <ion-icon name="chevron-forward-outline" class="chev"></ion-icon>
+      </button>
     </div>
 
     <button class="bc-home" (click)="goHome()">

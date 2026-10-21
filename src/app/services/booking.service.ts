@@ -1,7 +1,11 @@
-import { Injectable, computed, signal } from '@angular/core';
+import { Injectable, computed, inject, signal } from '@angular/core';
+import { onAuthStateChanged } from 'firebase/auth';
+import { collection, doc, getDocs, query, setDoc, where } from 'firebase/firestore';
 import {
   Booking, BookingDraft, BookingQuote, HikeActivity, MerchLine,
 } from '../models/booking.model';
+import { auth, db } from './firebase.client';
+import { UserService } from './user.service';
 import {
   TRANSACTION_FEE, activityById, guideById, merchById, packageById,
 } from '../pages/booking/booking-catalog';
@@ -21,6 +25,14 @@ import {
  *
  * When the team wires up Firestore, only `load()` and `save()` change — every
  * page reads through the signals below.
+ *
+ * ADMIN PANEL HOOK-UP
+ *   Each confirmed booking is ALSO copied to Firestore  bookings/{id}  with the
+ *   hiker's uid, name and email, so the admin panel can see every booking.
+ *   When a hiker signs in, their bookings are read back from Firestore, so a
+ *   booking an admin cancels or completes shows that status here too, and a
+ *   booking made on another phone appears. The Bookings tab only lists the
+ *   signed-in hiker's own bookings (plus older ones saved before this change).
  * ═══════════════════════════════════════════════════════════════════════════
  */
 
@@ -28,11 +40,24 @@ const STORAGE_KEY = 'TrailBound.bookings.v1';
 
 @Injectable({ providedIn: 'root' })
 export class BookingService {
+  private readonly userService = inject(UserService);
   private readonly _draft = signal<BookingDraft | null>(null);
   private readonly _bookings = signal<Booking[]>(this.load());
+  private readonly _uid = signal<string | null>(null);
 
   readonly draft = computed(() => this._draft());
-  readonly bookings = computed(() => this._bookings());
+  /** The signed-in hiker's bookings, plus any saved before bookings had an owner. */
+  readonly bookings = computed(() => {
+    const uid = this._uid();
+    return this._bookings().filter(b => !b.uid || b.uid === uid);
+  });
+
+  constructor() {
+    onAuthStateChanged(auth, user => {
+      this._uid.set(user?.uid ?? null);
+      if (user) void this.syncFromServer(user.uid);
+    });
+  }
 
   // ── draft ───────────────────────────────────────────────────────────────
 
@@ -117,6 +142,7 @@ export class BookingService {
     const pkg = packageById(draft.packageId);
     const guide = guideById(draft.guideId);
 
+    const user = auth.currentUser;
     const booking: Booking = {
       id: 'b' + Date.now(),
       reference: this.newReference(),
@@ -137,11 +163,15 @@ export class BookingService {
       cardLast4,
       createdAt: new Date().toISOString(),
       status: 'confirmed',
+      uid: user?.uid,
+      userName: this.userService.profile().name || user?.displayName || '',
+      userEmail: user?.email ?? '',
     };
 
     this._bookings.update(list => [booking, ...list]);
     this.save();
     this.clearDraft();
+    void this.upload(booking);
 
     return booking;
   }
@@ -160,6 +190,65 @@ export class BookingService {
    */
   private newReference(): string {
     return 'HIK-' + String(Math.floor(10000 + Math.random() * 90000));
+  }
+
+  // ── Firestore copy (for the admin panel) ────────────────────────────────
+
+  /** Copies one booking to bookings/{id}. A failure keeps it local and retries on next sign-in. */
+  private async upload(booking: Booking): Promise<void> {
+    if (!booking.uid) return;
+    try {
+      // JSON round-trip drops `undefined` fields, which Firestore refuses.
+      const { synced, ...data } = JSON.parse(JSON.stringify(booking)) as Booking;
+      void synced;
+      await setDoc(doc(db, 'bookings', booking.id), data);
+      this._bookings.update(list => list.map(b => (b.id === booking.id ? { ...b, synced: true } : b)));
+      this.save();
+    } catch (e) {
+      console.warn('Booking saved on this device only; will retry later.', e);
+    }
+  }
+
+  /**
+   * Brings this hiker's bookings in line with Firestore: picks up status
+   * changes an admin made, drops bookings an admin deleted, adds bookings
+   * made on another device, and re-sends any that never reached the server.
+   */
+  private async syncFromServer(uid: string): Promise<void> {
+    let remote: Booking[];
+    try {
+      const snap = await getDocs(query(collection(db, 'bookings'), where('uid', '==', uid)));
+      remote = snap.docs.map(d => ({ ...(d.data() as Booking), id: d.id, synced: true }));
+    } catch (e) {
+      console.warn('Could not read bookings from Firestore.', e);
+      return;
+    }
+
+    const byId = new Map(remote.map(b => [b.id, b]));
+    const retry: Booking[] = [];
+    const merged: Booking[] = [];
+
+    for (const local of this._bookings()) {
+      if (local.uid !== uid) {
+        merged.push(local);
+        continue;
+      }
+      const server = byId.get(local.id);
+      if (server) {
+        merged.push({ ...local, ...server, trailImage: server.trailImage || local.trailImage });
+        byId.delete(local.id);
+      } else if (!local.synced) {
+        merged.push(local);
+        retry.push(local);
+      }
+      // else: it reached the server once and is gone now — an admin deleted it.
+    }
+    merged.push(...byId.values());
+    merged.sort((a, b) => (b.createdAt ?? '').localeCompare(a.createdAt ?? ''));
+
+    this._bookings.set(merged);
+    this.save();
+    retry.forEach(b => void this.upload(b));
   }
 
   // ── persistence ─────────────────────────────────────────────────────────

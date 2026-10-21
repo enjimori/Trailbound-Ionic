@@ -6,10 +6,11 @@ import {
   IonToggle, AlertController, ToastController,
 } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
-import { moonOutline, person, sunnyOutline } from 'ionicons/icons';
+import { documentAttachOutline, moonOutline, person, sunnyOutline } from 'ionicons/icons';
 import { UserService } from '../../services/user.service';
 import { NotificationService } from '../../services/notification.service';
 import { ThemeService } from '../../services/theme.service';
+import { CertificateService } from '../../services/certificate.service';
 import { UpcomingAdventure } from '../../models/user.model';
 
 @Component({
@@ -38,12 +39,13 @@ export class ProfilePage {
     public userService: UserService,
     public notificationService: NotificationService,
     public themeService: ThemeService,
+    public certs: CertificateService,
     private router: Router,
     private alertCtrl: AlertController,
     private toastCtrl: ToastController,
   ) {
     // Silhouette for the default avatar (guests, or users without a photo)
-    addIcons({ person, moonOutline, sunnyOutline });
+    addIcons({ person, moonOutline, sunnyOutline, documentAttachOutline });
     this.userService.ready.then(() => this.authReady.set(true));
   }
 
@@ -61,6 +63,11 @@ export class ProfilePage {
 
   goPersonalInfo() {
     this.router.navigate(['/personal-info']);
+  }
+
+  /** Medical certificate and barangay clearance upload. */
+  goDocuments() {
+    this.router.navigate(['/documents']);
   }
 
   goNotifications() {

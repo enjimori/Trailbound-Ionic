@@ -7,7 +7,7 @@ import {
   deleteUser,
   User,
 } from 'firebase/auth';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { doc, getDoc, serverTimestamp, setDoc } from 'firebase/firestore';
 import { auth, db } from './firebase.client';
 import { startSession, clearSession, isSessionExpired } from './session-expiry';
 import { UserProfile, UpcomingAdventure } from '../models/user.model';
@@ -61,7 +61,7 @@ function friendlyAuthError(code: string): string {
     case 'auth/invalid-email':
       return 'That email address is not valid.';
     case 'auth/user-disabled':
-      return 'This account has been disabled.';
+      return 'This account has been suspended. Please contact TrailBound support.';
     case 'auth/too-many-requests':
       return 'Too many attempts. Please wait a moment and try again.';
     case 'auth/network-request-failed':
@@ -107,8 +107,15 @@ export class UserService {
           return;
         }
         if (user) {
-          await this.loadProfile(user);
-          this._isAuthenticated.set(true);
+          const suspended = await this.loadProfile(user);
+          if (suspended) {
+            // Suspended from the admin panel: end the session.
+            clearSession();
+            await fbSignOut(auth).catch(() => {});
+            this.resetState();
+          } else {
+            this._isAuthenticated.set(true);
+          }
         } else {
           this.resetState();
         }
@@ -134,7 +141,8 @@ export class UserService {
         // avatar stays '' until the user uploads one; the app shows a default silhouette
       };
       try {
-        await setDoc(doc(db, 'users', cred.user.uid), { profile, upcoming: [] });
+        // createdAt lets the admin panel show when each hiker joined.
+        await setDoc(doc(db, 'users', cred.user.uid), { profile, upcoming: [], createdAt: serverTimestamp() });
       } catch (e) {
         // Don't leave an auth account without a profile document.
         await deleteUser(cred.user).catch(() => {});
@@ -156,7 +164,14 @@ export class UserService {
     try {
       const cred = await signInWithEmailAndPassword(auth, email.trim(), password);
       startSession(remember);
-      await this.loadProfile(cred.user);
+      const suspended = await this.loadProfile(cred.user);
+      if (suspended) {
+        // An admin suspended this account (Admin → Hikers).
+        clearSession();
+        await fbSignOut(auth).catch(() => {});
+        this.resetState();
+        throw { code: 'auth/user-disabled' };
+      }
       this._isAuthenticated.set(true);
     } catch (e: any) {
       throw new AuthError(e?.code ?? 'unknown', friendlyAuthError(e?.code ?? ''));
@@ -211,7 +226,8 @@ export class UserService {
     this._upcoming.set(list);
   }
 
-  private async loadProfile(user: User): Promise<void> {
+  /** Loads the profile. Returns true if an admin has suspended the account. */
+  private async loadProfile(user: User): Promise<boolean> {
     const fallback: UserProfile = {
       ...EMPTY_PROFILE,
       email: user.email ?? '',
@@ -225,8 +241,9 @@ export class UserService {
         if (isPlaceholderAvatar(loaded.avatar)) loaded.avatar = '';
         this._profile.set(loaded);
         this._upcoming.set(data['upcoming'] ?? []);
+        return data['status'] === 'suspended';
       } else {
-        await setDoc(ref, { profile: fallback, upcoming: [] });
+        await setDoc(ref, { profile: fallback, upcoming: [], createdAt: serverTimestamp() });
         this._profile.set(fallback);
         this._upcoming.set([]);
       }
@@ -235,6 +252,7 @@ export class UserService {
       this._profile.set(fallback);
       this._upcoming.set([]);
     }
+    return false;
   }
 
   private resetState() {

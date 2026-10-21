@@ -34,6 +34,50 @@ npx cap sync
 npx cap open ios     # or: npx cap open android
 ```
 
+## Admin panel
+
+Open **`/admin`** in the browser (for example `http://localhost:8100/admin`).
+
+| | |
+|---|---|
+| Username | `admin` |
+| Password | `TrailBound@2026` — first sign-in only; change it in **Admin → Settings** |
+
+The first sign-in with that username and password creates the admin login in
+Firebase Authentication. After that, only the password Firebase holds works.
+Accounts are set in `src/app/pages/admin/admin.config.ts`.
+
+**Before it can read everything, publish `firestore.rules`:** Firebase console →
+Firestore Database → Rules → paste the whole file → Publish. Until then the
+panel shows a yellow "Firebase is blocking some admin data" banner.
+
+What an admin can do:
+
+- **Dashboard** — revenue, bookings and hikers, a revenue chart (week / month / year), recent bookings, trail status and community activity.
+- **Bookings** — every hiker's bookings; search, filter, full receipt, mark completed, cancel, delete, export to CSV.
+- **Hikers** — every account with profile, bookings, spend and saved trails; suspend / reactivate, make admin / remove admin, delete profile data.
+- **Trails** — the 30 trails; close one for booking with a reason (the app shows it and turns off **Book**), reopen it.
+- **Community** — every post and its comments; remove a comment or a whole post.
+- **Reviews** — every trail review; remove one.
+- **Certificates** — each hiker's medical certificate and barangay clearance; view the file, approve it, or reject it with a reason the hiker sees. Also lists hikers with an upcoming hike who are still missing a document. The sidebar shows how many are waiting.
+- **Packages** — packages, activities, guides and merchandise with how often each is booked (prices live in `booking-catalog.ts`).
+- **Settings** — change the admin password, see who else is an admin, check Firestore access.
+
+To make another person an admin, open them in **Hikers** and choose **Make admin**;
+they sign in to `/admin` with their own email and password.
+
+Hikers upload their documents in the app from **Profile → Hiking Documents**
+(a photo or a PDF up to 650 KB). Files are stored inside Firestore
+(`certificates` + `certificate_files`), like post photos, so no paid Firebase
+Storage plan is needed.
+
+What the app writes to Firestore for the panel: each confirmed booking
+(`bookings/{id}`, with the hiker's uid), each signed-in hiker's review
+(`reviews/{id}`), hiking documents (`certificates/{uid}_{type}`), and the
+admin's trail closures (`trail_status/{id}`).
+Bookings and reviews saved only on a phone before this version are not in
+Firestore, so the panel cannot see those.
+
 ## Project structure
 
 ```

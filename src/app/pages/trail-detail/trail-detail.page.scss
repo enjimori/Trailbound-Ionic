@@ -452,3 +452,38 @@
   min-height: 56px;
   font-size: 15.5px;
 }
+
+/* Trail closed from the admin panel */
+.closed-notice {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  margin: 0 0 18px;
+  padding: 14px 16px;
+  border-radius: var(--app-radius-sm, 12px);
+  background: rgba(240, 80, 90, 0.12);
+  border: 1px solid rgba(240, 80, 90, 0.3);
+  color: var(--app-text);
+
+  ion-icon {
+    flex: none;
+    font-size: 20px;
+    color: var(--app-heart, #f0505a);
+    margin-top: 1px;
+  }
+
+  strong {
+    font-size: 14px;
+  }
+
+  p {
+    margin: 3px 0 0;
+    font-size: 13px;
+    line-height: 1.45;
+    color: var(--app-text-dim);
+  }
+}
+
+.act-book.is-closed {
+  opacity: 0.55;
+}

@@ -29,6 +29,15 @@
 
   <div class="sheet">
 
+    <!-- Set from the admin panel (Admin → Trails). Booking is off while closed. -->
+    <div class="closed-notice" *ngIf="closure() as c">
+      <ion-icon name="lock-closed-outline"></ion-icon>
+      <div>
+        <strong>Closed for booking</strong>
+        <p>{{ c.note || 'This trail is temporarily closed. Check back soon.' }}</p>
+      </div>
+    </div>
+
     <p class="section-title">Overview</p>
     <p class="description">{{ t.description }}</p>
 
@@ -162,7 +171,7 @@
         <span class="date">{{ timeAgo(r.createdAt) }}</span>
       </div>
       <p class="review-text">{{ r.text }}</p>
-      <button class="delete-review" (click)="deleteReview(r.id)">
+      <button class="delete-review" *ngIf="canDeleteReview(r)" (click)="deleteReview(r.id)">
         <ion-icon name="trash-outline"></ion-icon>
       </button>
     </div>
@@ -178,9 +187,9 @@
       <ion-icon name="arrow-back-outline"></ion-icon>
     </button>
 
-    <button class="cta-pill act-book" (click)="bookNow()">
-      Book This Hike
-      <ion-icon name="chevron-forward-outline"></ion-icon>
+    <button class="cta-pill act-book" [class.is-closed]="closure()" (click)="bookNow()">
+      {{ closure() ? 'Closed for booking' : 'Book This Hike' }}
+      <ion-icon [name]="closure() ? 'lock-closed-outline' : 'chevron-forward-outline'"></ion-icon>
     </button>
 
     <button

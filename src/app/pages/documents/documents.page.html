@@ -1,0 +1,107 @@
+<ion-header class="ion-no-border">
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-button (click)="goBack()" aria-label="Go back">
+        <ion-icon name="arrow-back-outline" slot="icon-only"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+    <ion-title>Hiking documents</ion-title>
+  </ion-toolbar>
+  <p class="subtitle">Needed for your hiking permit. TrailBound checks them before your hike.</p>
+</ion-header>
+
+<ion-content [fullscreen]="true">
+  <div class="page-pad">
+
+    <div class="summary" [attr.data-state]="certs.summary().allApproved ? 'ok' : certs.summary().rejected ? 'bad' : 'wait'">
+      @if (certs.summary().allApproved) {
+        <ion-icon name="checkmark-circle"></ion-icon>
+        <div><strong>You're all set</strong><p>Both documents are approved.</p></div>
+      } @else if (certs.summary().rejected) {
+        <ion-icon name="alert-circle"></ion-icon>
+        <div><strong>A document needs a new file</strong><p>See the reason below and upload it again.</p></div>
+      } @else if (certs.summary().missing) {
+        <ion-icon name="document-attach-outline"></ion-icon>
+        <div><strong>{{ certs.summary().missing === 2 ? 'Upload both documents' : 'One more to upload' }}</strong><p>A clear photo or a PDF works.</p></div>
+      } @else {
+        <ion-icon name="time-outline"></ion-icon>
+        <div><strong>Under review</strong><p>We'll update this page once they're checked.</p></div>
+      }
+    </div>
+
+    @for (c of cards(); track c.kind.id) {
+      <ng-container *ngTemplateOutlet="card; context: { k: c.kind, r: c.rec }"></ng-container>
+    }
+
+    <ng-template #card let-k="k" let-r="r">
+      <section class="doc-card">
+        <div class="doc-head">
+          <span class="doc-icon"><ion-icon [name]="k.icon"></ion-icon></span>
+          <div class="doc-title">
+            <h2>{{ k.title }}</h2>
+            <p>{{ k.description }}</p>
+          </div>
+        </div>
+
+        <span class="status" [attr.data-status]="r?.status ?? 'none'">{{ statusLabel(r) }}</span>
+
+        @if (r?.status === 'rejected') {
+          <div class="reason">
+            <strong>Reason</strong>
+            <p>{{ r?.note || 'The file could not be accepted. Please upload a clearer copy.' }}</p>
+          </div>
+        }
+
+        @if (r) {
+          <div class="file-row">
+            <ion-icon [name]="r.mimeType === 'application/pdf' ? 'document-text-outline' : 'document-attach-outline'"></ion-icon>
+            <div class="file-meta">
+              <span class="file-name">{{ r.fileName }}</span>
+              <span class="file-sub">Uploaded {{ r.uploadedAt | date: 'MMM d, y, h:mm a' }}</span>
+            </div>
+            <button type="button" class="icon-btn" (click)="view(k)" aria-label="View file"><ion-icon name="eye-outline"></ion-icon></button>
+            <button type="button" class="icon-btn danger" (click)="remove(k)" aria-label="Remove file"><ion-icon name="trash-outline"></ion-icon></button>
+          </div>
+        }
+
+        <input #fileInput type="file" accept="image/*,application/pdf" hidden (change)="onFile(k, $event)" />
+        @if (r?.status !== 'approved') {
+          <button type="button" class="cta-pill upload-btn" [disabled]="uploading() !== null" (click)="pick(fileInput)">
+            <ion-icon name="cloud-upload-outline"></ion-icon>
+            {{ uploading() === k.id ? 'Uploading…' : r ? 'Upload a new file' : 'Upload file' }}
+          </button>
+        } @else {
+          <button type="button" class="ghost-pill upload-btn" [disabled]="uploading() !== null" (click)="pick(fileInput)">
+            {{ uploading() === k.id ? 'Uploading…' : 'Replace file' }}
+          </button>
+        }
+      </section>
+    </ng-template>
+
+    <p class="hint">Photo (JPG or PNG) or PDF up to 650 KB. Make sure your name, the date and the signature are easy to read.</p>
+    <p class="privacy"><ion-icon name="lock-closed-outline"></ion-icon>Only you and TrailBound admins can see these files.</p>
+  </div>
+
+  <ion-modal [isOpen]="viewerOpen()" (didDismiss)="closeViewer()" class="doc-viewer">
+    <ng-template>
+      <div class="viewer">
+        <header>
+          <h3>{{ viewerTitle() }}</h3>
+          @if (viewerDownload(); as d) {
+            <a class="icon-btn" [href]="d.url" [attr.download]="d.name" aria-label="Download"><ion-icon name="download-outline"></ion-icon></a>
+          }
+          <button type="button" class="icon-btn" (click)="closeViewer()" aria-label="Close"><ion-icon name="close-outline"></ion-icon></button>
+        </header>
+        <div class="viewer-body">
+          @if (viewerLoading()) {
+            <p class="loading">Opening…</p>
+          } @else if (viewerImage()) {
+            <img [src]="viewerImage()" alt="" />
+          } @else if (viewerPdf()) {
+            <iframe [src]="viewerPdf()" title="Document"></iframe>
+          }
+        </div>
+      </div>
+    </ng-template>
+  </ion-modal>
+</ion-content>

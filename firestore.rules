@@ -1,9 +1,31 @@
 rules_version = '2';
 
 // ==========================================================
-// Trailbound — Firestore security rules
+// Trailbound — Firestore security rules (trailbound-ionic)
 // ----------------------------------------------------------
 // Deploy:  firebase deploy --only firestore:rules
+//   or paste into Firebase console -> Firestore Database ->
+//   Rules -> Publish.
+//
+// ADMIN PANEL (/admin) — what changed in this version
+//   * isAdmin() now recognises the built-in admin login
+//     (username "admin" = admin@trailbound-ionic.firebaseapp.com),
+//     anyone in admins/{uid}, and any hiker promoted from
+//     Admin -> Hikers (users/{uid}.role == 'admin').
+//   * A hiker can never give themselves role or status, on
+//     create or update, so nobody can self-promote or
+//     un-suspend themselves.
+//   * bookings: each booking carries the hiker's uid. A hiker
+//     reads and creates only their own; only an admin changes
+//     or deletes one.
+//   * reviews, trail_status, certificates and certificate_files:
+//     new collections (certificates = medical certificate and
+//     barangay clearance uploads, reviewed by an admin).
+//   * An admin may remove any post, comment or edit history.
+//
+// To add another built-in admin email, add it to the list in
+// isAdmin() below AND to ADMIN_ACCOUNTS in
+// src/app/pages/admin/admin.config.ts.
 //
 // IMPORTANT — this REPLACES the earlier version of this file.
 // That one only knew about products, bookings, users, settings
@@ -38,7 +60,15 @@ service cloud.firestore {
     }
 
     function isAdmin() {
-      return signedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+      return signedIn() && (
+        request.auth.token.get('email', '') in [
+          'admin@trailbound-ionic.firebaseapp.com'
+        ]
+        || exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+        || (exists(/databases/$(database)/documents/users/$(request.auth.uid))
+            && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('role', '') == 'admin'
+            && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('status', 'active') != 'suspended')
+      );
     }
 
     function isOwner(uid) {
@@ -85,7 +115,7 @@ service cloud.firestore {
     function touchesPrivilegedFields() {
       return request.resource.data.diff(resource.data)
         .affectedKeys()
-        .hasAny(['role', 'disabled']);
+        .hasAny(['role', 'disabled', 'status']);
     }
 
     /* ==========================================================
@@ -161,48 +191,78 @@ service cloud.firestore {
 
     /* ==========================================================
        BOOKINGS
-       Created by booking.js when a slot is reserved. An admin
-       changes the status, which is what notifies the customer.
-       A customer may cancel their own — cart.js does exactly
-       that when a booking line is removed from the cart.
+       Written by the app's checkout (BookingService.confirm) with
+       the hiker's uid. A hiker reads and creates only their own;
+       the admin panel reads them all and is the only one that can
+       change a status (completed / cancelled) or delete one.
        ========================================================== */
 
     match /bookings/{bookingId} {
-      allow read: if isAdmin() || (signedIn() && ownsUid()) || emailMatches();
+      allow read: if isAdmin() || (signedIn() && resource.data.uid == request.auth.uid);
+      allow create: if signedIn() && request.resource.data.uid == request.auth.uid;
+      allow update, delete: if isAdmin();
+    }
 
-      allow create: if signedIn();
+    /* ==========================================================
+       REVIEWS
+       Written from a trail page by a signed-in hiker. Everyone can
+       read them; the author or an admin can delete; nobody edits.
+       ========================================================== */
 
-      // A customer may change ONLY the status fields on their own
-      // booking, never the trail, date, group size or price.
-      //
-      // Both client paths that do this are legitimate:
-      //   cart.js           removing the cart line -> "Cancelled"
-      //   payment-result.js Maya returning success -> "Confirmed" + "Paid"
-      //
-      // An earlier draft of this rule allowed only "Cancelled", which
-      // would have broken payment-result.js and left every paid
-      // booking stuck on Pending.
-      allow update: if isAdmin()
-                    || (signedIn()
-                        && (ownsUid() || emailMatches())
-                        && request.resource.data.diff(resource.data)
-                             .affectedKeys()
-                             .hasOnly(['status', 'payment_status', 'updatedAt']));
+    match /reviews/{reviewId} {
+      allow read: if true;
+      allow create: if signedIn()
+                    && request.resource.data.uid == request.auth.uid
+                    && request.resource.data.rating is int
+                    && request.resource.data.rating >= 1
+                    && request.resource.data.rating <= 5
+                    && request.resource.data.text is string
+                    && request.resource.data.text.size() <= 2000;
+      allow update: if false;
+      allow delete: if isAdmin() || (signedIn() && resource.data.uid == request.auth.uid);
+    }
 
-      // ADDED — booking.js saves the chosen accommodation (hotel,
-      // nights, check-in, price) right after creating the booking.
-      // Allowed ONCE, by the booking's owner, and the update may touch
-      // nothing but that one field: trail, date, group size and the
-      // total price all stay locked. (Firestore allows an update when
-      // ANY "allow update" line matches, so the line above is unchanged.)
-      allow update: if signedIn()
-                    && (ownsUid() || emailMatches())
-                    && !('accommodation' in resource.data)
-                    && request.resource.data.diff(resource.data)
-                         .affectedKeys()
-                         .hasOnly(['accommodation']);
+    /* ==========================================================
+       TRAIL STATUS
+       trail_status/{trailId} = { status: 'open'|'closed', note }.
+       Set from Admin -> Trails; the app reads it to switch off
+       booking on a closed trail.
+       ========================================================== */
 
-      allow delete: if isAdmin();
+    match /trail_status/{trailId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    /* ==========================================================
+       HIKING DOCUMENTS — medical certificate + barangay clearance
+       certificates/{uid}_{type}       status, reviewer's note
+       certificate_files/{uid}_{type}  the file (data URL)
+       One of each type per hiker; the id must match the hiker and
+       the type. A hiker may upload or replace their own, but it
+       always goes back to 'pending' — only an admin approves or
+       rejects. Nobody but the hiker and admins can read them.
+       ========================================================== */
+
+    function ownCertificateWrite(certId) {
+      return signedIn()
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.type in ['medical', 'barangay']
+        && certId == request.auth.uid + '_' + request.resource.data.type;
+    }
+
+    match /certificates/{certId} {
+      allow read: if isAdmin() || (signedIn() && resource.data.uid == request.auth.uid);
+      allow create, update: if ownCertificateWrite(certId)
+                            && request.resource.data.status == 'pending';
+      allow update: if isAdmin();
+      allow delete: if isAdmin() || (signedIn() && resource.data.uid == request.auth.uid);
+    }
+
+    match /certificate_files/{certId} {
+      allow read: if isAdmin() || (signedIn() && resource.data.uid == request.auth.uid);
+      allow create, update: if ownCertificateWrite(certId);
+      allow delete: if isAdmin() || (signedIn() && resource.data.uid == request.auth.uid);
     }
 
     /* ==========================================================
@@ -241,7 +301,8 @@ service cloud.firestore {
       allow get: if isOwner(uid) || isAdmin();
       allow list: if isAdmin();
 
-      allow create: if isOwner(uid);
+      allow create: if isOwner(uid)
+                    && !request.resource.data.keys().hasAny(['role', 'status', 'disabled']);
       allow update: if isAdmin() || (isOwner(uid) && !touchesPrivilegedFields());
       allow delete: if isAdmin();
 
@@ -355,7 +416,8 @@ service cloud.firestore {
                         && request.resource.data.authorUid == resource.data.authorUid
                         && validRating()
                         && validGuide())
-                    || engagementOnly();
+                    || engagementOnly()
+                    || isAdmin();
 
       allow delete: if isOwner(resource.data.authorUid) || isAdmin();
 
@@ -366,10 +428,11 @@ service cloud.firestore {
         allow update: if false;
         // You can delete your own comment, and the post's author can
         // delete any comment on their post.
-        allow delete: if signedIn()
-                      && (resource.data.authorUid == request.auth.uid
-                          || get(/databases/$(database)/documents/posts/$(postId))
-                               .data.authorUid == request.auth.uid);
+        allow delete: if isAdmin()
+                      || (signedIn()
+                          && (resource.data.authorUid == request.auth.uid
+                              || get(/databases/$(database)/documents/posts/$(postId))
+                                   .data.authorUid == request.auth.uid));
       }
 
       // Earlier versions of the post. Anyone can read them; only the
@@ -382,9 +445,10 @@ service cloud.firestore {
                       && get(/databases/$(database)/documents/posts/$(postId))
                            .data.authorUid == request.auth.uid;
         allow update: if false;
-        allow delete: if signedIn()
-                      && get(/databases/$(database)/documents/posts/$(postId))
-                           .data.authorUid == request.auth.uid;
+        allow delete: if isAdmin()
+                      || (signedIn()
+                          && get(/databases/$(database)/documents/posts/$(postId))
+                               .data.authorUid == request.auth.uid);
       }
     }
 

@@ -6,11 +6,12 @@ import {
   IonContent, IonButton, IonIcon, IonTextarea, IonInput, ToastController,
 } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
-import { mapOutline } from 'ionicons/icons';
+import { lockClosedOutline, mapOutline } from 'ionicons/icons';
 
 import { TrailService } from '../../services/trail.service';
 import { UserService } from '../../services/user.service';
-import { ReviewService } from '../../services/review.service';
+import { ReviewService, TrailReview } from '../../services/review.service';
+import { TrailStatusService } from '../../services/trail-status.service';
 import { Trail } from '../../models/trail.model';
 
 // Falls back to the 30-trail dataset for ids TrailService does not hold.
@@ -21,7 +22,7 @@ import { TrailWeatherComponent } from '../explore/trail-weather.component';
 // Registered here rather than relying on Explore having been opened first —
 // module-level addIcons only runs once that page's chunk has loaded, and a
 // user can land on this page directly from a deep link.
-addIcons({ mapOutline });
+addIcons({ mapOutline, lockClosedOutline });
 
 @Component({
   selector: 'app-trail-detail',
@@ -36,6 +37,12 @@ addIcons({ mapOutline });
 export class TrailDetailPage implements OnInit {
   trail = signal<Trail | undefined>(undefined);
   saved = signal(false);
+
+  /** Set when an admin has closed this trail for booking. */
+  closure = computed(() => {
+    const t = this.trail();
+    return t ? this.trailStatus.closureFor(t.id) : null;
+  });
 
   /** Editorial content — tagline, why-hike bullets, long-form story. */
   story = computed(() => {
@@ -78,6 +85,7 @@ export class TrailDetailPage implements OnInit {
     private userService: UserService,
     private reviewService: ReviewService,
     private toastCtrl: ToastController,
+    private trailStatus: TrailStatusService,
   ) {}
 
   ngOnInit() {
@@ -124,6 +132,11 @@ export class TrailDetailPage implements OnInit {
     this.draftRating.set(0);
     this.showReviewForm.set(false);
     this.toast('Review posted');
+  }
+
+  /** Only the author (or a guest, for their own device-only reviews) may delete. */
+  canDeleteReview(r: TrailReview): boolean {
+    return this.reviewService.canDelete(r);
   }
 
   deleteReview(id: string) {
@@ -181,7 +194,12 @@ export class TrailDetailPage implements OnInit {
 
   bookNow() {
     const t = this.trail();
-    if (t) this.router.navigate(['/booking', t.id]);
+    if (!t) return;
+    if (this.closure()) {
+      this.toast('This trail is closed for booking right now.');
+      return;
+    }
+    this.router.navigate(['/booking', t.id]);
   }
 
   private async toast(message: string, color: string = 'dark') {

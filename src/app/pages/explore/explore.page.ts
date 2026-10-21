@@ -1,4 +1,4 @@
-import { Component, OnDestroy, ViewChild, computed, signal } from '@angular/core';
+import { Component, OnDestroy, ViewChild, computed, signal, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -23,6 +23,7 @@ import { photoFor, hasPhoto as hasPhotoFor, TrailPhoto } from './trail-photos';
 import { videoFor, embedUrlFor, isPlayable } from './trail-videos';
 import { searchTrails, TRAILS_30 } from './explore-trails.data';
 import { TrailService } from '../../services/trail.service';
+import { TrailStatusService } from '../../services/trail-status.service';
 import { UserService } from '../../services/user.service';
 import { WeatherService } from '../../services/weather.service';
 import { Trail } from '../../models/trail.model';
@@ -144,6 +145,8 @@ export class ExplorePage implements ViewDidEnter, OnDestroy {
     const ids = new Set(this.userService.upcoming().map(u => u.trailId));
     return TRAILS_30.filter(t => ids.has(t.id));
   });
+
+  private readonly trailStatus = inject(TrailStatusService);
 
   constructor(
     public trailService: TrailService,
@@ -368,6 +371,11 @@ export class ExplorePage implements ViewDidEnter, OnDestroy {
   }
 
   bookNow(trail: Trail) {
+    // Closed from Admin → Trails: keep hikers out of the booking flow.
+    if (this.trailStatus.closureFor(trail.id)) {
+      this.toast('This trail is closed for booking right now');
+      return;
+    }
     this.router.navigate(['/booking', trail.id]);
   }
 

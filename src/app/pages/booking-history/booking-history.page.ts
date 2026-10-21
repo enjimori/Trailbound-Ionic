@@ -98,7 +98,9 @@ export class BookingHistoryPage {
   /** Upcoming hikes in the next 30 days — drives the reminder banner */
   readonly soonCount = computed(() => {
     const limit = Date.now() + 30 * DAY_MS;
-    return this.upcoming().filter((b) => toDate(b.date).getTime() <= limit).length;
+    return this.upcoming().filter(
+      (b) => b.status !== 'cancelled' && toDate(b.date).getTime() <= limit,
+    ).length;
   });
 
   constructor() {
@@ -131,6 +133,17 @@ export class BookingHistoryPage {
 
   isPast(b: Booking): boolean {
     return b.date < todayKey();
+  }
+
+  /** Cancelled / completed by an admin wins; otherwise a past hike is completed. */
+  statusOf(b: Booking): 'confirmed' | 'completed' | 'cancelled' {
+    if (b.status === 'cancelled' || b.status === 'completed') return b.status;
+    return this.isPast(b) ? 'completed' : 'confirmed';
+  }
+
+  statusLabel(b: Booking): string {
+    const s = this.statusOf(b);
+    return s === 'cancelled' ? 'Cancelled' : s === 'completed' ? 'Completed' : 'Confirmed';
   }
 
   markBroken(url: string): void {

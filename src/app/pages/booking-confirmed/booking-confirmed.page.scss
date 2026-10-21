@@ -196,6 +196,20 @@
   ion-icon { color: #765710; }
 }
 
+/* Hiking documents reminder — a tappable row in the same style. */
+.bc-docs {
+  width: 100%;
+  margin-top: 8px;
+  text-align: left;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  align-items: center;
+
+  span { flex: 1; }
+  .chev { font-size: 14px; margin-top: 0; }
+}
+
 /* ── Actions ────────────────────────────────────────────────────────────── */
 
 .bc-home {

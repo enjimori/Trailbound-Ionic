@@ -1,4 +1,6 @@
 import { Injectable, computed, signal } from '@angular/core';
+import { deleteDoc, doc, onSnapshot, setDoc, collection } from 'firebase/firestore';
+import { auth, db } from './firebase.client';
 
 /**
  * ═══════════════════════════════════════════════════════════════════════════
@@ -17,6 +19,13 @@ import { Injectable, computed, signal } from '@angular/core';
  * When the team wires up Firestore, swap the two localStorage calls for reads
  * and writes against a `reviews` collection. Nothing else needs to change,
  * because every page reads through the signals below.
+ *
+ * FIRESTORE (added for the admin panel)
+ *   A review written by a signed-in hiker is also saved to  reviews/{id},
+ *   and every review in that collection is streamed back in. So reviews are
+ *   now shared between hikers, the admin panel can see and remove them, and
+ *   one an admin removes disappears here too. A guest's review still stays
+ *   on their device only, exactly as before.
  * ═══════════════════════════════════════════════════════════════════════════
  */
 
@@ -29,6 +38,10 @@ export interface TrailReview {
   text: string;
   /** ISO timestamp, so it can be sorted and formatted per locale. */
   createdAt: string;
+  /** Firebase uid of the hiker who wrote it (absent for a guest's review). */
+  uid?: string;
+  /** Internal: this review has reached Firestore. */
+  synced?: boolean;
 }
 
 const STORAGE_KEY = 'TrailBound.reviews.v1';
@@ -38,6 +51,28 @@ export class ReviewService {
   private readonly _reviews = signal<TrailReview[]>(this.load());
 
   readonly reviews = computed(() => this._reviews());
+
+  constructor() {
+    onSnapshot(
+      collection(db, 'reviews'),
+      snap => {
+        const remote = snap.docs.map(d => ({ ...(d.data() as TrailReview), id: d.id, synced: true }));
+        const remoteIds = new Set(remote.map(r => r.id));
+        // Keep local reviews that never reached the server (guest reviews,
+        // or ones written offline). Synced ones missing from the server were
+        // removed by an admin, so they go.
+        const localOnly = this._reviews().filter(r => !r.synced && !remoteIds.has(r.id));
+        this._reviews.set([...remote, ...localOnly]);
+        this.save();
+      },
+      err => console.warn('Could not read reviews from Firestore.', err),
+    );
+  }
+
+  /** Whether the person using the app may delete this review. */
+  canDelete(r: TrailReview): boolean {
+    return !r.uid || r.uid === auth.currentUser?.uid;
+  }
 
   /** Reviews for one trail, newest first. */
   forTrail(trailId: string): TrailReview[] {
@@ -60,7 +95,9 @@ export class ReviewService {
 
   add(trailId: string, author: string, rating: number, text: string) {
     const review: TrailReview = {
-      id: 'r' + Date.now(),
+      // Random suffix: reviews are shared now, so two hikers posting in the
+      // same millisecond must not get the same id.
+      id: 'r' + Date.now() + Math.random().toString(36).slice(2, 6),
       trailId,
       author: author.trim() || 'Anonymous',
       // Clamp rather than trust the caller — a 7-star review would quietly
@@ -69,14 +106,31 @@ export class ReviewService {
       text: text.trim(),
       createdAt: new Date().toISOString(),
     };
+    const uid = auth.currentUser?.uid;
+    if (uid) review.uid = uid;
 
     this._reviews.update(list => [review, ...list]);
     this.save();
+
+    if (uid) {
+      const { synced, ...data } = review;
+      void synced;
+      setDoc(doc(db, 'reviews', review.id), data)
+        .then(() => {
+          this._reviews.update(list => list.map(r => (r.id === review.id ? { ...r, synced: true } : r)));
+          this.save();
+        })
+        .catch(e => console.warn('Review saved on this device only.', e));
+    }
   }
 
   remove(id: string) {
+    const review = this._reviews().find(r => r.id === id);
     this._reviews.update(list => list.filter(r => r.id !== id));
     this.save();
+    if (review?.synced) {
+      deleteDoc(doc(db, 'reviews', id)).catch(e => console.warn('Could not delete review.', e));
+    }
   }
 
   /** Relative time for display: "2 days ago". */

@@ -132,5 +132,15 @@ export interface Booking {
   paymentMethod: string;
   cardLast4: string | null;
   createdAt: string;
-  status: 'confirmed';
+  /**
+   * 'confirmed' when paid. An admin can later mark it 'completed' or
+   * 'cancelled' from the admin panel; the Bookings tab picks that up.
+   */
+  status: 'confirmed' | 'completed' | 'cancelled';
+  /** Who booked it. Added so the admin panel can show every hiker's bookings. */
+  uid?: string;
+  userName?: string;
+  userEmail?: string;
+  /** Internal: this booking has reached Firestore at least once. */
+  synced?: boolean;
 }

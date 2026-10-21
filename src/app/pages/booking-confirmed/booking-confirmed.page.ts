@@ -3,12 +3,13 @@ import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { IonContent, IonIcon, IonButton } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
-import { checkmark, arrowForward, warningOutline } from 'ionicons/icons';
+import { checkmark, arrowForward, warningOutline, documentAttachOutline, chevronForwardOutline } from 'ionicons/icons';
 
 import { Booking } from '../../models/booking.model';
 import { BookingService } from '../../services/booking.service';
+import { CertificateService } from '../../services/certificate.service';
 
-addIcons({ checkmark, arrowForward, warningOutline });
+addIcons({ checkmark, arrowForward, warningOutline, documentAttachOutline, chevronForwardOutline });
 
 @Component({
   selector: 'app-booking-confirmed',
@@ -33,6 +34,7 @@ export class BookingConfirmedPage implements OnInit {
     private route: ActivatedRoute,
     private router: Router,
     private bookingService: BookingService,
+    public certs: CertificateService,
   ) {}
 
   ngOnInit() {
@@ -46,6 +48,10 @@ export class BookingConfirmedPage implements OnInit {
    */
   goHome() {
     this.router.navigate(['/tabs/home'], { replaceUrl: true });
+  }
+
+  goDocuments() {
+    this.router.navigate(['/documents']);
   }
 
   viewBookings() {

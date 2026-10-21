@@ -102,6 +102,12 @@
         <span>Personal Information</span>
         <ion-icon name="chevron-forward-outline" class="chevron"></ion-icon>
       </div>
+      <div class="account-item" (click)="goDocuments()">
+        <span class="ai-icon"><ion-icon name="document-attach-outline"></ion-icon></span>
+        <span>Hiking Documents</span>
+        <span class="pill" *ngIf="certs.loaded()">{{ certs.summary().label }}</span>
+        <ion-icon name="chevron-forward-outline" class="chevron"></ion-icon>
+      </div>
       <div class="account-item" (click)="goNotifications()">
         <span class="ai-icon"><ion-icon name="notifications-outline"></ion-icon></span>
         <span>Notifications</span>
