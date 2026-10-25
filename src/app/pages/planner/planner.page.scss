@@ -1,3 +1,4 @@
+/* Planner styles: arrange the schedule and booking items rendered by planner.page.html. */
 .page-pad {
   padding: 8px 16px 0;
 }
@@ -9,6 +10,7 @@
   margin: 4px 0 14px;
 }
 
+/* Adventure cards combine a thumbnail, schedule details, and a remove action. */
 .plan-card {
   display: flex;
   align-items: center;
@@ -69,6 +71,7 @@
   }
 }
 
+/* Empty state provides a plan-a-hike action when UserService has no adventures. */
 .empty-state {
   text-align: center;
   padding: 60px 20px;

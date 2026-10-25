@@ -1,3 +1,6 @@
+/**
+ * Application bootstrap: initializes Angular and Ionic, loads the root component, and connects the router and providers.
+ */
 import { bootstrapApplication } from '@angular/platform-browser';
 import { RouteReuseStrategy, provideRouter } from '@angular/router';
 import { IonicRouteStrategy, provideIonicAngular } from '@ionic/angular/standalone';

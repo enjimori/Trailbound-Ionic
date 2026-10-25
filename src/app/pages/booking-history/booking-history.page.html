@@ -1,3 +1,4 @@
+<!-- Booking-history template: booking records, their progress, and the receipt. -->
 <ion-header class="ion-no-border">
   <ion-toolbar>
     <h1 class="page-title">My Bookings</h1>
@@ -6,6 +7,7 @@
 
 <ion-content>
   <div class="page">
+    <!-- The selected segment controls which booking records BookingHistoryPage exposes. -->
     <ion-segment
       mode="ios"
       class="tabs pill-seg"
@@ -20,35 +22,62 @@
       </ion-segment-button>
     </ion-segment>
 
-    @for (b of visible(); track b.id) {
+    <!--
+      Anything waiting on the hiker is surfaced at the top. A blocked booking
+      three cards down is a booking nobody acts on.
+    -->
+    @if (tab() === 'upcoming' && needsYouCount() > 0) {
+      <div class="hint hint--act" role="note">
+        <ion-icon name="warning"></ion-icon>
+        <span>
+          {{ needsYouCount() === 1 ? 'One booking needs' : needsYouCount() + ' bookings need' }}
+          something from you before {{ needsYouCount() === 1 ? 'it' : 'they' }} can be confirmed.
+        </span>
+      </div>
+    }
+
+    <!-- Cards summarize each visible booking; opening Details shows its progress. -->
+    @for (r of rows(); track r.b.id) {
       <article class="card">
         <div class="card-top">
           <div class="thumb">
-            @if (b.trailImage && !brokenImages().has(b.trailImage)) {
-              <img [src]="b.trailImage" [alt]="b.trailName" (error)="markBroken(b.trailImage)" />
+            @if (r.b.trailImage && !brokenImages().has(r.b.trailImage)) {
+              <img [src]="r.b.trailImage" [alt]="r.b.trailName" (error)="markBroken(r.b.trailImage)" />
             } @else {
               <ion-icon name="image-outline"></ion-icon>
             }
           </div>
 
           <div class="info">
-            <h2 class="trail">{{ b.trailName }}</h2>
+            <h2 class="trail">{{ r.b.trailName }}</h2>
             <p class="when">
-              {{ toDate(b.date) | date: 'MMM d, y' }} &middot; {{ b.packageName }}
+              {{ toDate(r.b.date) | date: 'MMM d, y' }} &middot; {{ r.b.packageName }}
             </p>
-            <span class="status" [attr.data-status]="statusOf(b)">
-              {{ statusLabel(b) }}
+            <span class="status" [attr.data-status]="r.statusKey">
+              {{ r.statusLabel }}
             </span>
           </div>
         </div>
 
+        <!--
+          One line saying what the booking is sitting on. This is the whole
+          point of the tracker: a status chip says "Pending", this says what
+          pending means today.
+        -->
+        @if (r.current && r.status === 'pending') {
+          <p class="waiting" [attr.data-state]="r.current.state">
+            <ion-icon [name]="r.current.state === 'blocked' ? 'warning' : 'shield-checkmark-outline'"></ion-icon>
+            <span><b>{{ r.current.title }}</b> — {{ r.current.detail }}</span>
+          </p>
+        }
+
         <div class="card-bottom">
           <div class="id-block">
             <span class="eyebrow">Booking ID</span>
-            <span class="booking-id">#{{ b.reference }}</span>
+            <span class="booking-id">#{{ r.b.reference }}</span>
           </div>
-          <button type="button" class="details-btn" (click)="openDetails(b)">
-            Details <ion-icon name="chevron-forward-outline"></ion-icon>
+          <button type="button" class="details-btn" (click)="openDetails(r)">
+            {{ r.unlocked ? 'Details' : 'Track' }} <ion-icon name="chevron-forward-outline"></ion-icon>
           </button>
         </div>
       </article>
@@ -68,6 +97,7 @@
       </div>
     }
 
+    <!-- A reminder appears only for upcoming bookings within the next 30 days. -->
     @if (tab() === 'upcoming' && soonCount() > 0) {
       <div class="hint" role="note">
         <ion-icon name="warning"></ion-icon>
@@ -79,31 +109,31 @@
     }
   </div>
 
-  <!-- Details sheet (receipt) -->
+  <!-- Details sheet: progress first, then the receipt once it is unlocked. -->
   <ion-modal
     class="details-sheet"
     [isOpen]="detailsOpen()"
-    [initialBreakpoint]="0.75"
-    [breakpoints]="[0, 0.75, 1]"
+    [initialBreakpoint]="0.9"
+    [breakpoints]="[0, 0.9, 1]"
     (didDismiss)="closeDetails()"
   >
     <ng-template>
-      @if (selected(); as b) {
+      @if (selected(); as r) {
         <ion-content>
           <div class="sheet">
             <div class="sheet-head">
               <div class="thumb thumb--lg">
-                @if (b.trailImage && !brokenImages().has(b.trailImage)) {
-                  <img [src]="b.trailImage" [alt]="b.trailName" (error)="markBroken(b.trailImage)" />
+                @if (r.b.trailImage && !brokenImages().has(r.b.trailImage)) {
+                  <img [src]="r.b.trailImage" [alt]="r.b.trailName" (error)="markBroken(r.b.trailImage)" />
                 } @else {
                   <ion-icon name="image-outline"></ion-icon>
                 }
               </div>
               <div class="info">
-                <h2 class="trail">{{ b.trailName }}</h2>
-                <p class="where">#{{ b.reference }}</p>
-                <span class="status" [attr.data-status]="statusOf(b)">
-                  {{ statusLabel(b) }}
+                <h2 class="trail">{{ r.b.trailName }}</h2>
+                <p class="where">#{{ r.b.reference }}</p>
+                <span class="status" [attr.data-status]="r.statusKey">
+                  {{ r.statusLabel }}
                 </span>
               </div>
               <button type="button" class="close-btn" aria-label="Close" (click)="closeDetails()">
@@ -111,52 +141,245 @@
               </button>
             </div>
 
-            <dl class="rows">
-              <div class="row">
-                <dt><ion-icon name="calendar-outline"></ion-icon>Hike date</dt>
-                <dd>{{ toDate(b.date) | date: 'EEE, MMM d, y' }}</dd>
-              </div>
-              <div class="row">
-                <dt><ion-icon name="ticket-outline"></ion-icon>Package</dt>
-                <dd>{{ b.packageName }}</dd>
-              </div>
-              @if (b.activityNames.length) {
-                <div class="row">
-                  <dt><ion-icon name="sparkles-outline"></ion-icon>Activities</dt>
-                  <dd>{{ b.activityNames.join(', ') }}</dd>
+            @if (isUpcomingHike(r)) {
+              <section class="ready-card" aria-labelledby="ready-title">
+                <div class="ready-card__icon">
+                  <ion-icon name="checkmark-circle-outline"></ion-icon>
                 </div>
-              }
-              @if (b.guideName) {
-                <div class="row">
-                  <dt><ion-icon name="person-outline"></ion-icon>Guide</dt>
-                  <dd>{{ b.guideName }}</dd>
+                <p class="ready-card__eyebrow">YOUR ADVENTURE IS CONFIRMED</p>
+                <h2 id="ready-title">You’re all set. Happy hiking!</h2>
+                <p>
+                  Your spot on {{ r.b.trailName }} is confirmed. We’re looking forward
+                  to helping you have a safe and memorable hike.
+                </p>
+                <div class="ready-card__facts">
+                  <div>
+                    <ion-icon name="calendar-outline"></ion-icon>
+                    <span><small>Hike date</small><strong>{{ toDate(r.b.date) | date: 'EEEE, MMM d, y' }}</strong></span>
+                  </div>
+                  @if (trailRegion(r.b); as region) {
+                    <div>
+                      <ion-icon name="location-outline"></ion-icon>
+                      <span><small>Trail location</small><strong>{{ region }}</strong></span>
+                    </div>
+                  }
+                  <div>
+                    <ion-icon name="person-outline"></ion-icon>
+                    <span>
+                      <small>Tour guide</small>
+                      <strong>{{ r.b.guideName || 'Your guide will be shown here once assigned' }}</strong>
+                    </span>
+                  </div>
+                  @if (trailDuration(r.b); as duration) {
+                    <div>
+                      <ion-icon name="time-outline"></ion-icon>
+                      <span><small>Typical trail duration</small><strong>{{ duration }}</strong></span>
+                    </div>
+                  }
                 </div>
+              </section>
+            }
+
+            <!-- Progress comes first: it is the reason most people open this. -->
+            <section class="block">
+              <h3 class="block-title">Progress</h3>
+              <div class="tracker">
+                <app-booking-progress [steps]="r.steps"></app-booking-progress>
+              </div>
+
+              @if ((r.current?.state === 'blocked' && r.current!.id === 'documents') || canPayBalance(r)) {
+                <button
+                  type="button"
+                  class="act-btn"
+                  [class.demo-pay]="canPayBalance(r)"
+                  (click)="canPayBalance(r) ? payBalance(r) : act(r.current!)"
+                >
+                  {{ canPayBalance(r) ? 'Pay balance' : 'Upload my certificate' }}
+                  <ion-icon name="arrow-forward"></ion-icon>
+                </button>
               }
-              @if (b.merch.length) {
+              @if (r.demoBalancePaid) {
+                <p class="demo-payment-note" role="status">
+                  Test transaction: no funds were collected. Your booking is awaiting confirmation.
+                </p>
+              }
+            </section>
+
+            @if (isUpcomingHike(r)) {
+              <section class="block hike-prep">
+                <h3 class="block-title">Before you go</h3>
+                <p class="section-intro">
+                  A few essentials help make the day smoother. Follow any specific
+                  instructions from your guide and the local trail office.
+                </p>
+                <ul class="prep-list">
+                  <li><ion-icon name="checkmark-circle-outline"></ion-icon><span>Wear comfortable, broken-in hiking shoes and weather-appropriate layers.</span></li>
+                  <li><ion-icon name="checkmark-circle-outline"></ion-icon><span>Bring drinking water and trail snacks; ask your guide how much to carry for this route.</span></li>
+                  <li><ion-icon name="checkmark-circle-outline"></ion-icon><span>Pack sun protection and a light rain layer, and check the forecast before leaving.</span></li>
+                  <li><ion-icon name="checkmark-circle-outline"></ion-icon><span>Keep your ID, permit details, and booking reference easy to access.</span></li>
+                  <li><ion-icon name="checkmark-circle-outline"></ion-icon><span>Charge your phone and bring a power bank and any personal medication you need.</span></li>
+                  @if (isOvernightPackage(r.b)) {
+                    <li><ion-icon name="checkmark-circle-outline"></ion-icon><span>For an overnight hike, confirm accommodation and sleeping arrangements with your guide, and pack a change of clothes.</span></li>
+                  }
+                  @if (hasActivity(r.b, 'canyoneering')) {
+                    <li><ion-icon name="checkmark-circle-outline"></ion-icon><span>For canyoneering, confirm water activity requirements and any additional gear with your guide.</span></li>
+                  }
+                </ul>
+              </section>
+
+              <section class="block itinerary">
+                <h3 class="block-title">Your hike at a glance</h3>
+                <p class="section-intro">
+                  Your guide will confirm the exact meeting time, route, and schedule before hike day.
+                  This outline helps you know what to expect.
+                </p>
+                <ol class="itinerary-list">
+                  <li>
+                    <span class="itinerary-list__step">1</span>
+                    <div><strong>Meet your guide</strong><p>Meet at the agreed trailhead or jump-off point and check in with your group.</p></div>
+                  </li>
+                  <li>
+                    <span class="itinerary-list__step">2</span>
+                    <div><strong>Registration & safety briefing</strong><p>Complete local registration, review the route, and go over the day’s safety guidance.</p></div>
+                  </li>
+                  <li>
+                    <span class="itinerary-list__step">3</span>
+                    <div><strong>Guided hike</strong><p>Follow your guide’s pace and planned route. @if (r.b.activityNames.length) { Your booking includes {{ r.b.activityNames.join(', ') }}. }</p></div>
+                  </li>
+                  <li>
+                    <span class="itinerary-list__step">4</span>
+                    <div><strong>Viewpoint & rest stops</strong><p>Take in the scenery, rest, and hydrate as conditions and the route allow.</p></div>
+                  </li>
+                  <li>
+                    <span class="itinerary-list__step">5</span>
+                    <div><strong>Descent & return</strong><p>Return with your guide and check out at the trailhead before heading home.</p></div>
+                  </li>
+                </ol>
+                <p class="itinerary-note">
+                  Itinerary and timings can change with weather, trail conditions, and local guidance.
+                  Your guide’s instructions take priority.
+                </p>
+              </section>
+            }
+
+            @if (r.b.paperwork === 'cleared' && r.b.permitRef) {
+              <section class="block">
+                <h3 class="block-title">Digital permit copy</h3>
+                <article class="permit-copy" aria-label="Digital permit record">
+                  <div class="permit-copy__brand">
+                    <ion-icon name="shield-checkmark-outline"></ion-icon>
+                    <span>TrailBound</span>
+                  </div>
+                  <p class="permit-copy__eyebrow">PERMIT APPROVAL RECORD</p>
+                  <h3>{{ r.b.trailName }}</h3>
+                  <dl>
+                    <div>
+                      <dt>{{ isGeneratedPermitRef(r.b) ? 'TrailBound reference' : 'Office permit number' }}</dt>
+                      <dd class="permit-copy__code">{{ r.b.permitRef }}</dd>
+                    </div>
+                    <div><dt>Hiker</dt><dd>{{ r.b.userName || '—' }}</dd></div>
+                    <div><dt>Hike date</dt><dd>{{ toDate(r.b.date) | date: 'EEE, MMM d, y' }}</dd></div>
+                    <div><dt>Issuing office</dt><dd>{{ r.b.permitOffice || 'Permit office' }}</dd></div>
+                    <div><dt>Issued</dt><dd>{{ r.permitIssuedAt | date: 'MMM d, y' }}</dd></div>
+                    <div><dt>Booking reference</dt><dd>#{{ r.b.reference }}</dd></div>
+                  </dl>
+                  <p class="permit-copy__notice">
+                    This digital record confirms the permit details recorded for your booking.
+                    Follow any instructions from the issuing office; this is not a replacement
+                    for an official document they may require.
+                  </p>
+                </article>
+                <button type="button" class="permit-print-btn" (click)="printPermit(r)">
+                  <ion-icon name="print-outline"></ion-icon>
+                  Print permit
+                </button>
+              </section>
+            }
+
+            <!-- Trip details: always visible, because they describe what was booked. -->
+            <section class="block">
+              <h3 class="block-title">Your hike</h3>
+              <dl class="rows">
                 <div class="row">
-                  <dt><ion-icon name="bag-handle-outline"></ion-icon>Merch</dt>
-                  <dd>
-                    @for (m of b.merch; track m.id) {
-                      <span class="line">{{ m.qty }}&times; {{ m.name }}</span>
-                    }
-                  </dd>
+                  <dt><ion-icon name="calendar-outline"></ion-icon>Hike date</dt>
+                  <dd>{{ toDate(r.b.date) | date: 'EEE, MMM d, y' }}</dd>
                 </div>
+                <div class="row">
+                  <dt><ion-icon name="ticket-outline"></ion-icon>Package</dt>
+                  <dd>{{ r.b.packageName }}</dd>
+                </div>
+                @if (r.b.activityNames.length) {
+                  <div class="row">
+                    <dt><ion-icon name="sparkles-outline"></ion-icon>Activities</dt>
+                    <dd>{{ r.b.activityNames.join(', ') }}</dd>
+                  </div>
+                }
+                @if (r.b.guideName) {
+                  <div class="row">
+                    <dt><ion-icon name="person-outline"></ion-icon>Guide</dt>
+                    <dd>{{ r.b.guideName }}</dd>
+                  </div>
+                }
+                @if (r.b.merch.length) {
+                  <div class="row">
+                    <dt><ion-icon name="bag-handle-outline"></ion-icon>Merch</dt>
+                    <dd>
+                      @for (m of r.b.merch; track m.id) {
+                        <span class="line">{{ m.qty }}&times; {{ m.name }}</span>
+                      }
+                    </dd>
+                  </div>
+                }
+              </dl>
+            </section>
+
+            <!--
+              The receipt waits for confirmation. Until then the hiker sees
+              what they have actually paid and what is still to come, which is
+              the honest version — hiding the amount they already handed over
+              would be worse than showing a partial picture.
+            -->
+            <section class="block">
+              <h3 class="block-title">{{ r.unlocked ? 'Receipt' : 'Payment so far' }}</h3>
+
+              @if (r.unlocked) {
+                <dl class="rows">
+                  <div class="row">
+                    <dt><ion-icon name="card-outline"></ion-icon>Payment</dt>
+                    <dd>
+                      {{ r.b.paymentMethod }}@if (r.b.cardLast4) { &bull;&bull;&bull;&bull; {{ r.b.cardLast4 }} }
+                    </dd>
+                  </div>
+                  <div class="row">
+                    <dt><ion-icon name="receipt-outline"></ion-icon>Booked on</dt>
+                    <dd>{{ r.b.createdAt | date: 'MMM d, y' }}</dd>
+                  </div>
+                  <div class="row row--total">
+                    <dt>Total paid</dt>
+                    <dd>&#8369;{{ r.b.total | number: '1.0-0' }}</dd>
+                  </div>
+                </dl>
+              } @else {
+                <dl class="rows">
+                  <div class="row">
+                    <dt><ion-icon name="card-outline"></ion-icon>Deposit paid</dt>
+                    <dd>&#8369;{{ r.paidSoFar | number: '1.0-0' }}</dd>
+                  </div>
+                  <div class="row">
+                    <dt><ion-icon name="receipt-outline"></ion-icon>Still to pay</dt>
+                    <dd>&#8369;{{ r.balance | number: '1.0-0' }}</dd>
+                  </div>
+                  <div class="row row--total">
+                    <dt>Total for this hike</dt>
+                    <dd>&#8369;{{ r.b.total | number: '1.0-0' }}</dd>
+                  </div>
+                </dl>
+                <p class="locked">
+                  <ion-icon name="lock-closed-outline"></ion-icon>
+                  Your full receipt appears here once your hike is confirmed.
+                </p>
               }
-              <div class="row">
-                <dt><ion-icon name="card-outline"></ion-icon>Payment</dt>
-                <dd>
-                  {{ b.paymentMethod }}@if (b.cardLast4) { &bull;&bull;&bull;&bull; {{ b.cardLast4 }} }
-                </dd>
-              </div>
-              <div class="row">
-                <dt><ion-icon name="receipt-outline"></ion-icon>Booked on</dt>
-                <dd>{{ b.createdAt | date: 'MMM d, y' }}</dd>
-              </div>
-              <div class="row row--total">
-                <dt>Total paid</dt>
-                <dd>&#8369;{{ b.total | number: '1.0-0' }}</dd>
-              </div>
-            </dl>
+            </section>
           </div>
         </ion-content>
       }

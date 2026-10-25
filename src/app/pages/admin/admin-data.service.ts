@@ -3,18 +3,18 @@
  * ADMIN DATA — everything the panel can see and change, live from Firestore
  *
  *   users/{uid}          hiker accounts: profile, saved trails, role, status
- *   bookings/{id}        every confirmed booking, with who made it
+ *   bookings/{id}        every booking, with who made it and where it stands
  *   posts/{id}           community posts (+ comments, edit history)
  *   profiles/{uid}       public name + photo shown on posts
  *   reviews/{id}         trail reviews
  *   trail_status/{id}    trails an admin has closed, and why
- *   certificates/{id}    hikers' medical certificates and barangay
- *                        clearances (the files are in certificate_files)
+ *   certificates/{id}    hikers' medical certificates (the files are in
+ *                        certificate_files)
  *
  * Every collection streams with onSnapshot, so a booking made on a phone
- * appears on the dashboard without a refresh. All reads and writes go through
- * the admin's own Firebase app (admin-firebase.ts), which is what lets
- * firestore.rules recognise them as an admin.
+ * appears on the dashboard without a refresh. Reads and writes use the shared
+ * Firebase app and signed-in session (admin-firebase.ts); Firestore rules
+ * authorize the session based on its admin account or users/{uid}.role.
  *
  * The 30 trails, packages, guides and merchandise are NOT in Firestore —
  * they live in code (explore-trails.data.ts, booking-catalog.ts) — so the
@@ -43,8 +43,12 @@ import {
 } from 'firebase/firestore';
 import { adminDb } from './admin-firebase';
 import { dayKey, toDate } from './admin-utils';
-import type { MerchLine } from '../../models/booking.model';
-import { TRAILS_30 } from '../explore/explore-trails.data';
+import type { GroupHiker, MerchLine } from '../../models/booking.model';
+import {
+  BALANCE_WINDOW_DAYS,
+  type PaperworkStatus,
+  type PaymentStatus,
+} from '../../models/booking-workflow';
 import { trailById } from '../explore/trail-lookup';
 import { TrailService } from '../../services/trail.service';
 import type { CertificateRecord, CertificateStatus, CertificateType } from '../../models/certificate.model';
@@ -60,6 +64,16 @@ export interface SavedTrail {
   duration: string;
 }
 
+/**
+ * Staff roles alongside 'hiker'.
+ *
+ * 'permit_office' is the issuing body — a barangay, a municipal tourism
+ * office, a DENR protected-area office. One account covers all of them for
+ * now; when a second office is added, match their `office` field against the
+ * booking's permitOffice so each only sees its own applications.
+ */
+export type UserRole = 'admin' | 'permit_office' | 'guide' | 'hiker';
+
 export interface AdminUser {
   uid: string;
   name: string;
@@ -72,13 +86,28 @@ export interface AdminUser {
   gender: string;
   emergencyContactName: string;
   emergencyContactPhone: string;
-  role: 'admin' | 'hiker';
+  role: UserRole;
+  /** Which issuing body a permit officer belongs to. Empty for everyone else. */
+  office: string;
+  /**
+   * Which guide on the roster this account IS, by id ('g1'…).
+   *
+   * The roster in booking-catalog.ts is static code with the photos and bios,
+   * and accounts live in Firebase — this field is the join between them. A
+   * booking stores the same roster id, so a guide's own hikes are a query
+   * rather than a name comparison that breaks the day two guides share one.
+   */
+  guideRosterId: string;
   status: 'active' | 'suspended';
   createdAt: Date | null;
   upcoming: SavedTrail[];
 }
 
-export type BookingStatus = 'confirmed' | 'completed' | 'cancelled';
+/**
+ * Where the trip stands. 'pending' is where a new booking starts: paying the
+ * deposit holds the date, it does not confirm the hike.
+ */
+export type BookingStatus = 'pending' | 'confirmed' | 'completed' | 'cancelled' | 'no_show';
 
 export interface AdminBooking {
   id: string;
@@ -92,7 +121,11 @@ export interface AdminBooking {
   packageName: string;
   activityNames: string[];
   guideName: string | null;
+  /** The roster id behind that name, which is what a guide account matches on. */
+  guideId: string | null;
   merch: MerchLine[];
+  groupHikers: GroupHiker[];
+  groupSurcharge: number;
   total: number;
   paymentMethod: string;
   cardLast4: string | null;
@@ -100,6 +133,32 @@ export interface AdminBooking {
   updatedAt: Date | null;
   /** What is stored. */
   status: BookingStatus;
+
+  /** Where the documents and permit stand. */
+  paperwork: PaperworkStatus;
+  /** Where the money stands. */
+  payment: PaymentStatus;
+  /** Taken at checkout. The rest is the balance. */
+  deposit: number;
+  balanceDueBy: Date | null;
+
+  /** What the issuing office granted. */
+  permitRef: string | null;
+  permitIssuedAt: Date | null;
+  permitOffice: string | null;
+  /** Demo-only balance simulation; not a record of money received. */
+  demoBalancePaid: boolean;
+  demoBalancePaidAt: Date | null;
+  demoBalancePaymentMethod: string | null;
+  /** The part of the permit fee the office keeps even if the hike is refused. */
+  permitFeeLodged: number;
+  /** True once an application has been sent, which is what a permit officer sees. */
+  permitLodged: boolean;
+
+  /** When the hiker accepted the risk sheet, and which wording. */
+  riskAckAt: Date | null;
+  riskAckVersion: string;
+
   uid: string;
   userName: string;
   userEmail: string;
@@ -154,15 +213,32 @@ export type CollectionName =
 
 export type AdminCertificate = CertificateRecord;
 
-/** Booking status as a person reads it: a confirmed hike in the past is done. */
+/**
+ * Booking status as a person reads it: a confirmed hike in the past is done.
+ *
+ * A PENDING booking whose date has passed stays pending, deliberately. It did
+ * not happen — nobody confirmed it — and quietly relabelling it "completed"
+ * would hide a booking that someone still owes an answer on.
+ */
 export function effectiveStatus(b: AdminBooking): BookingStatus {
-  if (b.status === 'cancelled' || b.status === 'completed') return b.status;
+  if (b.status === 'cancelled' || b.status === 'completed' || b.status === 'no_show') return b.status;
+  if (b.status === 'pending') return 'pending';
   return b.date && b.date < dayKey(new Date()) ? 'completed' : 'confirmed';
 }
 
 /** Cancelled bookings earn nothing. */
 export function countsAsRevenue(b: AdminBooking): boolean {
-  return b.status !== 'cancelled';
+  return b.status !== 'cancelled' && b.status !== 'no_show';
+}
+
+/**
+ * What has actually been received, which is not the same as the total. A
+ * pending booking has paid a deposit only; counting its full price as revenue
+ * would overstate the books by whatever has not been collected yet.
+ */
+export function receivedFrom(b: AdminBooking): number {
+  if (!countsAsRevenue(b)) return 0;
+  return b.payment === 'paid_in_full' ? b.total : b.deposit;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -189,6 +265,11 @@ export class AdminDataService {
   readonly errors = this._errors.asReadonly();
   readonly loaded = this._loaded.asReadonly();
 
+  /** Bookings waiting on someone — the admin sidebar's count. */
+  readonly pendingBookings = computed(
+    () => this._bookings().filter((b) => b.status === 'pending').length,
+  );
+
   /** Posts with the author's live name and photo filled in. */
   readonly posts = computed(() => {
     const profiles = this._profiles();
@@ -212,7 +293,11 @@ export class AdminDataService {
       .map(([name]) => name as CollectionName),
   );
 
-  readonly hikers = computed(() => this._users().filter((u) => u.role !== 'admin'));
+  /** Hikers only — staff accounts are listed separately. */
+  readonly hikers = computed(() => this._users().filter((u) => u.role === 'hiker'));
+
+  /** Everyone with a staff role. */
+  readonly staff = computed(() => this._users().filter((u) => u.role !== 'hiker'));
 
   private unsubs: Unsubscribe[] = [];
 
@@ -271,6 +356,7 @@ export class AdminDataService {
     this.listen('certificates', collection(adminDb, 'certificates'), (docs) =>
       this._certificates.set(
         docs
+          .filter(({ data }) => data['type'] === 'medical')
           .map(({ id, data }) => toCertificate(id, data))
           .sort((a, b) => (b.uploadedAt?.getTime() ?? 0) - (a.uploadedAt?.getTime() ?? 0)),
       ),
@@ -331,16 +417,18 @@ export class AdminDataService {
     return trailById(id)?.name ?? this.trailService.getById(id)?.name ?? id;
   }
 
+  /** Performs the trail image operation for this feature and returns its result to the caller. */
   trailImage(id: string): string {
     return trailById(id)?.image ?? this.trailService.getById(id)?.image ?? '';
   }
 
+  /** Checks whether the trail is closed based on the admin trail data. */
   isClosed(trailId: string): boolean {
     return this._trailStatus()[trailId]?.status === 'closed';
   }
 
   readonly closedCount = computed(
-    () => TRAILS_30.filter((t) => this._trailStatus()[t.id]?.status === 'closed').length,
+    () => Object.values(this._trailStatus()).filter((state) => state.status === 'closed').length,
   );
 
   // ── bookings ─────────────────────────────────────────────────────────────
@@ -349,6 +437,58 @@ export class AdminDataService {
     return updateDoc(doc(adminDb, 'bookings', id), { status, updatedAt: serverTimestamp() });
   }
 
+  /** Moves the documents-and-permit track on its own. */
+  setPaperwork(id: string, paperwork: PaperworkStatus): Promise<void> {
+    return updateDoc(doc(adminDb, 'bookings', id), { paperwork, updatedAt: serverTimestamp() });
+  }
+
+  /**
+   * Sends the application to the issuing office.
+   *
+   * permitLodged is what a permit officer's account can query on, so this is
+   * also the moment the booking becomes visible to them — nothing before it
+   * was sent, which is the scoping the rules rely on.
+   */
+  lodgePermit(id: string, office: string): Promise<void> {
+    return updateDoc(doc(adminDb, 'bookings', id), {
+      permitOffice: office,
+      permitLodged: true,
+      paperwork: 'permit_pending' satisfies PaperworkStatus,
+      updatedAt: serverTimestamp(),
+    });
+  }
+
+  /**
+   * Records what the office issued, and starts the balance clock.
+   *
+   * The permit clearing is what makes the rest of the money payable, so these
+   * two writes belong together: a cleared permit with no balance due would
+   * leave the booking stuck with nothing to do next.
+   */
+  recordPermit(id: string, permitRef: string, office: string): Promise<void> {
+    const due = new Date();
+    due.setDate(due.getDate() + BALANCE_WINDOW_DAYS);
+    return updateDoc(doc(adminDb, 'bookings', id), {
+      permitRef: permitRef.trim().slice(0, 60),
+      permitIssuedAt: serverTimestamp(),
+      permitOffice: office,
+      permitLodged: true,
+      paperwork: 'cleared' satisfies PaperworkStatus,
+      payment: 'balance_due' satisfies PaymentStatus,
+      balanceDueBy: due.toISOString(),
+      updatedAt: serverTimestamp(),
+    });
+  }
+
+  /** The office refused it. The booking cannot go ahead. */
+  denyPermit(id: string): Promise<void> {
+    return updateDoc(doc(adminDb, 'bookings', id), {
+      paperwork: 'denied' satisfies PaperworkStatus,
+      updatedAt: serverTimestamp(),
+    });
+  }
+
+  /** Performs the delete booking operation for this feature and returns its result to the caller. */
   deleteBooking(id: string): Promise<void> {
     return deleteDoc(doc(adminDb, 'bookings', id));
   }
@@ -359,8 +499,24 @@ export class AdminDataService {
     return updateDoc(doc(adminDb, 'users', uid), { status });
   }
 
-  setUserRole(uid: string, role: 'admin' | 'hiker'): Promise<void> {
-    return updateDoc(doc(adminDb, 'users', uid), { role: role === 'admin' ? 'admin' : deleteField() });
+  /**
+   * Grants or removes a staff role.
+   *
+   * 'hiker' deletes the field rather than writing the word, so an ordinary
+   * account has no role at all — which is what the sign-up rule in
+   * firestore.rules expects and what every older document already looks like.
+   *
+   * `detail` is what the role needs alongside it: the office name for a permit
+   * officer, the roster id for a guide. Whichever one does not apply is
+   * deleted, so an account demoted from officer to guide cannot keep claiming
+   * an office it no longer speaks for.
+   */
+  setUserRole(uid: string, role: UserRole, detail = ''): Promise<void> {
+    return updateDoc(doc(adminDb, 'users', uid), {
+      role: role === 'hiker' ? deleteField() : role,
+      office: role === 'permit_office' ? detail : deleteField(),
+      guideRosterId: role === 'guide' ? detail : deleteField(),
+    });
   }
 
   /**
@@ -372,6 +528,15 @@ export class AdminDataService {
     const batch = writeBatch(adminDb);
     batch.delete(doc(adminDb, 'users', uid));
     batch.delete(doc(adminDb, 'profiles', uid));
+    // Their hiking documents go too. Without these the medical certificate
+    // outlives the account with no owner left to claim it — a retention
+    // problem under the Data Privacy Act, and the one category of data in
+    // this app where that matters most. Deleting a document that does not
+    // exist is a no-op in a batch, so this is safe for every hiker.
+    for (const type of ['medical'] as const) {
+      batch.delete(doc(adminDb, 'certificates', `${uid}_${type}`));
+      batch.delete(doc(adminDb, 'certificate_files', `${uid}_${type}`));
+    }
     await batch.commit();
   }
 
@@ -397,6 +562,7 @@ export class AdminDataService {
     });
   }
 
+  /** Performs the delete comment operation for this feature and returns its result to the caller. */
   async deleteComment(postId: string, commentId: string): Promise<void> {
     const batch = writeBatch(adminDb);
     batch.delete(doc(adminDb, 'posts', postId, 'comments', commentId));
@@ -445,6 +611,7 @@ export class AdminDataService {
     return data;
   }
 
+  /** Performs the review certificate operation for this feature and returns its result to the caller. */
   reviewCertificate(id: string, status: CertificateStatus, note: string, reviewer: string): Promise<void> {
     return updateDoc(doc(adminDb, 'certificates', id), {
       status,
@@ -454,6 +621,7 @@ export class AdminDataService {
     });
   }
 
+  /** Performs the delete certificate operation for this feature and returns its result to the caller. */
   async deleteCertificate(id: string): Promise<void> {
     const batch = writeBatch(adminDb);
     batch.delete(doc(adminDb, 'certificates', id));
@@ -461,6 +629,7 @@ export class AdminDataService {
     await batch.commit();
   }
 
+  /** Performs the certificates for operation for this feature and returns its result to the caller. */
   certificatesFor(uid: string): Partial<Record<CertificateType, AdminCertificate>> {
     const out: Partial<Record<CertificateType, AdminCertificate>> = {};
     for (const c of this._certificates()) if (c.uid === uid) out[c.type] = c;
@@ -471,7 +640,15 @@ export class AdminDataService {
 
   private toBooking(id: string, d: Record<string, any>): AdminBooking {
     const trailId = String(d['trailId'] ?? '');
-    const status = d['status'];
+    const total = Number(d['total'] ?? 0) || 0;
+
+    // Bookings written before the workflow existed have none of these fields.
+    // They were created as paid-and-confirmed, so that is what they read back
+    // as — re-opening settled history would be worse than the inconsistency.
+    const status = String(d['status'] ?? '');
+    const paperwork = String(d['paperwork'] ?? '');
+    const payment = String(d['payment'] ?? '');
+
     return {
       id,
       reference: String(d['reference'] ?? id),
@@ -483,19 +660,55 @@ export class AdminDataService {
       packageName: String(d['packageName'] ?? '—'),
       activityNames: Array.isArray(d['activityNames']) ? d['activityNames'].map(String) : [],
       guideName: d['guideName'] ? String(d['guideName']) : null,
+      guideId: d['guideId'] ? String(d['guideId']) : null,
       merch: Array.isArray(d['merch']) ? (d['merch'] as MerchLine[]) : [],
-      total: Number(d['total'] ?? 0) || 0,
+      groupHikers: Array.isArray(d['groupHikers'])
+        ? d['groupHikers'].map((hiker: Record<string, unknown>) => ({
+            name: String(hiker['name'] ?? ''),
+            address: String(hiker['address'] ?? ''),
+            emergencyContactName: String(hiker['emergencyContactName'] ?? ''),
+            emergencyContactPhone: String(hiker['emergencyContactPhone'] ?? ''),
+          }))
+        : [],
+      groupSurcharge: Number(d['groupSurcharge'] ?? 0) || 0,
+      total,
       paymentMethod: String(d['paymentMethod'] ?? '—'),
       cardLast4: d['cardLast4'] ? String(d['cardLast4']) : null,
       createdAt: toDate(d['createdAt']),
       updatedAt: toDate(d['updatedAt']),
-      status: status === 'cancelled' || status === 'completed' ? status : 'confirmed',
+
+      status: STATUSES.includes(status as BookingStatus) ? (status as BookingStatus) : 'confirmed',
+      paperwork: PAPERWORKS.includes(paperwork as PaperworkStatus)
+        ? (paperwork as PaperworkStatus)
+        : 'not_required',
+      payment: PAYMENTS.includes(payment as PaymentStatus)
+        ? (payment as PaymentStatus)
+        : 'paid_in_full',
+
+      deposit: Number(d['deposit'] ?? total) || 0,
+      balanceDueBy: toDate(d['balanceDueBy']),
+
+      permitRef: d['permitRef'] ? String(d['permitRef']) : null,
+      permitIssuedAt: toDate(d['permitIssuedAt']),
+      permitOffice: d['permitOffice'] ? String(d['permitOffice']) : null,
+      demoBalancePaid: d['demoBalancePaid'] === true,
+      demoBalancePaidAt: toDate(d['demoBalancePaidAt']),
+      demoBalancePaymentMethod: d['demoBalancePaymentMethod']
+        ? String(d['demoBalancePaymentMethod'])
+        : null,
+      permitFeeLodged: Number(d['permitFeeLodged'] ?? 0) || 0,
+      permitLodged: !!d['permitLodged'],
+
+      riskAckAt: toDate(d['riskAckAt']),
+      riskAckVersion: String(d['riskAckVersion'] ?? ''),
+
       uid: String(d['uid'] ?? ''),
       userName: String(d['userName'] ?? ''),
       userEmail: String(d['userEmail'] ?? ''),
     };
   }
 
+  /** Performs the to review operation for this feature and returns its result to the caller. */
   private toReview(id: string, d: Record<string, any>): AdminReview {
     const trailId = String(d['trailId'] ?? '');
     return {
@@ -511,12 +724,20 @@ export class AdminDataService {
   }
 }
 
+const STATUSES: BookingStatus[] = ['pending', 'confirmed', 'completed', 'cancelled', 'no_show'];
+const PAPERWORKS: PaperworkStatus[] = [
+  'not_required', 'awaiting_docs', 'under_review', 'needs_correction',
+  'permit_pending', 'cleared', 'denied',
+];
+const PAYMENTS: PaymentStatus[] = ['deposit_paid', 'balance_due', 'paid_in_full', 'refunded', 'lapsed'];
+
 function toUser(uid: string, d: Record<string, any>): AdminUser {
   // The hiker app nests the profile; an older admin draft stored name/email
   // at the top level. Read both so neither kind of document shows blank.
   const p = (d['profile'] ?? {}) as Record<string, any>;
   const s = (k: string) => String(p[k] ?? d[k] ?? '');
   const avatar = s('avatar');
+  const role = String(d['role'] ?? '');
   return {
     uid,
     name: s('name'),
@@ -529,7 +750,9 @@ function toUser(uid: string, d: Record<string, any>): AdminUser {
     gender: s('gender'),
     emergencyContactName: s('emergencyContactName'),
     emergencyContactPhone: s('emergencyContactPhone'),
-    role: d['role'] === 'admin' ? 'admin' : 'hiker',
+    role: role === 'admin' || role === 'permit_office' || role === 'guide' ? role : 'hiker',
+    office: String(d['office'] ?? ''),
+    guideRosterId: String(d['guideRosterId'] ?? ''),
     status: d['status'] === 'suspended' ? 'suspended' : 'active',
     createdAt: toDate(d['createdAt']),
     upcoming: Array.isArray(d['upcoming']) ? (d['upcoming'] as SavedTrail[]) : [],
@@ -541,7 +764,7 @@ function toCertificate(id: string, d: Record<string, any>): AdminCertificate {
   return {
     id,
     uid: String(d['uid'] ?? ''),
-    type: d['type'] === 'barangay' ? 'barangay' : 'medical',
+    type: 'medical',
     fileName: String(d['fileName'] ?? 'document'),
     mimeType: String(d['mimeType'] ?? ''),
     size: Number(d['size'] ?? 0) || 0,

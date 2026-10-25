@@ -148,10 +148,12 @@ export class AdminReviewsPage {
     }, { allowSignalWrites: true });
   }
 
+  /** Performs the toggle rating operation for this feature and returns its result to the caller. */
   toggleRating(stars: number): void {
     this.rating.set(this.rating() === stars ? 0 : stars);
   }
 
+  /** Removes the selected record through the owning service and refreshes the view. */
   async remove(r: AdminReview): Promise<void> {
     const ok = await this.ui.confirm({
       title: 'Remove this review?',

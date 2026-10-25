@@ -37,15 +37,13 @@ npx cap open ios     # or: npx cap open android
 ## Admin panel
 
 Open **`/admin`** in the browser (for example `http://localhost:8100/admin`).
+Admins sign in through the regular app login using their existing email and
+password. Promoted hikers are sent to the admin dashboard after signing in;
+other users continue to the regular app. The old `/admin/login` address
+redirects to the shared login page.
 
-| | |
-|---|---|
-| Username | `admin` |
-| Password | `TrailBound@2026` — first sign-in only; change it in **Admin → Settings** |
-
-The first sign-in with that username and password creates the admin login in
-Firebase Authentication. After that, only the password Firebase holds works.
-Accounts are set in `src/app/pages/admin/admin.config.ts`.
+Built-in owner accounts are listed in `src/app/pages/admin/admin.config.ts`.
+To give another user admin access, promote them from **Admin → Hikers**.
 
 **Before it can read everything, publish `firestore.rules`:** Firebase console →
 Firestore Database → Rules → paste the whole file → Publish. Until then the

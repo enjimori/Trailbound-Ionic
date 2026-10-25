@@ -13,11 +13,13 @@
 
 @import "@ionic/angular/css/palettes/dark.always.css";
 
+/* Shared global styling connects Ionic's base styles and theme tokens to every page. */
 /* ═══════════════════════════════════════════════════════════════════════════
    GLOBAL LOOK
    Shared building blocks used across pages. Page files only add layout.
    ═════════════════════════════════════════════════════════════════════════ */
 
+/* These base rules connect the theme variables to the document and Ionic page surfaces. */
 html, body {
   background: var(--app-bg);
 }

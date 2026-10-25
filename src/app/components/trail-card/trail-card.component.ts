@@ -1,3 +1,6 @@
+/**
+ * Reusable trail card: presents a trail summary and emits selection actions so parent pages can open the matching trail.
+ */
 import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { IonIcon, IonButton } from '@ionic/angular/standalone';
@@ -15,11 +18,13 @@ export class TrailCardComponent {
   @Output() details = new EventEmitter<Trail>();
   @Output() cardTap = new EventEmitter<Trail>();
 
+  /** Emits the details action so the parent page can open this trail. */
   onDetails(ev: Event) {
     ev.stopPropagation();
     this.details.emit(this.trail);
   }
 
+  /** Emits the card tap so the parent page can navigate to the trail. */
   onTap() {
     this.cardTap.emit(this.trail);
   }

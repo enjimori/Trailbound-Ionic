@@ -30,6 +30,7 @@ export class AdminUiService {
   readonly dialog = signal<ConfirmState | null>(null);
   private nextId = 1;
 
+  /** Shows a brief Ionic notification so the user can understand the action result. */
   toast(message: string, tone: AdminToast['tone'] = 'ok'): void {
     const id = this.nextId++;
     this.toasts.update((t) => [...t, { id, message, tone }]);
@@ -61,6 +62,7 @@ export class AdminUiService {
     });
   }
 
+  /** Closes the active view and restores the surrounding page state. */
   close(result: string | null): void {
     const d = this.dialog();
     if (!d) return;

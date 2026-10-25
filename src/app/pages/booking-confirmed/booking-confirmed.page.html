@@ -1,15 +1,31 @@
-<ion-content [fullscreen]="true">
+<ion-content [fullscreen]="true" [scrollY]="true">
+  <!-- Reads the booking id from the route through BookingConfirmedPage.booking. -->
   <div class="bc-wrap" *ngIf="booking() as b; else missing">
 
-    <div class="bc-check">
-      <ion-icon name="checkmark"></ion-icon>
+    <!--
+      A clock, not a tick, while the booking is pending. The icon is the first
+      thing read on this screen, and a big green tick over "we are arranging
+      your permit" would contradict the sentence under it.
+    -->
+    <div class="bc-check" [class.waiting]="isPending()">
+      <ion-icon [name]="isPending() ? 'time-outline' : 'checkmark'"></ion-icon>
     </div>
 
-    <h1>Booking confirmed</h1>
-    <p class="bc-sub">
-      Your adventure to <strong>{{ b.trailName }}</strong> is all set for
-      {{ prettyDate() }}.
+    <h1>{{ isPending() ? 'Booking received' : 'Booking confirmed' }}</h1>
+
+    <p class="bc-sub" *ngIf="isPending(); else allSet">
+      We have your deposit for <strong>{{ b.trailName }}</strong> on {{ prettyDate() }}.
+      <ng-container *ngIf="hasPermit()">
+        We are arranging your permit with {{ permitOffice() }} and will let you know as
+        soon as it is released.
+      </ng-container>
     </p>
+    <ng-template #allSet>
+      <p class="bc-sub">
+        Your adventure to <strong>{{ b.trailName }}</strong> is all set for
+        {{ prettyDate() }}.
+      </p>
+    </ng-template>
 
     <div class="bc-card">
       <span class="bc-label">Booking ID</span>
@@ -57,35 +73,68 @@
         </span>
       </div>
 
-      <div class="bc-row total">
-        <span>Total paid</span>
-        <span>₱{{ b.total | number }}</span>
-      </div>
+      <!--
+        "Total paid" would be false for a pending booking: only the deposit
+        has been taken. Showing the balance alongside it is the honest
+        version, and it is the number they will be asked for next.
+      -->
+      <ng-container *ngIf="isPending(); else paidInFull">
+        <div class="bc-row total">
+          <span>Deposit paid</span>
+          <span>₱{{ paidNow() | number }}</span>
+        </div>
+        <div class="bc-row" *ngIf="balance() > 0">
+          <span>Balance, once your permit is released</span>
+          <span>₱{{ balance() | number }}</span>
+        </div>
+      </ng-container>
+      <ng-template #paidInFull>
+        <div class="bc-row total">
+          <span>Total paid</span>
+          <span>₱{{ b.total | number }}</span>
+        </div>
+      </ng-template>
 
       <div class="bc-reminder">
         <ion-icon name="warning-outline"></ion-icon>
         <span>Check the summit weather 24 hours before your climb.</span>
       </div>
 
-      <!-- Medical certificate + barangay clearance, reviewed by TrailBound -->
-      <button type="button" class="bc-reminder bc-docs" *ngIf="certs.loaded() && !certs.summary().allApproved" (click)="goDocuments()">
+      <!-- Required-document status comes from CertificateService after booking. -->
+      <button
+        type="button"
+        class="bc-reminder bc-docs"
+        *ngIf="certs.loaded() && certs.records()['medical']?.status !== 'approved'"
+        (click)="goDocuments()"
+      >
         <ion-icon name="document-attach-outline"></ion-icon>
         <span>
-          {{ certs.summary().missing ? 'Upload your medical certificate and barangay clearance for your hiking permit.' : 'Your hiking documents: ' + certs.summary().label.toLowerCase() + '.' }}
+          {{
+            certs.records()['medical']?.status === 'pending'
+              ? 'Your medical certificate is being reviewed.'
+              : certs.records()['medical']?.status === 'rejected'
+                ? 'Your medical certificate was not accepted — upload a new one.'
+                : 'Upload your medical certificate so your permit can be processed.'
+          }}
         </span>
         <ion-icon name="chevron-forward-outline" class="chev"></ion-icon>
       </button>
     </div>
 
-    <button class="bc-home" (click)="goHome()">
-      Back to home
+    <!--
+      Track, not Home. Someone who has just paid a deposit needs to know where
+      to watch what happens next; the home feed buries it.
+    -->
+    <button class="bc-home" (click)="viewBookings()">
+      {{ isPending() ? 'Track my booking' : 'View my bookings' }}
       <ion-icon name="arrow-forward"></ion-icon>
     </button>
 
-    <button class="bc-link" (click)="viewBookings()">View my bookings</button>
+    <button class="bc-link" (click)="goHome()">Back to home</button>
   </div>
 
   <ng-template #missing>
+    <!-- A stale or invalid booking id has no receipt, so offer a safe route home. -->
     <div class="bc-wrap">
       <p class="bc-sub">That booking could not be found.</p>
       <ion-button (click)="goHome()">Back to home</ion-button>

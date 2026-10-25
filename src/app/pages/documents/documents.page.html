@@ -1,4 +1,6 @@
+<!-- Documents template: binds upload and review controls to DocumentsPage and displays CertificateService status. -->
 <ion-header class="ion-no-border">
+  <!-- Page heading and back action stay outside the scrollable document list. -->
   <ion-toolbar>
     <ion-buttons slot="start">
       <ion-button (click)="goBack()" aria-label="Go back">
@@ -13,6 +15,7 @@
 <ion-content [fullscreen]="true">
   <div class="page-pad">
 
+    <!-- The summary gives one status for the required documents before listing each file. -->
     <div class="summary" [attr.data-state]="certs.summary().allApproved ? 'ok' : certs.summary().rejected ? 'bad' : 'wait'">
       @if (certs.summary().allApproved) {
         <ion-icon name="checkmark-circle"></ion-icon>
@@ -29,6 +32,7 @@
       }
     </div>
 
+    <!-- Each document card shares one template, with its type and saved record passed as context. -->
     @for (c of cards(); track c.kind.id) {
       <ng-container *ngTemplateOutlet="card; context: { k: c.kind, r: c.rec }"></ng-container>
     }
@@ -82,6 +86,7 @@
     <p class="privacy"><ion-icon name="lock-closed-outline"></ion-icon>Only you and TrailBound admins can see these files.</p>
   </div>
 
+  <!-- The viewer modal is separate from upload cards so documents can be inspected without leaving the page. -->
   <ion-modal [isOpen]="viewerOpen()" (didDismiss)="closeViewer()" class="doc-viewer">
     <ng-template>
       <div class="viewer">

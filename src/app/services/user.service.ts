@@ -1,3 +1,6 @@
+/**
+ * User service: centralizes account, profile, and upcoming-adventure state used across authentication and profile-related pages.
+ */
 import { Injectable, signal, computed } from '@angular/core';
 import {
   createUserWithEmailAndPassword,
@@ -159,6 +162,7 @@ export class UserService {
     }
   }
 
+  /** Submits the sign-in request and updates the page according to the authentication result. */
   async signIn(email: string, password: string, remember = false): Promise<void> {
     this.manualAuth = true;
     try {
@@ -180,6 +184,7 @@ export class UserService {
     }
   }
 
+  /** Ends the current session and clears or redirects the related account state. */
   async signOut(): Promise<void> {
     clearSession();
     await fbSignOut(auth);
@@ -205,14 +210,17 @@ export class UserService {
     this._profile.set(merged);
   }
 
+  /** Performs the update avatar operation for this feature and returns its result to the caller. */
   updateAvatar(dataUrl: string) {
     return this.updateProfile({ avatar: dataUrl });
   }
 
+  /** Performs the add upcoming operation for this feature and returns its result to the caller. */
   async addUpcoming(adv: UpcomingAdventure) {
     await this.saveUpcoming([adv, ...this._upcoming()]);
   }
 
+  /** Performs the remove upcoming operation for this feature and returns its result to the caller. */
   async removeUpcoming(id: string) {
     await this.saveUpcoming(this._upcoming().filter((a) => a.id !== id));
   }
@@ -255,6 +263,7 @@ export class UserService {
     return false;
   }
 
+  /** Performs the reset state operation for this feature and returns its result to the caller. */
   private resetState() {
     this._profile.set({ ...EMPTY_PROFILE });
     this._upcoming.set([]);

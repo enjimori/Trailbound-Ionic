@@ -1,71 +1,100 @@
-<!-- Title only. Back moved to the pay bar at the bottom, where the thumb
-     already is — and where it sits beside the action it is an alternative to. -->
 <ion-header class="ion-no-border co-header">
   <ion-toolbar>
-    <ion-title>Checkout</ion-title>
+    <ion-title>{{ balanceCheckoutRequested() ? 'Pay balance' : 'Checkout' }}</ion-title>
   </ion-toolbar>
 </ion-header>
 
-<ion-content *ngIf="draft() as d">
-  <div class="co-body" *ngIf="quote() as q">
-
-    <!-- ── Order summary ───────────────────────────────────────────────── -->
-    <p class="co-title">Order summary</p>
-
-    <div class="co-card">
-      <div class="co-trail">
-        <div class="co-thumb" [style.backgroundImage]="'url(' + d.trailImage + ')'"></div>
-        <div class="co-trail-meta">
-          <span class="n">{{ d.trailName }}</span>
-          <span class="s">{{ prettyDate() }}</span>
-          <span class="s">{{ q.packageName }}</span>
+<ion-content>
+  <div *ngIf="balanceCheckoutRequested(); else bookingCheckout">
+    <div class="co-body" *ngIf="balanceBooking() as b; else loadingBalance">
+      <p class="co-title">Balance payment</p>
+      <div class="co-card">
+        <div class="co-trail">
+          <div class="co-thumb" [style.backgroundImage]="'url(' + b.trailImage + ')'"></div>
+          <div class="co-trail-meta">
+            <span class="n">{{ b.trailName }}</span>
+            <span class="s">{{ b.date | date: 'EEE, MMM d, y' }}</span>
+            <span class="s">Booking #{{ b.reference }}</span>
+          </div>
+        </div>
+        <div class="co-divider"></div>
+        <div class="co-row"><span>Total for this hike</span><span>₱{{ b.total | number }}</span></div>
+        <div class="co-row"><span>Deposit paid</span><span>₱{{ b.deposit | number }}</span></div>
+        <div class="co-row total">
+          <span>Balance due</span>
+          <span>₱{{ balanceDue() | number }}</span>
         </div>
       </div>
 
-      <div class="co-guide" *ngIf="guideName() as g">
-        <span class="co-avatar">{{ g.charAt(0) }}</span>
-        <span class="co-trail-meta">
-          <span class="n">{{ g }}</span>
-          <span class="s">Your expert guide</span>
-        </span>
-      </div>
-
-      <div class="co-divider"></div>
-
-      <div class="co-row" *ngFor="let a of q.coveredActivities">
-        <span class="muted">{{ a.name }}</span>
-        <span class="muted">Included</span>
-      </div>
-
-      <div class="co-row" *ngFor="let a of q.paidActivities">
-        <span>{{ a.name }}</span>
-        <span>₱{{ a.price | number }}</span>
-      </div>
-
-      <div class="co-row" *ngFor="let l of q.merchLines">
-        <span>{{ l.name }} × {{ l.qty }}</span>
-        <span>₱{{ l.lineTotal | number }}</span>
-      </div>
-
-      <div class="co-row">
-        <span>Subtotal</span>
-        <span>₱{{ q.subtotal | number }}</span>
-      </div>
-
-      <div class="co-row">
-        <span>Transaction fee</span>
-        <span>₱{{ q.transactionFee | number }}</span>
-      </div>
-
-      <div class="co-row total">
-        <span>Total amount</span>
-        <span>₱{{ q.total | number }}</span>
-      </div>
+      <ng-container *ngTemplateOutlet="paymentOptions"></ng-container>
     </div>
+  </div>
 
-    <!-- ── Payment method ──────────────────────────────────────────────── -->
+  <ng-template #bookingCheckout>
+    <div class="co-body" *ngIf="draft() as d">
+      <ng-container *ngIf="quote() as q">
+        <p class="co-title">Order summary</p>
+        <div class="co-card">
+          <div class="co-trail">
+            <div class="co-thumb" [style.backgroundImage]="'url(' + d.trailImage + ')'"></div>
+            <div class="co-trail-meta">
+              <span class="n">{{ d.trailName }}</span>
+              <span class="s">{{ prettyDate() }}</span>
+              <span class="s">{{ q.packageName }}</span>
+            </div>
+          </div>
+
+          <div class="co-guide" *ngIf="guideName() as g">
+            <span class="co-avatar">{{ g.charAt(0) }}</span>
+            <span class="co-trail-meta">
+              <span class="n">{{ g }}</span>
+              <span class="s">Your expert guide</span>
+            </span>
+          </div>
+
+          <div class="co-divider"></div>
+          <div class="co-row" *ngFor="let a of q.coveredActivities">
+            <span class="muted">{{ a.name }}</span><span class="muted">Included</span>
+          </div>
+          <div class="co-row" *ngFor="let a of q.paidActivities">
+            <span>{{ a.name }}</span><span>₱{{ a.price | number }}</span>
+          </div>
+          <div class="co-row" *ngFor="let l of q.merchLines">
+            <span>{{ l.name }} × {{ l.qty }}</span><span>₱{{ l.lineTotal | number }}</span>
+          </div>
+          <div class="co-row" *ngIf="q.groupSurcharge > 0">
+            <span>Additional group hikers · {{ d.groupHikers?.length }} total</span><span>₱{{ q.groupSurcharge | number }}</span>
+          </div>
+          <div class="co-row"><span>Subtotal</span><span>₱{{ q.subtotal | number }}</span></div>
+          <div class="co-row"><span>Transaction fee</span><span>₱{{ q.transactionFee | number }}</span></div>
+          <div class="co-row"><span>Total for this hike</span><span>₱{{ q.total | number }}</span></div>
+          <div class="co-divider"></div>
+          <div class="co-row total">
+            <span>Pay now — deposit</span><span>₱{{ q.deposit | number }}</span>
+          </div>
+          <div class="co-row">
+            <span class="muted">Balance, once your permit is released</span>
+            <span class="muted">₱{{ q.balance | number }}</span>
+          </div>
+        </div>
+
+        <app-refund-policy
+          [total]="q.total"
+          [deposit]="q.deposit"
+          [transactionFee]="q.transactionFee">
+        </app-refund-policy>
+
+        <ng-container *ngTemplateOutlet="paymentOptions"></ng-container>
+      </ng-container>
+    </div>
+  </ng-template>
+
+  <ng-template #loadingBalance>
+    <div class="co-body"><p class="co-title">Loading booking…</p></div>
+  </ng-template>
+
+  <ng-template #paymentOptions>
     <p class="co-title">Payment method</p>
-
     <div class="co-methods">
       <button
         class="co-method"
@@ -80,7 +109,6 @@
       </button>
     </div>
 
-    <!-- ── Card form ───────────────────────────────────────────────────── -->
     <ng-container *ngIf="method() === 'card'">
       <label class="co-label">Card number<span class="req" aria-hidden="true">*</span></label>
       <ion-input
@@ -119,14 +147,9 @@
       </div>
 
       <label class="co-label">Cardholder name<span class="req" aria-hidden="true">*</span></label>
-      <ion-input
-        class="co-input"
-        placeholder="Name on card"
-        [(ngModel)]="cardName"
-      ></ion-input>
+      <ion-input class="co-input" placeholder="Name on card" [(ngModel)]="cardName"></ion-input>
     </ng-container>
 
-    <!-- ── QRPh (demo) ─────────────────────────────────────────────────── -->
     <ng-container *ngIf="method() === 'qrph'">
       <div class="co-alt">
         <div class="co-qr">
@@ -134,63 +157,46 @@
             <path [attr.d]="qrPath" />
           </svg>
         </div>
-        <p class="co-alt-title">Scan to pay ₱{{ q.total | number }}</p>
+        <p class="co-alt-title">Scan to pay ₱{{ balanceCheckoutRequested() ? (balanceDue() | number) : (quote()?.deposit | number) }}</p>
         <p class="co-alt-text">
-          Open any bank or e-wallet app that supports QRPh, scan the code and
-          pay. Then upload a screenshot of your receipt below and tap Pay.
+          This sample QR code is not scannable. For this demo, upload an image and tap
+          the button below; no payment will be sent or verified.
         </p>
       </div>
 
-      <label class="co-label" for="qrph-proof">Proof of payment<span class="req" aria-hidden="true">*</span></label>
-      <input
-        #proofInput
-        id="qrph-proof"
-        class="co-file"
-        type="file"
-        accept="image/*"
-        (change)="onProof($event)"
-      />
-
+      <label class="co-label" for="qrph-proof">Demo proof image<span class="req" aria-hidden="true">*</span></label>
+      <input #proofInput id="qrph-proof" class="co-file" type="file" accept="image/*" (change)="onProof($event)" />
       <button type="button" class="co-upload" *ngIf="!proof()" (click)="proofInput.click()">
         <ion-icon name="cloud-upload-outline"></ion-icon>
-        <span class="t">Upload a screenshot of your payment</span>
+        <span class="t">Choose an image</span>
         <span class="s">Image only (JPG or PNG), up to 5 MB</span>
       </button>
-
       <div class="co-proof" *ngIf="proof() as pf">
-        <img [src]="pf.url" alt="Proof of payment preview" />
+        <img [src]="pf.url" alt="Demo proof image preview" />
         <div class="co-proof-meta">
           <span class="n">{{ pf.name }}</span>
-          <span class="s"><ion-icon name="checkmark-circle"></ion-icon> Uploaded · {{ pf.size }}</span>
+          <span class="s"><ion-icon name="checkmark-circle"></ion-icon> Selected · {{ pf.size }}</span>
         </div>
-        <button type="button" class="co-proof-remove" aria-label="Remove proof of payment" (click)="removeProof()">
+        <button type="button" class="co-proof-remove" aria-label="Remove proof image" (click)="removeProof()">
           <ion-icon name="close-outline"></ion-icon>
         </button>
       </div>
     </ng-container>
 
-    <!-- ── Apple Pay (demo) ────────────────────────────────────────────── -->
     <ng-container *ngIf="method() === 'apple'">
       <div class="co-alt">
         <ion-icon class="co-alt-icon" name="logo-apple"></ion-icon>
-        <p class="co-alt-title">Pay with Apple Pay</p>
-        <p class="co-alt-text">
-          Tap Pay below, then confirm with Face ID or Touch ID on your device.
-        </p>
+        <p class="co-alt-title">Apple Pay demo</p>
+        <p class="co-alt-text">No Apple Pay transaction will be made.</p>
       </div>
     </ng-container>
 
-    <!-- ── Maya (demo) ─────────────────────────────────────────────────── -->
     <ng-container *ngIf="method() === 'maya'">
       <div class="co-alt">
         <ion-icon class="co-alt-icon" name="wallet-outline"></ion-icon>
-        <p class="co-alt-title">Pay with Maya</p>
-        <p class="co-alt-text">
-          Enter the mobile number linked to your Maya account. You will approve
-          the payment in the Maya app.
-        </p>
+        <p class="co-alt-title">Maya demo</p>
+        <p class="co-alt-text">No Maya transaction will be made. Enter a sample number to continue.</p>
       </div>
-
       <label class="co-label">Maya mobile number<span class="req" aria-hidden="true">*</span></label>
       <ion-input
         class="co-input"
@@ -203,40 +209,27 @@
       ></ion-input>
     </ng-container>
 
-    <!-- This notice is not decoration. A form that looks exactly like a real
-         card form should say plainly that it is not one. -->
     <div class="co-demo">
       <ion-icon name="warning-outline"></ion-icon>
       <span>
-        <strong>Demo payment.</strong> No payment gateway is connected, no card
-        is charged, and nothing you type here leaves this device. Only the last
-        four digits are kept, for the receipt. Do not enter a real card.
+        <strong>Test transaction.</strong> Payment processing is not yet connected.
+        No funds will be collected. Do not enter real payment details.
       </span>
     </div>
-
     <div class="co-spacer"></div>
-  </div>
+  </ng-template>
 
-  <!-- ── Sticky pay bar — back, pay ────────────────────────────────────── -->
-  <div class="co-footer" *ngIf="quote() as q">
-    <!-- Disabled while processing: leaving halfway through a payment is the
-         one thing this screen must not make easy. -->
-    <button
-      class="co-back"
-      [disabled]="processing()"
-      (click)="goBack()"
-      aria-label="Go back"
-    >
+  <div class="co-footer" *ngIf="checkoutReady()">
+    <button class="co-back" [disabled]="processing()" (click)="goBack()" aria-label="Go back">
       <ion-icon name="arrow-back-outline"></ion-icon>
     </button>
-
-    <!-- pay button -->
     <button class="co-pay" [disabled]="processing()" (click)="pay()">
       <ng-container *ngIf="!processing(); else working">
-        Pay ₱{{ q.total | number }}
+        {{ balanceCheckoutRequested() ? 'Pay Balance' : 'Pay deposit' }}
+        · ₱{{ balanceCheckoutRequested() ? (balanceDue() | number) : (payNow() | number) }}
         <ion-icon name="arrow-forward"></ion-icon>
       </ng-container>
-      <ng-template #working>Processing…</ng-template>
+      <ng-template #working>Processing demo…</ng-template>
     </button>
   </div>
 </ion-content>

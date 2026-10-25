@@ -21,6 +21,7 @@
 <ion-content [fullscreen]="true">
   <div class="page-pad" *ngIf="form" [class.viewing]="!editing">
 
+    <!-- Avatar editing uses a hidden file input; the preview is driven by page state. -->
     <div class="avatar-section">
       <div class="avatar-wrap" [class.editable]="editing" (click)="triggerFileInput()">
         <img *ngIf="avatarPreview; else noPhoto" [src]="avatarPreview" alt="Profile picture" />
@@ -35,7 +36,9 @@
       <input id="avatarFileInput" type="file" accept="image/*" hidden (change)="onAvatarFileChange($event)" />
     </div>
 
+    <!-- The form is grouped to mirror the profile model saved by PersonalInfoPage. -->
     <form [formGroup]="form">
+      <!-- Identity fields are editable except email, which is the authentication account identifier. -->
       <p class="group-label">Personal Information</p>
       <div class="form-card">
         <ion-item lines="full" class="field" [class.invalid]="!!err('name')">
@@ -74,6 +77,7 @@
         <p class="err" *ngIf="err('gender') as msg">{{ msg }}</p>
       </div>
 
+      <!-- Optional profile fields provide descriptive information for the hiker's account. -->
       <p class="group-label">About You</p>
       <div class="form-card">
         <ion-item lines="full" class="field" [class.invalid]="!!err('location')">
@@ -97,6 +101,7 @@
         <p class="err" *ngIf="err('bio') as msg">{{ msg }}</p>
       </div>
 
+      <!-- Emergency-contact fields are saved with the profile for hiking safety. -->
       <p class="group-label">Emergency Contact</p>
       <div class="form-card">
         <ion-item lines="full" class="field" [class.invalid]="!!err('emergencyContactName')">

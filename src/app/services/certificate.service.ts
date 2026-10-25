@@ -1,3 +1,6 @@
+/**
+ * Certificate service: manages hiking-document upload, review status, and summary data consumed by profile, document, and booking screens.
+ */
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { onAuthStateChanged } from 'firebase/auth';
 import {
@@ -14,7 +17,7 @@ import {
  * ═══════════════════════════════════════════════════════════════════════════
  * CERTIFICATE SERVICE — the signed-in hiker's hiking documents
  *
- * Medical certificate and barangay clearance, one of each per hiker. See
+ * Medical certificate, one per hiker. See
  * certificate.model.ts for how they are stored. The hiker's own records
  * stream live, so when an admin approves or rejects a file the Documents
  * page and the Profile tab update straight away.
@@ -77,6 +80,7 @@ export class CertificateService {
         (snap) => {
           const map: Partial<Record<CertificateType, CertificateRecord>> = {};
           for (const d of snap.docs) {
+            if (d.data()['type'] !== 'medical') continue;
             const r = toRecord(d.id, d.data({ serverTimestamps: 'estimate' }));
             map[r.type] = r;
           }
@@ -145,6 +149,7 @@ export class CertificateService {
     return data;
   }
 
+  /** Removes the selected record through the owning service and refreshes the view. */
   async remove(type: CertificateType): Promise<void> {
     const user = auth.currentUser;
     if (!user) return;
@@ -164,7 +169,7 @@ function toRecord(id: string, d: Record<string, any>): CertificateRecord {
   return {
     id,
     uid: String(d['uid'] ?? ''),
-    type: d['type'] === 'barangay' ? 'barangay' : 'medical',
+    type: 'medical',
     fileName: String(d['fileName'] ?? 'document'),
     mimeType: String(d['mimeType'] ?? ''),
     size: Number(d['size'] ?? 0) || 0,

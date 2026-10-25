@@ -1,3 +1,6 @@
+/**
+ * Hiking-documents controller: connects the document upload and review interface to CertificateService and the current hiker?s records.
+ */
 import { Component, computed, inject, signal } from '@angular/core';
 import { DatePipe, Location, NgTemplateOutlet } from '@angular/common';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
@@ -18,8 +21,8 @@ import {
 } from '../../models/certificate.model';
 
 /**
- * HIKING DOCUMENTS — upload a medical certificate and a barangay clearance.
- * Each one shows whether TrailBound has approved it, is still checking it,
+ * HIKING DOCUMENTS — upload a medical certificate.
+ * It shows whether TrailBound has approved it, is still checking it,
  * or needs a new file (with the admin's reason).
  */
 @Component({
@@ -60,24 +63,29 @@ export class DocumentsPage {
     });
   }
 
+  /** Returns the saved upload record for the requested document type. */
   record(type: CertificateType): CertificateRecord | undefined {
     return this.certs.records()[type];
   }
 
+  /** Converts a record status into the readable text shown in the interface. */
   statusLabel(r: CertificateRecord | undefined): string {
     if (!r) return 'Not uploaded';
     return r.status === 'approved' ? 'Approved' : r.status === 'rejected' ? 'Needs a new file' : 'Under review';
   }
 
+  /** Navigates back to the screen that opened the current page. */
   goBack(): void {
     this.location.back();
   }
 
+  /** Opens the file picker connected to the selected document upload control. */
   pick(input: HTMLInputElement): void {
     input.value = '';
     input.click();
   }
 
+  /** Validates the chosen file and passes an acceptable upload to the document flow. */
   async onFile(kind: CertificateKind, event: Event): Promise<void> {
     const file = (event.target as HTMLInputElement).files?.[0];
     if (!file) return;
@@ -92,6 +100,7 @@ export class DocumentsPage {
     }
   }
 
+  /** Opens the selected document in the in-page preview viewer. */
   async view(kind: CertificateKind): Promise<void> {
     const r = this.record(kind.id);
     if (!r) return;
@@ -120,11 +129,13 @@ export class DocumentsPage {
     }
   }
 
+  /** Closes or cancels the close viewer flow and returns the interface to its previous state. */
   closeViewer(): void {
     this.viewerOpen.set(false);
     this.revoke();
   }
 
+  /** Removes the selected record through the owning service and refreshes the view. */
   async remove(kind: CertificateKind): Promise<void> {
     const alert = await this.alertCtrl.create({
       header: `Remove ${kind.title.toLowerCase()}?`,
@@ -148,11 +159,13 @@ export class DocumentsPage {
     alert.present();
   }
 
+  /** Releases a temporary document preview URL when its viewer closes. */
   private revoke(): void {
     if (this.blobUrl) URL.revokeObjectURL(this.blobUrl);
     this.blobUrl = null;
   }
 
+  /** Shows a brief Ionic notification so the user can understand the action result. */
   private async toast(message: string, color = 'dark'): Promise<void> {
     const t = await this.toastCtrl.create({ message, duration: 2600, position: 'top', color });
     t.present();

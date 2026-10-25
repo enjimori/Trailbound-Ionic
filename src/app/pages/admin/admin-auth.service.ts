@@ -1,12 +1,12 @@
 /**
- * Admin session — sign in with a username and password, remember who is
- * signed in, and confirm they really are an admin.
+ * Admin session — track the shared app login and confirm the signed-in user
+ * has admin access.
  *
  * WHO COUNTS AS AN ADMIN
- *   1. The built-in accounts in admin.config.ts (username "admin").
+ *   1. The built-in accounts in admin.config.ts.
  *   2. Any hiker an admin has promoted from Admin → Hikers, which sets
- *      role: 'admin' on their users/{uid} document. They sign in here with
- *      their own email and password.
+ *      role: 'admin' on their users/{uid} document. They sign in through the
+ *      shared app login with their own email and password.
  *
  * This class checks both so the screens can react, but the check that
  * actually protects the data is the identical one in firestore.rules. A route
@@ -15,32 +15,21 @@
 import { Injectable, computed, signal } from '@angular/core';
 import {
   EmailAuthProvider,
-  createUserWithEmailAndPassword,
   onAuthStateChanged,
   reauthenticateWithCredential,
-  signInWithEmailAndPassword,
   signOut as fbSignOut,
   updatePassword,
-  updateProfile,
   type User,
-  type UserCredential,
 } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import { adminAuth, adminDb } from './admin-firebase';
-import {
-  FIRST_SIGN_IN_PASSWORD,
-  accountForUsername,
-  isBuiltInAdminEmail,
-  ADMIN_ACCOUNTS,
-} from './admin.config';
+import { isBuiltInAdminEmail, ADMIN_ACCOUNTS } from './admin.config';
 
 export interface AdminIdentity {
   uid: string;
   email: string;
   /** What the panel shows in the corner. */
   name: string;
-  /** The short sign-in name, or the email for a promoted hiker. */
-  username: string;
   /** Built-in accounts are "Owner"; promoted hikers are "Admin". */
   level: 'Owner' | 'Admin';
 }
@@ -69,47 +58,15 @@ export class AdminAuthService {
     });
   }
 
-  /** Throws an Error whose message is safe to show on screen. */
-  async signIn(username: string, password: string): Promise<AdminIdentity> {
-    const input = username.trim();
-    const account = accountForUsername(input);
-    const email = account?.email ?? (input.includes('@') ? input.toLowerCase() : null);
-
-    if (!email) {
-      throw new Error('Unknown username. Use your admin username or admin email address.');
-    }
-
-    let cred: UserCredential;
-    try {
-      cred = await signInWithEmailAndPassword(adminAuth, email, password);
-    } catch (err) {
-      const code = codeOf(err);
-      const accountMayNotExistYet =
-        code === 'auth/invalid-credential' ||
-        code === 'auth/invalid-login-credentials' ||
-        code === 'auth/user-not-found';
-
-      // First ever sign-in with a built-in username: create its login.
-      if (account && accountMayNotExistYet && password === FIRST_SIGN_IN_PASSWORD) {
-        cred = await this.createBuiltInAccount(account.email, account.name, password);
-      } else {
-        throw new Error(describeAuthError(err));
-      }
-    }
-
-    const identity = await this.loadIdentity(cred.user);
-    if (!identity) {
-      // Correct hiker credentials, but not an admin. Drop the session so the
-      // panel is never left holding a login it will not honour.
-      await fbSignOut(adminAuth);
-      this._admin.set(null);
-      throw new Error('This account does not have admin access.');
-    }
-
+  /** Re-checks the current app session after the shared login completes. */
+  async refreshCurrentAdmin(): Promise<AdminIdentity | null> {
+    const user = adminAuth.currentUser;
+    const identity = user ? await this.loadIdentity(user) : null;
     this._admin.set(identity);
     return identity;
   }
 
+  /** Ends the current session and clears or redirects the related account state. */
   async signOut(): Promise<void> {
     await fbSignOut(adminAuth);
     this._admin.set(null);
@@ -135,20 +92,6 @@ export class AdminAuthService {
     }
   }
 
-  private async createBuiltInAccount(email: string, name: string, password: string): Promise<UserCredential> {
-    try {
-      const cred = await createUserWithEmailAndPassword(adminAuth, email, password);
-      await updateProfile(cred.user, { displayName: name }).catch(() => {});
-      return cred;
-    } catch (err) {
-      // The login already exists, so the password typed was simply wrong.
-      if (codeOf(err) === 'auth/email-already-in-use') {
-        throw new Error('Wrong username or password.');
-      }
-      throw new Error(describeAuthError(err));
-    }
-  }
-
   /** Returns an identity only for an active admin; null for anyone else. */
   private async loadIdentity(user: User): Promise<AdminIdentity | null> {
     const email = (user.email ?? '').toLowerCase();
@@ -159,7 +102,6 @@ export class AdminAuthService {
         uid: user.uid,
         email,
         name: user.displayName || account.name,
-        username: account.username,
         level: 'Owner',
       };
     }
@@ -170,7 +112,7 @@ export class AdminAuthService {
       const data = snap.data() as Record<string, any>;
       if (data['role'] !== 'admin' || data['status'] === 'suspended') return null;
       const name = String(data['profile']?.name || data['name'] || user.displayName || 'Admin');
-      return { uid: user.uid, email, name, username: email, level: 'Admin' };
+      return { uid: user.uid, email, name, level: 'Admin' };
     } catch {
       // permission-denied here means the rules do not see this user as an
       // admin either. Treat it as "not an admin" rather than crashing.
@@ -194,7 +136,7 @@ function describeAuthError(err: unknown): string {
     case 'auth/wrong-password':
     case 'auth/invalid-credential':
     case 'auth/invalid-login-credentials':
-      return 'Wrong username or password.';
+      return 'Incorrect email or password.';
     case 'auth/too-many-requests':
       return 'Too many attempts. Wait a minute, then try again.';
     case 'auth/network-request-failed':

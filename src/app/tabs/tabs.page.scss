@@ -1,3 +1,5 @@
+/* Tab-shell styles: format the navigation controls rendered by tabs.page.html without owning route or selection logic. */
+/* Each button links to a child route; Ionic applies tab-selected to the active route. */
 ion-tab-button {
   ion-icon {
     font-size: 22px;

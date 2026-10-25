@@ -1,3 +1,6 @@
+/**
+ * Signup-page controller: validates registration input, creates the account through the authentication service, and reports the result to the user.
+ */
 import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -79,6 +82,7 @@ export class SignupPage {
     addIcons({ arrowBackOutline, calendarOutline, eyeOutline, eyeOffOutline, leaf });
   }
 
+  /** Performs the err operation for this feature and returns its result to the caller. */
   err(name: string): string | null {
     const c = this.form.get(name);
     if (name === 'confirmPassword') {
@@ -134,6 +138,7 @@ export class SignupPage {
     if (tappedDay) setTimeout(() => popover.dismiss(), 150);
   }
 
+  /** Stores the set gender selection so the related view and feature logic stay in sync. */
   setGender(g: string) {
     const c = this.form.controls.gender;
     c.setValue(g);
@@ -141,6 +146,7 @@ export class SignupPage {
     c.markAsTouched();
   }
 
+  /** Validates and submits the current form, then reports the result to the user. */
   async submit() {
     if (this.loading) return;
     if (this.form.invalid) {
@@ -165,10 +171,12 @@ export class SignupPage {
     }
   }
 
+  /** Navigates to sign-in so a guest can continue with an account-only action. */
   goLogin() {
     this.router.navigate(['/login'], { replaceUrl: true });
   }
 
+  /** Shows a brief Ionic notification so the user can understand the action result. */
   private async toast(message: string, color: 'success' | 'danger') {
     const t = await this.toastCtrl.create({ message, duration: 2200, position: 'top', color });
     t.present();

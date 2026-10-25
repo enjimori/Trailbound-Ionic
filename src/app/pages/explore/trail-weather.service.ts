@@ -175,6 +175,7 @@ export class TrailWeatherService {
   /** Ids currently in flight, so a re-render cannot start a second request. */
   private readonly inFlight = new Set<string>();
 
+  /** Performs the state for operation for this feature and returns its result to the caller. */
   stateFor(id: string): ForecastState {
     return this._states()[id] ?? IDLE;
   }
@@ -210,6 +211,7 @@ export class TrailWeatherService {
       .finally(() => this.inFlight.delete(req.id));
   }
 
+  /** Applies a partial update to the existing state without replacing unrelated fields. */
   private patch(id: string, state: ForecastState) {
     this._states.update(all => ({ ...all, [id]: state }));
   }
@@ -251,6 +253,7 @@ export class TrailWeatherService {
     return this.parse(json, req);
   }
 
+  /** Converts the response data into the typed values used by the application. */
   private parse(json: any, req: ForecastRequest): TrailForecast {
     const c = json.current ?? {};
     const code = Number(c.weather_code ?? 0);
@@ -281,6 +284,7 @@ export class TrailWeatherService {
     return forecast;
   }
 
+  /** Converts hourly response data into the format consumed by the weather view. */
   private parseHourly(json: any): HourForecast[] {
     const h = json.hourly;
     if (!h?.time?.length) return [];
@@ -304,6 +308,7 @@ export class TrailWeatherService {
     });
   }
 
+  /** Converts daily response data into the format consumed by the weather view. */
   private parseDays(json: any): DayForecast[] {
     const d = json.daily;
     if (!d?.time?.length) return [];

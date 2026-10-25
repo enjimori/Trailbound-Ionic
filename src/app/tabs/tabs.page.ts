@@ -1,3 +1,6 @@
+/**
+ * Tab-shell controller: supplies the shared navigation state for the tab bar and the routed pages beneath it.
+ */
 import { Component } from '@angular/core';
 import {
   IonTabs, IonTabBar, IonTabButton, IonIcon, IonLabel, IonBadge,

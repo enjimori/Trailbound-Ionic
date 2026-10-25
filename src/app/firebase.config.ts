@@ -1,3 +1,6 @@
+/**
+ * Firebase client configuration: provides the project settings consumed by firebase.client.ts when initializing Firebase services.
+ */
 export const firebaseConfig = {
   apiKey: "AIzaSyCFEvxkKyE7vvEMnFMATi5a3b8v6FYDaYw",
   authDomain: "trailbound-ionic.firebaseapp.com",

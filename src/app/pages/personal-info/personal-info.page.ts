@@ -1,3 +1,6 @@
+/**
+ * Personal-information controller: loads and validates editable profile fields, saves them through user services, and reports save results to the page.
+ */
 import { Component, OnInit } from '@angular/core';
 import { CommonModule, Location } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -51,6 +54,7 @@ export class PersonalInfoPage implements OnInit {
     addIcons({ pencilOutline });
   }
 
+  /** Runs when the component initializes; prepares the state its template needs. */
   ngOnInit() {
     const p = this.userService.profile();
     this.avatarPreview = p.avatar;
@@ -77,10 +81,12 @@ export class PersonalInfoPage implements OnInit {
     this.location.back();
   }
 
+  /** Performs the start edit operation for this feature and returns its result to the caller. */
   startEdit() {
     this.editing = true;
   }
 
+  /** Reports whether profile edits are currently being made. */
   private cancelEdit() {
     const p = this.userService.profile();
     this.form.reset({
@@ -103,11 +109,13 @@ export class PersonalInfoPage implements OnInit {
     return this.editing ? hint : 'Not set';
   }
 
+  /** Performs the trigger file input operation for this feature and returns its result to the caller. */
   triggerFileInput() {
     if (!this.editing) return;
     (document.getElementById('avatarFileInput') as HTMLInputElement | null)?.click();
   }
 
+  /** Validates the selected avatar file and updates its preview. */
   async onAvatarFileChange(ev: Event) {
     const input = ev.target as HTMLInputElement;
     const file = input.files?.[0];
@@ -147,14 +155,17 @@ export class PersonalInfoPage implements OnInit {
     });
   }
 
+  /** Performs the err operation for this feature and returns its result to the caller. */
   err(name: string) {
     return fieldError(this.form.get(name), LABELS[name] ?? name);
   }
 
+  /** Performs the bio length operation for this feature and returns its result to the caller. */
   get bioLength() {
     return (this.form.get('bio')?.value ?? '').length;
   }
 
+  /** Persists the current changes through the owning service and updates saved state. */
   async save() {
     if (this.saving) return;
     if (this.form.invalid) {
@@ -195,6 +206,7 @@ export class PersonalInfoPage implements OnInit {
     }
   }
 
+  /** Shows a brief Ionic notification so the user can understand the action result. */
   private async toast(message: string, color: 'success' | 'danger') {
     const t = await this.toastCtrl.create({ message, duration: 1800, position: 'top', color });
     t.present();

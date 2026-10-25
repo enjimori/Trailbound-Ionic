@@ -1,3 +1,6 @@
+/**
+ * Shared trail data contracts: define the fields used by trail pages, trail services, maps, and booking flows.
+ */
 export type TrailCategory = 'Nearby' | 'Popular' | 'Scenic' | 'Forest';
 export type Difficulty = 'Easy' | 'Moderate' | 'Hard';
 export type TrailStatus = 'open' | 'closed';
@@ -15,6 +18,6 @@ export interface Trail {
   category: TrailCategory;
   description: string;
   status: TrailStatus;
-  lat: number;
-  lng: number;
+  lat?: number;
+  lng?: number;
 }

@@ -70,6 +70,7 @@ export class AppLogoComponent {
   /** Rendered height in px. 28–34 suits a toolbar; 40+ suits a floating mark. */
   @Input() height = 30;
 
+  /** Returns the logo image path selected by the component's size and variant inputs. */
   get src(): string {
     return this.badgeOnly
       ? 'assets/logo/trailbound-badge.png'

@@ -240,3 +240,14 @@
   font-weight: 500;
   color: var(--bc-green);
 }
+
+/* Pending: an amber ring rather than the green celebratory fill. A big green
+   tick over "we are arranging your permit" contradicts the sentence below it. */
+.bc-check.waiting {
+  background: rgba(224, 182, 74, 0.14);
+  box-shadow:
+    0 0 0 12px rgba(224, 182, 74, 0.07),
+    0 0 0 26px rgba(224, 182, 74, 0.035);
+
+  ion-icon { color: #e0b64a; }
+}

@@ -5,6 +5,7 @@
 // The credit and license fields are a licence condition, not decoration. The
 // trail sheet renders them over the photo — leave that in place.
 
+/** Trail-id lookup used by trail views to show an attributed image. */
 export interface TrailPhoto {
   url: string;
   credit?: string;

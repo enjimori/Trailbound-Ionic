@@ -1,4 +1,7 @@
-﻿import { addIcons } from 'ionicons';
+﻿/**
+ * Central Ionic icon registration: makes the app-wide icon set available to templates that use ion-icon names.
+ */
+import { addIcons } from 'ionicons';
 import {
   homeOutline, home,
   compassOutline, compass,

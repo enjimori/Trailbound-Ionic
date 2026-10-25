@@ -15,6 +15,7 @@
   isolation: isolate;
 }
 
+/* The image and shade work together as the card backdrop; content sits above them. */
 .trail-image {
   position: absolute;
   inset: 0;
@@ -38,6 +39,7 @@
   );
 }
 
+/* Trail text and metadata occupy the lower part of the photo card. */
 .trail-body {
   position: absolute;
   left: 0;
@@ -99,6 +101,7 @@ h3 {
   }
 }
 
+/* The details action remains visually separate from the trail summary. */
 .details-btn {
   flex-shrink: 0;
   width: 36px;

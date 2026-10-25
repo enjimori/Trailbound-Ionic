@@ -1,3 +1,6 @@
+/**
+ * Weather service: retrieves and prepares weather data and alerts consumed by trail and weather components.
+ */
 import { Injectable, signal } from '@angular/core';
 
 export interface WeatherAlert {

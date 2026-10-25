@@ -1,5 +1,5 @@
 /**
- * Certificates — hikers' medical certificates and barangay clearances.
+ * Certificates — hikers' medical certificates.
  * Open one to see the file, then approve it or reject it with a reason the
  * hiker sees. Also lists hikers with an upcoming hike who are still missing
  * a document.
@@ -35,7 +35,7 @@ type Filter = 'pending' | 'approved' | 'rejected' | 'all';
     <div class="tba-head">
       <div>
         <h1>Certificates</h1>
-        <p>Medical certificates and barangay clearances uploaded by hikers.</p>
+        <p>Medical certificates uploaded by hikers.</p>
       </div>
     </div>
 
@@ -309,14 +309,17 @@ export class AdminCertificatesPage implements OnDestroy {
     }, { allowSignalWrites: true });
   }
 
+  /** Runs when the component is removed; releases resources owned by this component. */
   ngOnDestroy(): void {
     this.revoke();
   }
 
+  /** Opens the selected record or detail view and supplies the data it needs. */
   open(id: string): void {
     this.openId.set(id);
   }
 
+  /** Closes the active view and restores the surrounding page state. */
   close(): void {
     this.openId.set(null);
     this.loadedFor = null;
@@ -329,6 +332,7 @@ export class AdminCertificatesPage implements OnDestroy {
     }
   }
 
+  /** Performs the load file operation for this feature and returns its result to the caller. */
   private async loadFile(c: AdminCertificate): Promise<void> {
     this.loadedFor = c.id;
     this.fileLoading.set(true);
@@ -360,15 +364,18 @@ export class AdminCertificatesPage implements OnDestroy {
     }
   }
 
+  /** Releases the temporary URL used to preview the selected certificate file. */
   private revoke(): void {
     if (this.blobUrl) URL.revokeObjectURL(this.blobUrl);
     this.blobUrl = null;
   }
 
+  /** Performs the approve operation for this feature and returns its result to the caller. */
   async approve(c: AdminCertificate): Promise<void> {
     await this.review(c, 'approved', '', `${this.kind(c.type).title} approved`);
   }
 
+  /** Performs the reject operation for this feature and returns its result to the caller. */
   async reject(c: AdminCertificate): Promise<void> {
     const note = await this.ui.ask({
       title: `Reject this ${this.kind(c.type).title.toLowerCase()}?`,
@@ -381,6 +388,7 @@ export class AdminCertificatesPage implements OnDestroy {
     await this.review(c, 'rejected', note, 'Rejected. The hiker can upload a new file.');
   }
 
+  /** Performs the review operation for this feature and returns its result to the caller. */
   private async review(c: AdminCertificate, status: CertificateStatus, note: string, done: string): Promise<void> {
     this.busy.set(true);
     try {
@@ -393,6 +401,7 @@ export class AdminCertificatesPage implements OnDestroy {
     }
   }
 
+  /** Removes the selected record through the owning service and refreshes the view. */
   async remove(c: AdminCertificate): Promise<void> {
     const ok = await this.ui.confirm({
       title: 'Delete this file?',
@@ -413,38 +422,47 @@ export class AdminCertificatesPage implements OnDestroy {
     }
   }
 
+  /** Opens the hiker detail view for the selected record. */
   openHiker(uid: string): void {
     this.router.navigate(['/admin/hikers'], { queryParams: { open: uid } });
   }
 
+  /** Performs the name of operation for this feature and returns its result to the caller. */
   nameOf(c: AdminCertificate): string {
     return this.data.userById(c.uid)?.name || c.userName || c.userEmail || 'Hiker';
   }
 
+  /** Performs the email of operation for this feature and returns its result to the caller. */
   emailOf(c: AdminCertificate): string {
     return this.data.userById(c.uid)?.email || c.userEmail;
   }
 
+  /** Performs the avatar of operation for this feature and returns its result to the caller. */
   avatarOf(uid: string): string {
     return this.data.userById(uid)?.avatar ?? '';
   }
 
+  /** Returns the document type label used by the certificate review row. */
   kind(type: CertificateType) {
     return certificateKind(type);
   }
 
+  /** Maps an internal value to the readable label shown in the interface. */
   label(s: CertificateStatus): string {
     return s === 'approved' ? 'Approved' : s === 'rejected' ? 'Rejected' : 'To review';
   }
 
+  /** Maps a status value to the visual style used by the interface. */
   tone(s: CertificateStatus): string {
     return s === 'approved' ? 'green' : s === 'rejected' ? 'red' : 'amber';
   }
 
+  /** Formats a file size in kilobytes for the certificate review list. */
   kb(bytes: number): string {
     return bytes >= 1024 * 1024 ? (bytes / 1024 / 1024).toFixed(1) + ' MB' : Math.max(1, Math.round(bytes / 1024)) + ' KB';
   }
 
+  /** Converts a date key into a Date for display in the admin interface. */
   day(key: string): Date {
     return fromDayKey(key);
   }

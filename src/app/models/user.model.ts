@@ -1,3 +1,6 @@
+/**
+ * Shared user and upcoming-adventure contracts: keep profile data consistent between account services and profile screens.
+ */
 
 export interface UpcomingAdventure {
   id: string;

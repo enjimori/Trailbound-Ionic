@@ -1,16 +1,20 @@
 /**
- * Settings — your admin account, changing the password, who else is an
- * admin, and whether Firebase is letting the panel read everything.
+ * Settings — your admin account, changing the password, appearance, who else
+ * is an admin, and whether Firebase is letting the panel read everything.
  */
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators, type AbstractControl } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { IonIcon } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
-import { alertCircleOutline, checkmarkCircleOutline, keyOutline, logOutOutline, shieldCheckmarkOutline } from 'ionicons/icons';
+import {
+  alertCircleOutline, checkmarkCircleOutline, keyOutline, logOutOutline, moonOutline,
+  shieldCheckmarkOutline, sunnyOutline,
+} from 'ionicons/icons';
 
 import { AdminAuthService } from '../admin-auth.service';
 import { AdminDataService, CollectionName } from '../admin-data.service';
+import { AdminThemeService } from '../admin-theme.service';
 import { AdminUiService } from '../admin-ui.service';
 import { ADMIN_ACCOUNTS } from '../admin.config';
 import { initials, tintFor } from '../admin-utils';
@@ -44,7 +48,6 @@ const COLLECTIONS: { id: CollectionName; label: string }[] = [
           <div>
             <h2>{{ admin()?.name }}</h2>
             <dl class="tba-dl">
-              <div><dt>Username</dt><dd>{{ admin()?.username }}</dd></div>
               <div><dt>Login email</dt><dd>{{ admin()?.email }}</dd></div>
               <div><dt>Access</dt><dd>{{ admin()?.level === 'Owner' ? 'Owner (built-in account)' : 'Admin (promoted hiker)' }}</dd></div>
             </dl>
@@ -73,6 +76,32 @@ const COLLECTIONS: { id: CollectionName; label: string }[] = [
             <button type="submit" class="tba-btn primary" [disabled]="saving()">{{ saving() ? 'Saving…' : 'Update password' }}</button>
           </form>
         </section>
+
+        <!--
+          The panel's own appearance, stored in this browser only. It is
+          deliberately NOT the hiker app's Light mode switch: the panel is used
+          on a laptop and the app on a phone, so one shared setting would mean
+          changing the app to get the panel the way you want it.
+        -->
+        <section class="tba-card appearance">
+          <span class="appearance-icon">
+            <ion-icon [name]="theme.isDark() ? 'moon-outline' : 'sunny-outline'"></ion-icon>
+          </span>
+          <div>
+            <b>Dark mode</b>
+            <small>Applies to the admin panel on this computer. The hiker app keeps its own setting.</small>
+          </div>
+          <button
+            type="button"
+            class="tba-switch"
+            role="switch"
+            [attr.aria-checked]="theme.isDark()"
+            aria-label="Use dark mode in the admin panel"
+            (click)="theme.toggle()"
+          >
+            <span></span>
+          </button>
+        </section>
       </div>
 
       <div class="stack">
@@ -82,7 +111,7 @@ const COLLECTIONS: { id: CollectionName; label: string }[] = [
             @for (a of builtIn; track a.email) {
               <li>
                 <span class="tba-avatar sm" [style.background]="tint(a.name)">{{ ini(a.name) }}</span>
-                <div><b>{{ a.name }}</b><small>username “{{ a.username }}”</small></div>
+                <div><b>{{ a.name }}</b><small>{{ a.email }}</small></div>
                 <span class="tba-badge" data-tone="ink">Owner</span>
               </li>
             }
@@ -96,7 +125,7 @@ const COLLECTIONS: { id: CollectionName; label: string }[] = [
               </li>
             }
           </ul>
-          <p class="hint">To add an admin, open a hiker in <a routerLink="/admin/hikers">Hikers</a> and choose <b>Make admin</b>. They sign in here with their own email and password.</p>
+          <p class="hint">To add an admin, open a hiker in <a routerLink="/admin/hikers">Hikers</a> and choose <b>Make admin</b>. They sign in through the app login with their existing email and password.</p>
         </section>
 
         <section class="tba-card">
@@ -138,6 +167,33 @@ const COLLECTIONS: { id: CollectionName; label: string }[] = [
     .hint { margin: 14px 0 0; font-size: 12.5px; line-height: 1.5; color: var(--tba-muted); }
     .hint a { color: var(--tba-text); font-weight: 600; text-decoration: underline; }
     .hint code { background: var(--tba-soft); padding: 1px 5px; border-radius: 5px; }
+
+    /* ── appearance row ── */
+    .appearance { display: flex; align-items: center; gap: 14px; }
+    .appearance > div { flex: 1; min-width: 0; }
+    .appearance b { display: block; font-size: 13.5px; }
+    .appearance small { font-size: 12px; line-height: 1.45; color: var(--tba-muted); }
+    .appearance-icon { flex: none; width: 38px; height: 38px; display: grid; place-items: center; border-radius: 12px; background: var(--tba-soft); font-size: 19px; color: var(--tba-ink-2); }
+
+    /*
+      Hand-built switch rather than ion-toggle: the admin shell deliberately
+      keeps Ionic components out (only ion-icon is imported), so an ion-toggle
+      would arrive with Ionic's own theming and fight the --tba-* tokens. The
+      off-state track is a neutral translucent grey so it stays visible on both
+      a white card and a dark one.
+    */
+    .tba-switch { flex: none; width: 50px; height: 30px; padding: 3px; border: 0; border-radius: 999px; background: rgba(128, 136, 130, 0.35); transition: background .18s ease; }
+    .tba-switch span { display: block; width: 24px; height: 24px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0, 0, 0, .3); transition: transform .18s ease; }
+    .tba-switch[aria-checked='true'] { background: var(--tba-ink); }
+    .tba-switch[aria-checked='true'] span { transform: translateX(20px); }
+
+    /*
+      This page's styles are component-scoped, so admin-dark.css cannot reach
+      the one colour hard-coded above. Angular only appends its scoping
+      attribute to the last compound selector, so an ancestor like .tba still
+      matches — which is what lets this rule work from inside here.
+    */
+    .tba[data-tba-theme='dark'] .form-err { background: #341b1a; color: #f08682; }
   `],
 })
 export class AdminSettingsPage {
@@ -146,6 +202,8 @@ export class AdminSettingsPage {
   private readonly ui = inject(AdminUiService);
   private readonly router = inject(Router);
   private readonly fb = inject(FormBuilder);
+  /** Public: the template reads isDark() and calls toggle(). */
+  readonly theme = inject(AdminThemeService);
 
   readonly admin = this.auth.admin;
   readonly builtIn = ADMIN_ACCOUNTS;
@@ -172,15 +230,20 @@ export class AdminSettingsPage {
   );
 
   constructor() {
-    addIcons({ alertCircleOutline, checkmarkCircleOutline, keyOutline, logOutOutline, shieldCheckmarkOutline });
+    addIcons({
+      alertCircleOutline, checkmarkCircleOutline, keyOutline, logOutOutline, moonOutline,
+      shieldCheckmarkOutline, sunnyOutline,
+    });
     this.form.valueChanges.subscribe(() => this.error.set(''));
   }
 
+  /** Shows a validation error after the password field has been touched or changed. */
   bad(name: 'next'): boolean {
     const c = this.form.get(name)!;
     return c.invalid && (c.dirty || c.touched);
   }
 
+  /** Performs the change password operation for this feature and returns its result to the caller. */
   async changePassword(): Promise<void> {
     if (this.form.invalid) {
       this.form.markAllAsTouched();
@@ -199,12 +262,13 @@ export class AdminSettingsPage {
     }
   }
 
+  /** Ends the current session and clears or redirects the related account state. */
   async signOut(): Promise<void> {
-    const ok = await this.ui.confirm({ title: 'Log out?', message: 'You will need your username and password to get back in.', confirmText: 'Log out' });
+    const ok = await this.ui.confirm({ title: 'Log out?', message: 'You will need your email and password to get back in.', confirmText: 'Log out' });
     if (!ok) return;
     this.data.stop();
     await this.auth.signOut();
-    this.router.navigateByUrl('/admin/login', { replaceUrl: true });
+    this.router.navigateByUrl('/login', { replaceUrl: true });
   }
 
   ini = initials;

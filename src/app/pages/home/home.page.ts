@@ -1,4 +1,7 @@
-import { Component, computed, signal } from '@angular/core';
+/**
+ * Home-page controller: gathers the current hiker?s personalized data and featured trails for the home template.
+ */
+import { Component, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import {
@@ -8,6 +11,7 @@ import {
 import { TrailCardComponent } from '../../components/trail-card/trail-card.component';
 import { PostCardComponent } from '../../components/post-card/post-card.component';
 import { TrailService } from '../../services/trail.service';
+import { CatalogService } from '../../services/catalog.service';
 import { PostService } from '../../services/post.service';
 import { WeatherService } from '../../services/weather.service';
 import { NotificationService } from '../../services/notification.service';
@@ -50,6 +54,7 @@ addIcons({
   ],
 })
 export class HomePage {
+  private readonly catalog = inject(CatalogService);
   searchTerm = signal('');
   activeCategory = signal<TrailCategory | 'All'>('All');
   categories: (TrailCategory)[] = ['Nearby', 'Popular', 'Scenic', 'Forest'];
@@ -84,14 +89,15 @@ export class HomePage {
   /** The mountain currently being shown, if one has been picked. */
   weatherTrail = computed(() => {
     const id = this.weatherTrailId();
-    return id ? TRAILS_30.find(t => t.id === id) : undefined;
+    return id ? this.catalog.withTrailOverrides(TRAILS_30).find(t => t.id === id) : undefined;
   });
 
   /** Mountains matching the picker's search, by name or region. */
   weatherMatches = computed(() => {
     const q = this.weatherQuery().trim().toLowerCase();
-    if (!q) return TRAILS_30;
-    return TRAILS_30.filter(
+    const trails = this.catalog.withTrailOverrides(TRAILS_30);
+    if (!q) return trails;
+    return trails.filter(
       t =>
         t.name.toLowerCase().includes(q) ||
         t.region.toLowerCase().includes(q),
@@ -115,9 +121,21 @@ export class HomePage {
     // Typing searches all 30 trails with typo tolerance ("ulap", "mt ulpa",
     // "cordilera"). It matches name and region, ranked best match first.
     // With no search text, the category chip decides what shows.
+    const all = this.catalog.withTrailOverrides(allTrails());
+    const categoryIds = new Set(searchAll('', this.activeCategory()).map((trail) => trail.id));
     let list = this.isSearching()
-      ? fuzzyFilter(allTrails(), this.searchTerm(), t => `${t.name} ${t.region}`)
-      : searchAll('', this.activeCategory());
+      ? fuzzyFilter(all, this.searchTerm(), t => `${t.name} ${t.region}`)
+      : all.filter((trail) => categoryIds.has(trail.id));
+    const custom = this.catalog.withTrailOverrides(this.trailService.addedTrails()).filter((trail) => {
+      const categoryMatches = this.activeCategory() === 'All'
+        || this.activeCategory() === 'Nearby'
+        || trail.category === this.activeCategory();
+      const query = this.searchTerm().trim().toLowerCase();
+      const queryMatches = !query
+        || `${trail.name} ${trail.region}`.toLowerCase().includes(query);
+      return categoryMatches && queryMatches;
+    });
+    list = [...list, ...custom];
 
     if (this.difficulty() !== 'All') {
       list = list.filter(t => t.difficulty === this.difficulty());
@@ -149,10 +167,12 @@ export class HomePage {
     this.showWeatherPanel.update(open => !open);
   }
 
+  /** Handles weather search input and updates the selected forecast location. */
   onWeatherSearch(ev: Event) {
     this.weatherQuery.set((ev.target as HTMLInputElement).value ?? '');
   }
 
+  /** Stores the select weather trail selection so the related view and feature logic stay in sync. */
   selectWeatherTrail(id: string) {
     this.weatherTrailId.set(id);
   }
@@ -187,18 +207,22 @@ export class HomePage {
     this.activeCategory.set(this.activeCategory() === cat ? 'All' : cat);
   }
 
+  /** Performs the toggle filters operation for this feature and returns its result to the caller. */
   toggleFilters() {
     this.showFilters.update(open => !open);
   }
 
+  /** Stores the set difficulty selection so the related view and feature logic stay in sync. */
   setDifficulty(d: Difficulty) {
     this.difficulty.set(d);
   }
 
+  /** Stores the set sort selection so the related view and feature logic stay in sync. */
   setSort(key: SortKey) {
     this.sortBy.set(key);
   }
 
+  /** Performs the clear filters operation for this feature and returns its result to the caller. */
   clearFilters() {
     this.difficulty.set('All');
     this.sortBy.set('default');
@@ -238,10 +262,12 @@ export class HomePage {
     this.router.navigate(['/tabs/explore']);
   }
 
+  /** Opens the notification screen associated with the current user. */
   goNotifications() {
     this.router.navigate(['/notifications']);
   }
 
+  /** Performs the go community operation for this feature and returns its result to the caller. */
   goCommunity() {
     this.router.navigate(['/tabs/community']);
   }

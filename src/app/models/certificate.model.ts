@@ -1,6 +1,5 @@
 /**
- * Hiking documents a hiker submits before their hike: a medical certificate
- * and a barangay clearance. TrailBound's admins review each one.
+ * Hiking document a hiker submits before their hike: a medical certificate.
  *
  * Firestore:
  *   certificates/{uid}_{type}        what the file is and where it stands
@@ -13,7 +12,7 @@
  * 650 KB: a Firestore document holds at most 1 MiB.
  */
 
-export type CertificateType = 'medical' | 'barangay';
+export type CertificateType = 'medical';
 export type CertificateStatus = 'pending' | 'approved' | 'rejected';
 
 export interface CertificateKind {
@@ -29,12 +28,6 @@ export const CERTIFICATE_KINDS: CertificateKind[] = [
     title: 'Medical certificate',
     description: 'A fit-to-hike medical certificate signed by a doctor.',
     icon: 'medkit-outline',
-  },
-  {
-    id: 'barangay',
-    title: 'Barangay clearance',
-    description: 'A clearance from the barangay where you live.',
-    icon: 'document-text-outline',
   },
 ];
 

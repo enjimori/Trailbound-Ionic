@@ -1,3 +1,4 @@
+/* Signup styles: format the registration form and interaction states rendered by signup.page.html. */
 .login-content {
   --background: var(--ion-background-color);
 }
@@ -7,6 +8,7 @@
   font-weight: 600;
 }
 
+/* Layout and form groups follow the same vertical reading order as signup.page.html. */
 .signup-wrap {
   padding: 0 28px 40px;
 }
@@ -46,6 +48,7 @@
   gap: 14px;
 }
 
+/* Field styling communicates labels, validation, and focused input state. */
 .group-label {
   font-family: var(--app-font-serif);
   font-size: 18px;
@@ -92,6 +95,7 @@
 }
 
 // ---------- Date of birth picker ----------
+// The popover wraps Ionic's calendar; the page component updates the form value.
 
 .dob-field {
   cursor: pointer;

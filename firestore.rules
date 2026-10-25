@@ -7,11 +7,34 @@ rules_version = '2';
 //   or paste into Firebase console -> Firestore Database ->
 //   Rules -> Publish.
 //
-// ADMIN PANEL (/admin) — what changed in this version
-//   * isAdmin() now recognises the built-in admin login
-//     (username "admin" = admin@trailbound-ionic.firebaseapp.com),
+// STAFF ROLES — what changed in this version
+//   * roleOf() reads users/{uid}.role once. Three staff roles
+//     now exist beside 'admin': 'permit_office', 'guide', and
+//     an ordinary hiker (no role field at all).
+//   * bookings: a permit officer reads only applications that
+//     TrailBound has actually SENT them (permitLodged == true)
+//     and may change nothing but the permit decision. A guide
+//     reads only hikes assigned to them (guideId == their own
+//     roster id) and may change nothing but whether the hiker
+//     turned up.
+//   * certificates: a permit officer reads medical certificates,
+//     because fitness to climb is the basis on which they issue.
+//     They can never write one — TrailBound's review decision is
+//     not theirs to change.
+//   * certificate_access: NEW, append-only. Every time anyone
+//     opens a medical certificate file, a line lands here. No
+//     one can read it back through the app, and no one at all
+//     can edit or delete a line. Read it in the Firebase console.
+//   * touchesPrivilegedFields() now also covers 'office' and
+//     'guideRosterId', so a guide cannot point themselves at
+//     another guide's hikes and an officer cannot claim a
+//     different office.
+//
+// ADMIN PANEL (/admin)
+//   * isAdmin() recognises the built-in admin login
+//     (username "admin" = trailbound.philippines@gmail.com),
 //     anyone in admins/{uid}, and any hiker promoted from
-//     Admin -> Hikers (users/{uid}.role == 'admin').
+//     Admin -> Staff (users/{uid}.role == 'admin').
 //   * A hiker can never give themselves role or status, on
 //     create or update, so nobody can self-promote or
 //     un-suspend themselves.
@@ -19,20 +42,13 @@ rules_version = '2';
 //     reads and creates only their own; only an admin changes
 //     or deletes one.
 //   * reviews, trail_status, certificates and certificate_files:
-//     new collections (certificates = medical certificate and
-//     barangay clearance uploads, reviewed by an admin).
+//     certificates = hiker medical certificates
+//     uploads, reviewed by an admin.
 //   * An admin may remove any post, comment or edit history.
 //
 // To add another built-in admin email, add it to the list in
 // isAdmin() below AND to ADMIN_ACCOUNTS in
 // src/app/pages/admin/admin.config.ts.
-//
-// IMPORTANT — this REPLACES the earlier version of this file.
-// That one only knew about products, bookings, users, settings
-// and activity, so its closing `allow read, write: if false`
-// silently blocked trails, guides, packages, orders and contact.
-// Deploying it would have broken the booking page and checkout.
-// Every collection the site actually touches is covered below.
 //
 // Collections, and who each one is for:
 //
@@ -40,13 +56,13 @@ rules_version = '2';
 //                                      dropdowns. Public read.
 //   accommodations                  -> booking page Step 03:
 //                                      basecamp + partner hotels.
-//                                      Public read. (ADDED)
 //   products                        -> gear in the shop. Public
 //                                      read when active.
 //   bookings                        -> a reserved trail slot.
 //   orders                          -> a paid gear/checkout order.
 //   contact                         -> support messages.
 //   users  (+ wishlist, notifications)
+//   certificates  certificate_files  certificate_access
 //   settings   activity   admins
 // ==========================================================
 
@@ -62,13 +78,50 @@ service cloud.firestore {
     function isAdmin() {
       return signedIn() && (
         request.auth.token.get('email', '') in [
-          'admin@trailbound-ionic.firebaseapp.com'
+          'trailbound.philippines@gmail.com'
         ]
         || exists(/databases/$(database)/documents/admins/$(request.auth.uid))
         || (exists(/databases/$(database)/documents/users/$(request.auth.uid))
             && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('role', '') == 'admin'
             && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('status', 'active') != 'suspended')
       );
+    }
+
+    /* ---------- staff roles ----------
+       One read of users/{uid}, reused by the helpers below.
+       .get() with a default rather than bracket access, because an
+       ordinary hiker's document has no role field at all and reading a
+       missing field aborts the whole rule evaluation.
+
+       A suspended account is nobody: the status check that already
+       guards isAdmin() applies here too, so suspending someone in
+       Admin -> Hikers actually locks them out of their staff screen
+       rather than only hiding it in the UI.                          */
+
+    function roleOf() {
+      return signedIn()
+             && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+             && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('status', 'active') != 'suspended'
+        ? get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('role', '')
+        : '';
+    }
+
+    function isOffice() {
+      return roleOf() == 'permit_office';
+    }
+
+    function isGuide() {
+      return roleOf() == 'guide';
+    }
+
+    // Which guide on the roster this account IS ('g1'…), or '' for
+    // everyone else. The empty default matters: a booking with no guide
+    // stores guideId null, and '' never equals null, so an unlinked
+    // account can never accidentally match an unassigned hike.
+    function myRosterId() {
+      return isGuide()
+        ? get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('guideRosterId', '')
+        : '';
     }
 
     function isOwner(uid) {
@@ -91,12 +144,6 @@ service cloud.firestore {
     // as uid is being written. If you want it closed today, apply
     // those patches, backfill uid on existing documents, then delete
     // the two `!(field in resource.data)` lines below.
-    // REWRITTEN: this took a field name as a parameter and read it back
-    // with resource.data[field] — bracket access with a VARIABLE key,
-    // which the rules language does not reliably compile. A ruleset that
-    // fails to compile is rejected wholesale and your previous rules stay
-    // live, so the symptom is "I published and nothing changed".
-    // Literal field access only now.
     function ownsUid() {
       return signedIn()
              && (!('uid' in resource.data)
@@ -110,12 +157,18 @@ service cloud.firestore {
              && resource.data.email == request.auth.token.email;
     }
 
-    // Fields a customer must never set on their own profile —
-    // without this, anyone could make themselves an admin.
+    // Fields a customer must never set on their own profile — without
+    // this, anyone could make themselves an admin.
+    //
+    // 'office' and 'guideRosterId' are in here for the same reason. A
+    // guide who could edit guideRosterId would simply point it at a
+    // colleague and read that colleague's hikes; an officer who could
+    // edit 'office' would claim a different issuing body. Both are
+    // granted by an admin in Admin -> Staff and nowhere else.
     function touchesPrivilegedFields() {
       return request.resource.data.diff(resource.data)
         .affectedKeys()
-        .hasAny(['role', 'disabled', 'status']);
+        .hasAny(['role', 'disabled', 'status', 'office', 'guideRosterId']);
     }
 
     /* ==========================================================
@@ -152,10 +205,10 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
-    // ADDED — booking page Step 03 (Accommodation).
-    // One "basecamp" document + one document per partner hotel.
-    // Read by booking.js; written by upload-accommodations.html and
-    // edited in the Firebase console, so only an admin can change it.
+    // Booking page Step 03 (Accommodation). One "basecamp" document +
+    // one document per partner hotel. Read by booking.js; written by
+    // upload-accommodations.html and edited in the Firebase console,
+    // so only an admin can change it.
     match /accommodations/{accommodationId} {
       allow read: if true;
       allow write: if isAdmin();
@@ -192,15 +245,79 @@ service cloud.firestore {
     /* ==========================================================
        BOOKINGS
        Written by the app's checkout (BookingService.confirm) with
-       the hiker's uid. A hiker reads and creates only their own;
-       the admin panel reads them all and is the only one that can
-       change a status (completed / cancelled) or delete one.
+       the hiker's uid.
+
+       Four parties, three of them deliberately narrow:
+
+         hiker    reads and creates only their own
+         admin    reads all, changes anything
+         office   reads only applications TrailBound has SENT them,
+                  and changes only the permit decision
+         guide    reads only hikes assigned to them, and changes
+                  only whether the hiker turned up
+
+       The office and guide clauses are what separation of duties
+       actually means here. A stolen office account cannot confirm a
+       hike or move money; a stolen guide account cannot change a
+       price, a date or a permit. The UI hides those things too, but
+       the UI is not what stops anyone.
        ========================================================== */
 
     match /bookings/{bookingId} {
-      allow read: if isAdmin() || (signedIn() && resource.data.uid == request.auth.uid);
+      allow read: if isAdmin()
+                  || (signedIn() && resource.data.uid == request.auth.uid)
+                  // The office sees an application only once it has been
+                  // sent. Nothing in a basket, nothing abandoned at
+                  // checkout, is ever visible to them.
+                  || (isOffice() && resource.data.get('permitLodged', false) == true)
+                  // A guide sees the hikes assigned to them. This is why
+                  // the booking stores a roster id and not the guide's
+                  // name: a rule can compare two stored fields, and could
+                  // never compare a display name to an account.
+                  || (isGuide() && myRosterId() != ''
+                      && resource.data.get('guideId', '') == myRosterId());
+
       allow create: if signedIn() && request.resource.data.uid == request.auth.uid;
+
       allow update, delete: if isAdmin();
+
+      // A hiker can only record the constrained demo checkout marker on
+      // their own cleared, pending booking. It never changes real payment.
+      allow update: if signedIn()
+                    && resource.data.uid == request.auth.uid
+                    && resource.data.get('status', '') == 'pending'
+                    && resource.data.get('paperwork', '') == 'cleared'
+                    && resource.data.get('payment', '') == 'balance_due'
+                    && resource.data.get('demoBalancePaid', false) == false
+                    && request.resource.data.demoBalancePaid == true
+                    && request.resource.data.demoBalancePaidAt == request.time
+                    && request.resource.data.demoBalancePaymentMethod
+                         in ['Card', 'QRPh', 'Apple Pay', 'Maya']
+                    && request.resource.data.diff(resource.data).affectedKeys()
+                         .hasOnly(['demoBalancePaid', 'demoBalancePaidAt',
+                                   'demoBalancePaymentMethod']);
+
+      // The office decides the permit, and only the permit. Only from
+      // 'permit_pending', and only to a final answer — an office cannot
+      // un-decide, and cannot reach into anything else on the booking.
+      allow update: if isOffice()
+                    && resource.data.get('permitLodged', false) == true
+                    && resource.data.get('paperwork', '') == 'permit_pending'
+                    && request.resource.data.paperwork in ['cleared', 'denied']
+                    && request.resource.data.diff(resource.data).affectedKeys()
+                         .hasOnly(['paperwork', 'payment', 'permitRef', 'permitIssuedAt',
+                                   'permitNote', 'balanceDueBy', 'updatedAt']);
+
+      // The trailhead record, and nothing else. Only from 'confirmed':
+      // a pending hike has not been arranged, so there is nothing to
+      // turn up for, and a completed or cancelled one is already settled.
+      allow update: if isGuide()
+                    && myRosterId() != ''
+                    && resource.data.get('guideId', '') == myRosterId()
+                    && resource.data.get('status', '') == 'confirmed'
+                    && request.resource.data.status in ['completed', 'no_show']
+                    && request.resource.data.diff(resource.data).affectedKeys()
+                         .hasOnly(['status', 'updatedAt']);
     }
 
     /* ==========================================================
@@ -234,25 +351,64 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    // Admin-managed catalog additions are readable by signed-in hikers and
+    // writable only by admins. Built-in catalog records remain in the app.
+    match /catalog_trails/{trailId} {
+      allow read: if signedIn();
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /catalog_trail_overrides/{trailId} {
+      allow read: if signedIn();
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /catalog_packages/{packageId} {
+      allow read: if signedIn();
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /catalog_merch/{itemId} {
+      allow read: if signedIn();
+      allow create, update, delete: if isAdmin();
+    }
+
     /* ==========================================================
-       HIKING DOCUMENTS — medical certificate + barangay clearance
+       HIKING DOCUMENTS — medical certificate
        certificates/{uid}_{type}       status, reviewer's note
        certificate_files/{uid}_{type}  the file (data URL)
+
        One of each type per hiker; the id must match the hiker and
        the type. A hiker may upload or replace their own, but it
        always goes back to 'pending' — only an admin approves or
-       rejects. Nobody but the hiker and admins can read them.
+       rejects.
+
+       A permit officer reads medical certificates, because fitness
+       to climb is the basis on which they issue a permit. They can
+       never write one: TrailBound's review decision is not theirs
+       to change, and a document they could edit would be worthless
+       as evidence.
+
+       HONEST LIMITATION, worth knowing before anyone asks: this
+       grants an officer read of ANY medical certificate, not only
+       those attached to an application sent to them. Firestore
+       cannot look up "does a lodged booking exist for this hiker"
+       from a certificate id — rules cannot run queries. The
+       compensating control is certificate_access below: every
+       opening is logged with who, which and why.
        ========================================================== */
 
     function ownCertificateWrite(certId) {
       return signedIn()
         && request.resource.data.uid == request.auth.uid
-        && request.resource.data.type in ['medical', 'barangay']
+        && request.resource.data.type == 'medical'
         && certId == request.auth.uid + '_' + request.resource.data.type;
     }
 
     match /certificates/{certId} {
-      allow read: if isAdmin() || (signedIn() && resource.data.uid == request.auth.uid);
+      allow read: if isAdmin()
+                  || (signedIn() && resource.data.uid == request.auth.uid)
+                  || (isOffice() && resource.data.get('type', '') == 'medical');
       allow create, update: if ownCertificateWrite(certId)
                             && request.resource.data.status == 'pending';
       allow update: if isAdmin();
@@ -260,9 +416,29 @@ service cloud.firestore {
     }
 
     match /certificate_files/{certId} {
-      allow read: if isAdmin() || (signedIn() && resource.data.uid == request.auth.uid);
+      allow read: if isAdmin()
+                  || (signedIn() && resource.data.uid == request.auth.uid)
+                  || (isOffice() && resource.data.get('type', '') == 'medical');
       allow create, update: if ownCertificateWrite(certId);
       allow delete: if isAdmin() || (signedIn() && resource.data.uid == request.auth.uid);
+    }
+
+    /* ==========================================================
+       CERTIFICATE ACCESS LOG
+       Append-only. Anyone who may read a certificate may add a line
+       here; nobody can read it back through the app, and nobody at
+       all can edit or delete one.
+
+       `allow read: if false` applies to admins too, on purpose. A log
+       that the people it watches can quietly tidy up is not a log.
+       Read it in the Firebase console.
+       ========================================================== */
+
+    match /certificate_access/{entryId} {
+      allow create: if signedIn()
+                    && request.resource.data.openedBy == request.auth.token.get('email', '')
+                    && request.resource.data.at == request.time;
+      allow read, update, delete: if false;
     }
 
     /* ==========================================================
@@ -302,7 +478,8 @@ service cloud.firestore {
       allow list: if isAdmin();
 
       allow create: if isOwner(uid)
-                    && !request.resource.data.keys().hasAny(['role', 'status', 'disabled']);
+                    && !request.resource.data.keys().hasAny(
+                         ['role', 'status', 'disabled', 'office', 'guideRosterId']);
       allow update: if isAdmin() || (isOwner(uid) && !touchesPrivilegedFields());
       allow delete: if isAdmin();
 
@@ -343,10 +520,6 @@ service cloud.firestore {
 
     /* ==========================================================
        COMMUNITY — posts, comments, public profiles
-       ADDED. The rules file you sent had no block for these, so the
-       catch-all at the bottom was denying them. If your LIVE rules
-       already have posts/profiles blocks (e.g. in another file),
-       merge this in instead of pasting it twice.
 
        posts/{id}  one post. A repost is also a post (repostOf = the
                    original's id; its id is repost_<uid>_<originalId>).

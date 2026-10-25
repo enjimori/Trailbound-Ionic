@@ -290,6 +290,7 @@ export class AdminHikersPage {
     }, { allowSignalWrites: true });
   }
 
+  /** Closes the active view and restores the surrounding page state. */
   close(): void {
     this.openId.set(null);
     if (this.route.snapshot.queryParamMap.has('open')) {
@@ -297,14 +298,17 @@ export class AdminHikersPage {
     }
   }
 
+  /** Opens the open certificate interface for the user. */
   openCertificate(id: string): void {
     this.router.navigate(['/admin/certificates'], { queryParams: { open: id } });
   }
 
+  /** Opens the booking detail view for the selected record. */
   openBooking(id: string): void {
     this.router.navigate(['/admin/bookings'], { queryParams: { open: id } });
   }
 
+  /** Updates the selected record status through the owning service. */
   async setStatus(u: AdminUser, status: 'active' | 'suspended'): Promise<void> {
     if (status === 'suspended') {
       const ok = await this.ui.confirm({
@@ -318,6 +322,7 @@ export class AdminHikersPage {
     await this.run(() => this.data.setUserStatus(u.uid, status), status === 'suspended' ? 'Hiker suspended' : 'Hiker reactivated');
   }
 
+  /** Updates the selected account role through the admin workflow. */
   async setRole(u: AdminUser, role: 'admin' | 'hiker'): Promise<void> {
     const ok = await this.ui.confirm(
       role === 'admin'
@@ -336,6 +341,7 @@ export class AdminHikersPage {
     await this.run(() => this.data.setUserRole(u.uid, role), role === 'admin' ? 'Now an admin' : 'Admin access removed');
   }
 
+  /** Removes the selected record through the owning service and refreshes the view. */
   async remove(u: AdminUser): Promise<void> {
     const ok = await this.ui.confirm({
       title: `Delete ${u.name || 'this hiker'}’s profile data?`,
@@ -348,6 +354,7 @@ export class AdminHikersPage {
     this.close();
   }
 
+  /** Runs an admin action while showing progress and reporting its result. */
   private async run(job: () => Promise<void>, done: string): Promise<void> {
     this.busy.set(true);
     try {
@@ -360,10 +367,12 @@ export class AdminHikersPage {
     }
   }
 
+  /** Converts the hiker's stored birth date into a Date for display. */
   dob(u: AdminUser): Date | null {
     return toDate(u.dob);
   }
 
+  /** Converts a date key into a Date for the admin interface. */
   day(key: string): Date | null {
     return key ? fromDayKey(key) : null;
   }

@@ -1,11 +1,14 @@
+<!-- Login template: binds the sign-in form to LoginPage and sends submission to its authentication handler. -->
 <ion-content [fullscreen]="true" class="login-content">
   <div class="login-bg" style="background-image: url('assets/trails/T003.jpg')"></div>
   <div class="login-wrap">
+    <!-- Brand context appears before the form users submit to LoginPage.signIn(). -->
     <div class="brand">
       <img class="brand-logo" src="assets/logo/walato.png" alt="TrailBound logo" />
       <p>Your trail community awaits</p>
     </div>
 
+    <!-- Reactive form binds validation state to LoginPage and submits through its sign-in handler. -->
     <form class="form-block" [formGroup]="form" (ngSubmit)="signIn()" novalidate>
       <div class="field-group">
         <ion-input
@@ -48,6 +51,7 @@
 
       <p class="hint">Sign in to continue exploring trails.</p>
 
+      <!-- These links provide account creation or guest browsing when sign-in is not appropriate. -->
       <div class="switch-row">
         <span>New to TrailBound?</span>
         <button type="button" class="link-btn" (click)="goSignUp()">Sign Up</button>

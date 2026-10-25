@@ -233,11 +233,13 @@ export class AdminCommunityPage {
     }, { allowSignalWrites: true });
   }
 
+  /** Opens the open post interface for the user. */
   openPost(p: AdminPost): void {
     this.openId.set(p.id);
     void this.loadComments(p.id);
   }
 
+  /** Closes the active view and restores the surrounding page state. */
   close(): void {
     this.openId.set(null);
     this.comments.set([]);
@@ -246,6 +248,7 @@ export class AdminCommunityPage {
     }
   }
 
+  /** Performs the load comments operation for this feature and returns its result to the caller. */
   private async loadComments(postId: string): Promise<void> {
     this.loadingComments.set(true);
     this.comments.set([]);
@@ -259,6 +262,7 @@ export class AdminCommunityPage {
     }
   }
 
+  /** Performs the remove comment operation for this feature and returns its result to the caller. */
   async removeComment(p: AdminPost, c: AdminComment): Promise<void> {
     const ok = await this.ui.confirm({
       title: 'Remove this comment?',
@@ -276,6 +280,7 @@ export class AdminCommunityPage {
     }
   }
 
+  /** Performs the remove post operation for this feature and returns its result to the caller. */
   async removePost(p: AdminPost): Promise<void> {
     const ok = await this.ui.confirm({
       title: 'Remove this post?',
@@ -293,10 +298,12 @@ export class AdminCommunityPage {
     }
   }
 
+  /** Performs the plural operation for this feature and returns its result to the caller. */
   plural(n: number, word: string): string {
     return `${n} ${word}${n === 1 ? '' : 's'}`;
   }
 
+  /** Performs the stars operation for this feature and returns its result to the caller. */
   stars(n: number): number[] {
     return Array.from({ length: Math.max(0, Math.min(5, n)) });
   }

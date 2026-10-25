@@ -5,9 +5,9 @@ import { TRAILS_30 } from './explore-trails.data';
  * ═══════════════════════════════════════════════════════════════════════════
  * EXPLORE-MODULE GEO HELPERS
  *
- * Coordinates now live alongside the trail records in explore-trails.data.ts,
- * so this file derives its lookup from there rather than keeping a second
- * copy that could drift out of sync.
+ * Built-in trail coordinates are derived from explore-trails.data.ts. Added
+ * trails carry their own coordinates from the admin catalog and use the same
+ * helpers, so markers and directions work for both sources.
  *
  * Nothing here modifies trail.model.ts or trail.service.ts.
  * ═══════════════════════════════════════════════════════════════════════════
@@ -27,7 +27,15 @@ export const TRAIL_GEO: Record<string, LatLng> = Object.fromEntries(
 );
 
 /** Coordinates for a single trail id, or undefined if none are recorded. */
-export function geoFor(id: string): LatLng | undefined {
+export function geoFor(id: string, trail?: Trail): LatLng | undefined {
+  const lat = trail?.lat;
+  const lng = trail?.lng;
+  if (
+    typeof lat === 'number' && Number.isFinite(lat) && lat >= -90 && lat <= 90 &&
+    typeof lng === 'number' && Number.isFinite(lng) && lng >= -180 && lng <= 180
+  ) {
+    return { lat, lng };
+  }
   return TRAIL_GEO[id];
 }
 
@@ -37,7 +45,7 @@ export function geoFor(id: string): LatLng | undefined {
  */
 export function withGeo(trails: readonly Trail[]): MappedTrail[] {
   return trails.reduce<MappedTrail[]>((acc, t) => {
-    const geo = TRAIL_GEO[t.id];
+    const geo = geoFor(t.id, t);
     if (geo) acc.push({ ...t, ...geo });
     return acc;
   }, []);
@@ -45,7 +53,7 @@ export function withGeo(trails: readonly Trail[]): MappedTrail[] {
 
 /** Ids present in the list but missing coordinates. Logged in dev. */
 export function missingGeo(trails: readonly Trail[]): string[] {
-  return trails.filter(t => !TRAIL_GEO[t.id]).map(t => t.id);
+  return trails.filter(t => !geoFor(t.id, t)).map(t => t.id);
 }
 
 /**

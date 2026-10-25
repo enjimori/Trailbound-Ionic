@@ -1,3 +1,6 @@
+/**
+ * Notifications-page controller: loads notification state and connects notification actions in the template to app services.
+ */
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Location } from '@angular/common';
@@ -25,10 +28,12 @@ export class NotificationsPage {
     private router: Router,
   ) {}
 
+  /** Navigates back to the screen that opened the current page. */
   goBack() {
     this.location.back();
   }
 
+  /** Routes a notification tap to the relevant screen and updates its read state. */
   onTapNotification(n: AppNotification) {
     this.notificationService.markAsRead(n.id);
     if (n.postId) {
@@ -36,6 +41,7 @@ export class NotificationsPage {
     }
   }
 
+  /** Marks every currently available notification as read. */
   markAllRead() {
     this.notificationService.markAllRead();
   }

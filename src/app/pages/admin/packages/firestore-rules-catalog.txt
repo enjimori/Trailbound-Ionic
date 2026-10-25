@@ -1,0 +1,63 @@
+═══════════════════════════════════════════════════════════════════════════
+CATALOG COLLECTIONS — rules to merge into firestore.rules
+
+MERGE THIS BEFORE TESTING "Add guide". Without it the write is refused and
+you get a red toast, because the catch-all at the bottom of the file denies
+every collection that has no block of its own:
+
+    match /{document=**} { allow read, write: if false; }
+
+CatalogService writes to four collections that currently have no rules:
+
+    catalog_trails      added trails
+    catalog_packages    added packages
+    catalog_merch       added merchandise
+    catalog_guides      added guides
+
+Note these are NOT the `trails`, `guides` and `packages` blocks you already
+have. Those are a different, older set of collection names that the rules
+cover and this service never touches — which is exactly why "Add package"
+and "Add merch" would have failed too, silently, until someone pressed them.
+
+Paste the block below next to your existing /trails and /guides blocks, in
+the BOOKING CATALOG section. Then publish.
+═══════════════════════════════════════════════════════════════════════════
+
+
+    /* ==========================================================
+       ADDED CATALOG — trails, packages, merchandise, guides
+       Written from Admin -> Trails and Admin -> Packages by
+       CatalogService, and merged with the static defaults in
+       booking-catalog.ts.
+
+       Public read, like the rest of the booking catalog: the
+       Explore and booking pages must render these for a visitor
+       who has not signed in. Admin-only write, because this is
+       what a hiker is offered and what they are charged.
+
+       A guide record carries name, role, years, summits and
+       specialties — the credentials a hiker reads when choosing
+       who leads them up a mountain. Nothing here is personal data
+       about an account; linking a guide to a login happens on
+       users/{uid}.guideRosterId, which has its own rule.
+       ========================================================== */
+
+    match /catalog_trails/{docId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /catalog_packages/{docId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /catalog_merch/{docId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /catalog_guides/{docId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }

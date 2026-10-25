@@ -1,3 +1,6 @@
+/**
+ * Explore-page controller: coordinates trail discovery, filtering, location/map state, and navigation to each trail?s details.
+ */
 import { Component, OnDestroy, ViewChild, computed, signal, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
@@ -21,8 +24,9 @@ import { TrailWeatherComponent } from './trail-weather.component';
 import { isClosed, geoFor } from './trail-geo';
 import { photoFor, hasPhoto as hasPhotoFor, TrailPhoto } from './trail-photos';
 import { videoFor, embedUrlFor, isPlayable } from './trail-videos';
-import { searchTrails, TRAILS_30 } from './explore-trails.data';
+import { TRAILS_30 } from './explore-trails.data';
 import { TrailService } from '../../services/trail.service';
+import { CatalogService } from '../../services/catalog.service';
 import { TrailStatusService } from '../../services/trail-status.service';
 import { UserService } from '../../services/user.service';
 import { WeatherService } from '../../services/weather.service';
@@ -77,14 +81,16 @@ export class ExplorePage implements ViewDidEnter, OnDestroy {
     return hasPhotoFor(trail.id);
   }
 
-  /**
-   * Reads the Explore module's own 30-trail dataset, not TrailService. The
-   * shared service holds demo seed data that other pages depend on by id.
-   */
+  /** Shows the built-in Explore dataset together with admin-added catalog trails. */
   results = computed(() => {
-    const all = searchTrails(this.searchTerm());
-    if (this.difficultyFilter() === 'All') return all;
-    return all.filter(t => t.difficulty === this.difficultyFilter());
+    const q = this.searchTerm().trim().toLowerCase();
+    const matchesQuery = (trail: Trail) =>
+      !q || `${trail.name} ${trail.region} ${trail.description}`.toLowerCase().includes(q);
+    const all = this.catalog.withTrailOverrides(TRAILS_30).filter(matchesQuery);
+    const custom = this.catalog.withTrailOverrides(this.trailService.addedTrails()).filter(matchesQuery);
+    const matchesDifficulty = (trail: Trail) =>
+      this.difficultyFilter() === 'All' || trail.difficulty === this.difficultyFilter();
+    return [...all, ...custom].filter(matchesDifficulty);
   });
 
   /**
@@ -136,17 +142,20 @@ export class ExplorePage implements ViewDidEnter, OnDestroy {
 
   /**
    * Saved trails, resolved from UserService.upcoming() back to the Explore
-   * dataset. Saving writes to the shared UserService, so a trail saved here
-   * also appears in the Profile tab — same store the detail page writes to.
+   * catalog. Saving writes to the shared UserService, so built-in and
+   * admin-added trails appear here and in the Profile tab.
    */
   // LOOP: walk the saved ids once and map them back to the Explore catalog.
   // This keeps the bookmark list synced with the shared user data store.
   savedTrails = computed(() => {
     const ids = new Set(this.userService.upcoming().map(u => u.trailId));
-    return TRAILS_30.filter(t => ids.has(t.id));
+    return this.catalog
+      .withTrailOverrides([...TRAILS_30, ...this.trailService.addedTrails()])
+      .filter(t => ids.has(t.id));
   });
 
   private readonly trailStatus = inject(TrailStatusService);
+  private readonly catalog = inject(CatalogService);
 
   constructor(
     public trailService: TrailService,
@@ -163,8 +172,9 @@ export class ExplorePage implements ViewDidEnter, OnDestroy {
       const id = params.get('trail');
       if (!id) return;
 
-      const trail = TRAILS_30.find(t => t.id === id);
-      if (!trail) return;
+      const found = TRAILS_30.find(t => t.id === id) ?? this.trailService.getById(id);
+      if (!found) return;
+      const trail = this.catalog.withTrailOverrides([found])[0];
 
       this.selectedTrail.set(trail);
       this.pendingFocusId = id;
@@ -183,6 +193,7 @@ export class ExplorePage implements ViewDidEnter, OnDestroy {
     });
   }
 
+  /** Runs when the component is removed; releases resources owned by this component. */
   ngOnDestroy() {
     this.queryParamSub?.unsubscribe();
   }
@@ -207,16 +218,19 @@ export class ExplorePage implements ViewDidEnter, OnDestroy {
     });
   }
 
+  /** Handles search input and updates the matching trail results. */
   onSearch(ev: any) {
     this.searchTerm.set(ev.detail.value ?? '');
     this.clearSelectionIfFiltered();
   }
 
+  /** Updates the selected explore segment and its corresponding results. */
   onSegmentChange(ev: any) {
     this.difficultyFilter.set(ev.detail.value);
     this.clearSelectionIfFiltered();
   }
 
+  /** Receives a map selection and updates the selected trail shown by the page. */
   onMapSelect(trail: Trail) {
     this.selectedTrail.set(trail);
     // A route belongs to the trail it was drawn for.
@@ -224,6 +238,7 @@ export class ExplorePage implements ViewDidEnter, OnDestroy {
     this.routeShown.set(false);
   }
 
+  /** Closes or cancels the close sheet flow and returns the interface to its previous state. */
   closeSheet() {
     this.selectedTrail.set(null);
     this.trailMap?.clearRoute();
@@ -233,6 +248,7 @@ export class ExplorePage implements ViewDidEnter, OnDestroy {
     this.showVideo.set(false);
   }
 
+  /** Moves the map view to the current user location when available. */
   centerOnUser() {
     this.trailMap?.centerOnUser().then(coords => {
       if (!coords) this.toast('Location unavailable. Check permissions.');
@@ -248,6 +264,7 @@ export class ExplorePage implements ViewDidEnter, OnDestroy {
     if (label) this.toast(label);
   }
 
+  /** Adds or removes the trail from the user?s saved list. */
   async toggleBookmark(trail: Trail) {
     if (this.isSaved(trail)) {
       const existing = this.userService.upcoming().find(u => u.trailId === trail.id);
@@ -272,6 +289,7 @@ export class ExplorePage implements ViewDidEnter, OnDestroy {
     return this.userService.upcoming().some(u => u.trailId === trail.id);
   }
 
+  /** Shows or hides the panel containing saved trails. */
   toggleSavedPanel() {
     this.showSavedPanel.update(open => !open);
   }
@@ -290,6 +308,7 @@ export class ExplorePage implements ViewDidEnter, OnDestroy {
     if (existing) this.userService.removeUpcoming(existing.id);
   }
 
+  /** Closes or cancels the dismiss weather alert flow and returns the interface to its previous state. */
   dismissWeatherAlert() {
     this.showWeatherAlert.set(false);
   }
@@ -308,7 +327,7 @@ export class ExplorePage implements ViewDidEnter, OnDestroy {
    * service has the hiking trail itself, so this stops where the road does.
    */
   openDirections(trail: Trail) {
-    const geo = geoFor(trail.id);
+    const geo = geoFor(trail.id, trail);
     if (!geo) {
       this.toast('No coordinates recorded for this trail');
       return;
@@ -370,6 +389,7 @@ export class ExplorePage implements ViewDidEnter, OnDestroy {
     }
   }
 
+  /** Starts the booking route for the trail currently being viewed. */
   bookNow(trail: Trail) {
     // Closed from Admin → Trails: keep hikers out of the booking flow.
     if (this.trailStatus.closureFor(trail.id)) {
@@ -388,6 +408,7 @@ export class ExplorePage implements ViewDidEnter, OnDestroy {
     }
   }
 
+  /** Shows a brief Ionic notification so the user can understand the action result. */
   private async toast(message: string) {
     const t = await this.toastCtrl.create({
       message, duration: 1600, position: 'top', color: 'dark',

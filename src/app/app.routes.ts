@@ -1,6 +1,7 @@
 import { Routes } from '@angular/router';
 import { authGuard, guestGuard } from './guards/auth.guard';
 
+/** App-level route table: connects URLs to lazy-loaded pages and access guards. */
 export const routes: Routes = [
   // Public
   {
@@ -80,6 +81,16 @@ export const routes: Routes = [
     path: 'admin',
     loadChildren: () => import('./pages/admin/admin.routes').then((m) => m.ADMIN_ROUTES),
   },
+
+  {
+  path: 'office',
+  loadChildren: () => import('./pages/admin/office/office.routes').then((m) => m.OFFICE_ROUTES),
+},
+
+{
+  path: 'guide',
+  loadChildren: () => import('./pages/admin/guide/guide.routes').then((m) => m.GUIDE_ROUTES),
+},
 
   { path: '', redirectTo: 'tabs/home', pathMatch: 'full' },
   { path: '**', redirectTo: 'tabs/home' },

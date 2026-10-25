@@ -89,10 +89,12 @@ export class ReviewService {
     return Math.round((sum / list.length) * 10) / 10;
   }
 
+  /** Performs the count for operation for this feature and returns its result to the caller. */
   countFor(trailId: string): number {
     return this.forTrail(trailId).length;
   }
 
+  /** Creates a trail review, saves it, and updates the shared review list. */
   add(trailId: string, author: string, rating: number, text: string) {
     const review: TrailReview = {
       // Random suffix: reviews are shared now, so two hikers posting in the
@@ -124,6 +126,7 @@ export class ReviewService {
     }
   }
 
+  /** Removes the selected record through the owning service and refreshes the view. */
   remove(id: string) {
     const review = this._reviews().find(r => r.id === id);
     this._reviews.update(list => list.filter(r => r.id !== id));
@@ -168,6 +171,7 @@ export class ReviewService {
     }
   }
 
+  /** Persists the current changes through the owning service and updates saved state. */
   private save() {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(this._reviews()));

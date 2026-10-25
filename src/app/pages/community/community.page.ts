@@ -1,3 +1,6 @@
+/**
+ * Community-page controller: coordinates feed data, user actions, and community services that are rendered by the community template.
+ */
 import { Component, ElementRef, ViewChild, computed, effect, inject, signal, untracked } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -170,18 +173,22 @@ export class CommunityPage {
     });
   }
 
+  /** Reports whether a user is authenticated for community actions. */
   get isSignedIn(): boolean {
     return this.userService.isAuthenticated();
   }
 
+  /** Returns the current user's community identity for posts and comments. */
   get me() {
     return this.postService.me();
   }
 
+  /** Opens the notification screen associated with the current user. */
   goNotifications() {
     this.router.navigate(['/notifications']);
   }
 
+  /** Performs the go sign in operation for this feature and returns its result to the caller. */
   goSignIn() {
     this.router.navigate(['/login'], { queryParams: { returnUrl: '/tabs/community' } });
   }
@@ -202,6 +209,7 @@ export class CommunityPage {
     this.showPeople = true;
   }
 
+  /** Clears people-sheet selection state after the sheet closes. */
   onPeopleClosed() {
     this.showPeople = false;
     this.peopleUid = null;
@@ -222,6 +230,7 @@ export class CommunityPage {
     }
   }
 
+  /** Stores the set filter selection so the related view and feature logic stay in sync. */
   setFilter(f: FeedFilter) {
     if ((f === 'mine' || f === 'following') && !this.isSignedIn) {
       this.askToSignIn(f === 'mine' ? 'see your posts' : 'see posts from people you follow');
@@ -246,6 +255,7 @@ export class CommunityPage {
     }
   }
 
+  /** Adds or removes the current user's repost and refreshes the feed state. */
   async onRepost(post: Post) {
     if (!this.isSignedIn) {
       this.askToSignIn('repost');
@@ -259,6 +269,7 @@ export class CommunityPage {
     }
   }
 
+  /** Performs the remove repost operation for this feature and returns its result to the caller. */
   private async removeRepost(repost: Post) {
     try {
       await this.postService.removeRepost(repost);
@@ -268,6 +279,7 @@ export class CommunityPage {
     }
   }
 
+  /** Shares the selected post through the available browser or device action. */
   async onShare(post: Post) {
     const url = this.postLink(post);
     const where = post.trailName ? ` (${post.trailName})` : '';
@@ -285,6 +297,7 @@ export class CommunityPage {
     this.toast(copied ? (url ? 'Link copied to clipboard' : 'Post copied to clipboard') : 'Couldn\'t copy on this device.');
   }
 
+  /** Opens the action menu for the selected post. */
   async onMenu(post: Post) {
     // For a repost, post = the repost and target = the post it shares.
     const target = post.original ?? post;
@@ -327,10 +340,12 @@ export class CommunityPage {
     await sheet.present();
   }
 
+  /** Opens the detail screen for the selected trail. */
   openTrail(post: Post) {
     if (post.trailId) this.router.navigate(['/trail', post.trailId]);
   }
 
+  /** Performs the confirm delete post operation for this feature and returns its result to the caller. */
   private async confirmDeletePost(post: Post) {
     const n = post.commentCount;
     const alert = await this.alertCtrl.create({
@@ -377,6 +392,7 @@ export class CommunityPage {
     this.photoInput?.nativeElement.click();
   }
 
+  /** Opens the open editor interface for the user. */
   openEditor(post: Post) {
     this.resetDraft();
     this.editingPostId = post.id;
@@ -388,12 +404,14 @@ export class CommunityPage {
     this.showComposer = true;
   }
 
+  /** Checks whether the current draft satisfies the requirements for publishing. */
   get canPublish(): boolean {
     return !this.publishing && !this.processingPhotos
       && (this.draftText.trim().length > 0 || this.draftImages.length > 0)
       && this.draftText.length <= POST_TEXT_MAX;
   }
 
+  /** Checks whether the current form differs from its saved starting state. */
   private get isDirty(): boolean {
     return !!(this.draftText.trim() || this.draftImages.length || this.draftTrail || this.draftGuide);
   }
@@ -415,10 +433,12 @@ export class CommunityPage {
     return role === 'destructive';
   };
 
+  /** Closes or cancels the close composer flow and returns the interface to its previous state. */
   closeComposer() {
     this.composerModal?.dismiss();
   }
 
+  /** Initializes composer interaction after the modal becomes visible. */
   onComposerDidPresent() {
     if (this.pendingFiles.length) {
       const files = this.pendingFiles;
@@ -427,11 +447,13 @@ export class CommunityPage {
     }
   }
 
+  /** Resets composer state after its modal closes. */
   onComposerDismissed() {
     this.showComposer = false;
     this.resetDraft();
   }
 
+  /** Performs the reset draft operation for this feature and returns its result to the caller. */
   private resetDraft() {
     this.skipDiscardCheck = false;
     this.editingPostId = null;
@@ -446,6 +468,7 @@ export class CommunityPage {
     this.trailQuery = '';
   }
 
+  /** Stores the choose photos selection so the related view and feature logic stay in sync. */
   choosePhotos() {
     if (this.draftImages.length >= POST_PHOTO_MAX) {
       this.toast(`You can add up to ${POST_PHOTO_MAX} photos.`);
@@ -454,6 +477,7 @@ export class CommunityPage {
     this.photoInput?.nativeElement.click();
   }
 
+  /** Receives selected photos and validates them before adding to the draft. */
   onPhotosPicked(ev: Event) {
     const input = ev.target as HTMLInputElement;
     const files = Array.from(input.files ?? []);
@@ -470,6 +494,7 @@ export class CommunityPage {
     this.addPhotos(files);
   }
 
+  /** Performs the add photos operation for this feature and returns its result to the caller. */
   private async addPhotos(files: File[]) {
     const room = POST_PHOTO_MAX - this.draftImages.length;
     if (room <= 0) {
@@ -509,6 +534,7 @@ export class CommunityPage {
     }
   }
 
+  /** Performs the remove photo operation for this feature and returns its result to the caller. */
   removePhoto(index: number) {
     this.draftImages = this.draftImages.filter((_, i) => i !== index);
   }
@@ -523,6 +549,7 @@ export class CommunityPage {
     return list.slice(0, 8);
   }
 
+  /** Performs the toggle trail picker operation for this feature and returns its result to the caller. */
   toggleTrailPicker() {
     this.showTrailPicker = !this.showTrailPicker;
     this.trailQuery = '';
@@ -549,10 +576,12 @@ export class CommunityPage {
     this.draftGuide = { uid: p.uid, name: p.name };
   }
 
+  /** Performs the clear guide operation for this feature and returns its result to the caller. */
   clearGuide() {
     this.draftGuide = null;
   }
 
+  /** Performs the clear trail operation for this feature and returns its result to the caller. */
   clearTrail() {
     this.draftTrail = null;
     this.draftRating = 0;
@@ -575,6 +604,7 @@ export class CommunityPage {
       : [];
   }
 
+  /** Performs the pick composer mention operation for this feature and returns its result to the caller. */
   async pickComposerMention(p: PersonSummary) {
     if (!this.composerMention) return;
     const el = await this.composerText?.getInputElement();
@@ -604,6 +634,7 @@ export class CommunityPage {
       : [];
   }
 
+  /** Performs the pick comment mention operation for this feature and returns its result to the caller. */
   pickCommentMention(p: PersonSummary) {
     const box = this.commentBoxEl;
     if (!this.commentMention || !box) return;
@@ -666,6 +697,7 @@ export class CommunityPage {
     this.showComments = true;
   }
 
+  /** Refreshes comment-related state after the comments view closes. */
   onCommentsDismissed() {
     this.showComments = false;
     this.newComment = '';
@@ -674,11 +706,13 @@ export class CommunityPage {
     this.postService.closeThread();
   }
 
+  /** Checks whether the current user is allowed to remove this comment. */
   canDeleteComment(c: PostComment): boolean {
     // Your own comments, or any comment on your own post.
     return c.isMine || !!this.activePost()?.isMine;
   }
 
+  /** Performs the submit comment operation for this feature and returns its result to the caller. */
   async submitComment(list?: IonContent) {
     const post = this.activePost();
     const text = this.newComment.trim();
@@ -702,6 +736,7 @@ export class CommunityPage {
     }
   }
 
+  /** Performs the confirm delete comment operation for this feature and returns its result to the caller. */
   async confirmDeleteComment(c: PostComment) {
     const post = this.activePost();
     if (!post) return;
@@ -732,6 +767,7 @@ export class CommunityPage {
     this.showHistory = true;
   }
 
+  /** Refreshes post history after its viewer closes. */
   onHistoryDismissed() {
     this.showHistory = false;
     this.postService.closeHistory();
@@ -745,6 +781,7 @@ export class CommunityPage {
       && this.postService.versions().length <= 1;
   }
 
+  /** Opens the open version photo interface for the user. */
   openVersionPhoto(images: string[], index: number) {
     this.viewer = { images, index };
   }
@@ -757,15 +794,18 @@ export class CommunityPage {
     this.viewer = { images: ev.post.images, index: ev.index };
   }
 
+  /** Opens the open draft viewer interface for the user. */
   openDraftViewer(index: number) {
     this.viewer = { images: this.draftImages, index };
   }
 
+  /** Prepares the viewer after it is presented so its content can be navigated. */
   onViewerPresented() {
     const strip = document.querySelector<HTMLElement>('ion-modal.viewer-modal .viewer-strip');
     if (strip && this.viewer) strip.scrollLeft = this.viewer.index * strip.clientWidth;
   }
 
+  /** Tracks viewer scrolling and synchronizes the active item with the visible content. */
   onViewerScroll(strip: HTMLElement) {
     if (!this.viewer || !strip.clientWidth) return;
     this.viewer.index = Math.round(strip.scrollLeft / strip.clientWidth);
@@ -796,6 +836,7 @@ export class CommunityPage {
     return `${location.origin}/tabs/community?post=${encodeURIComponent(post.id)}`;
   }
 
+  /** Performs the focus post operation for this feature and returns its result to the caller. */
   private focusPost(id: string, found: boolean) {
     this.focusId.set(null);
     if (!found) {
@@ -815,6 +856,7 @@ export class CommunityPage {
     }, 120);
   }
 
+  /** Copies the requested text to the clipboard and informs the user of the result. */
   private async copy(text: string): Promise<boolean> {
     try {
       await navigator.clipboard.writeText(text);
@@ -824,10 +866,12 @@ export class CommunityPage {
     }
   }
 
+  /** Shows the supplied message through the page?s user-feedback mechanism. */
   private message(e: unknown): string {
     return e instanceof CommunityError ? e.message : 'Something went wrong. Please try again.';
   }
 
+  /** Shows a brief Ionic notification so the user can understand the action result. */
   private async toast(message: string, color: 'dark' | 'success' | 'danger' = 'dark') {
     const toast = await this.toastCtrl.create({ message, duration: 2200, position: 'top', color });
     await toast.present();

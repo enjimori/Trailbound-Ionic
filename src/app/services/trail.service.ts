@@ -1,9 +1,12 @@
-import { Injectable, signal, computed } from '@angular/core';
+import { Injectable, computed, inject } from '@angular/core';
 import { Trail, TrailCategory } from '../models/trail.model';
+import { CatalogService } from './catalog.service';
 
+/** Shared trail data source used by pages that need to list or resolve trails. */
 @Injectable({ providedIn: 'root' })
 export class TrailService {
-  private readonly _trails = signal<Trail[]>([
+  private readonly catalog = inject(CatalogService);
+  private readonly _seededTrails: Trail[] = [
     {
       id: 't1',
       name: 'Mt. Ulap Traverse',
@@ -100,17 +103,22 @@ export class TrailService {
       lat: 8.1500,
       lng: 124.9200,
     },
-  ]);
+  ];
+  readonly addedTrails = this.catalog.addedTrails;
 
-  readonly trails = computed(() => this._trails());
+  readonly trails = computed(() =>
+    this.catalog.withTrailOverrides([...this._seededTrails, ...this.addedTrails()]),
+  );
 
+  /** Returns the by id data needed by the calling page or template. */
   getById(id: string): Trail | undefined {
-    return this._trails().find(t => t.id === id);
+    return this.trails().find(t => t.id === id);
   }
 
+  /** Filters or finds matching data from the current search input. */
   search(query: string, category: TrailCategory | 'All' = 'All'): Trail[] {
     const q = query.trim().toLowerCase();
-    return this._trails().filter(t => {
+    return this.trails().filter(t => {
       const matchesQuery = !q || t.name.toLowerCase().includes(q) || t.region.toLowerCase().includes(q);
       const matchesCategory = category === 'All' || t.category === category;
       return matchesQuery && matchesCategory;

@@ -1,3 +1,6 @@
+/**
+ * Reusable people sheet: receives the people to display, renders their relationship details, and emits user actions back to its parent.
+ */
 import { Component, EventEmitter, Input, Output, computed, effect, inject, signal, untracked } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
@@ -173,6 +176,7 @@ export class PeopleSheetComponent {
     });
   }
 
+  /** Runs after the sheet appears so presentation-dependent loading can begin. */
   async onPresented() {
     this.query.set('');
     this.tab.set('following');
@@ -187,26 +191,31 @@ export class PeopleSheetComponent {
     }
   }
 
+  /** Resets sheet state after Ionic dismisses the modal. */
   onDismissed() {
     this.selectedUid.set(null);
     this.query.set('');
     this.closed.emit();
   }
 
+  /** Updates the people query and refreshes the matching search results. */
   onSearchInput(ev: Event) {
     this.query.set((ev.target as HTMLInputElement).value);
   }
 
+  /** Performs the clear search operation for this feature and returns its result to the caller. */
   clearSearch(input: HTMLInputElement) {
     this.query.set('');
     input.value = '';
     input.focus();
   }
 
+  /** Switches the sheet to the selected people-list tab. */
   onTab(ev: CustomEvent) {
     this.tab.set(ev.detail.value as ListTab);
   }
 
+  /** Opens the selected person's profile inside the people sheet. */
   onProfileTab(ev: CustomEvent) {
     this.profileTab.set(ev.detail.value as ProfileTab);
   }
@@ -217,6 +226,7 @@ export class PeopleSheetComponent {
     this.router.navigate(['/trail', id]);
   }
 
+  /** Opens the open person interface for the user. */
   openPerson(p: PersonSummary) {
     if (this.pick) {
       this.picked.emit(p);
@@ -226,10 +236,12 @@ export class PeopleSheetComponent {
     this.selectedUid.set(p.uid);
   }
 
+  /** Performs the back operation for this feature and returns its result to the caller. */
   back() {
     this.selectedUid.set(null);
   }
 
+  /** Performs the toggle follow operation for this feature and returns its result to the caller. */
   async toggleFollow(p: PersonSummary, ev?: Event) {
     ev?.stopPropagation();
     if (!this.signedIn()) {
@@ -254,6 +266,7 @@ export class PeopleSheetComponent {
   trackById = (_: number, item: { id: string }) => item.id;
   trackByTrail = (_: number, t: TrailLogEntry) => t.id;
 
+  /** Shows a brief Ionic notification so the user can understand the action result. */
   private async toast(message: string, error = false) {
     const t = await this.toastCtrl.create({
       message, duration: 1800, position: 'bottom', color: error ? 'danger' : undefined,

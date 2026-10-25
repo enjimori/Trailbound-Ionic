@@ -13,10 +13,12 @@ export class NotificationService {
   );
   readonly unreadCount = computed(() => this.notifications().filter(n => !n.read).length);
 
+  /** Marks the selected notification as read. */
   markAsRead(id: string) {
     this.followAlerts.markRead(id);
   }
 
+  /** Marks every currently available notification as read. */
   markAllRead() {
     this.followAlerts.markAllRead();
   }

@@ -1,3 +1,4 @@
+<!-- Profile template: displays user and activity state from ProfilePage and forwards account actions to its handlers. -->
 <ion-header class="ion-no-border">
   <ion-toolbar>
     <ion-title>Profile</ion-title>
@@ -97,6 +98,18 @@
     </div>
 
     <div class="account-list">
+      <!--
+        Admins only. There is no separate admin login page, so this row is the
+        only way into the panel without typing /admin by hand. Hidden entirely
+        for hikers rather than shown disabled: the panel isn't something they
+        can request access to from here.
+      -->
+      <div class="account-item" *ngIf="isAdmin()" (click)="goAdmin()">
+        <span class="ai-icon"><ion-icon name="speedometer-outline"></ion-icon></span>
+        <span>Admin Panel</span>
+        <span class="pill">{{ adminLevel() }}</span>
+        <ion-icon name="chevron-forward-outline" class="chevron"></ion-icon>
+      </div>
       <div class="account-item" (click)="goPersonalInfo()">
         <span class="ai-icon"><ion-icon name="person-outline"></ion-icon></span>
         <span>Personal Information</span>

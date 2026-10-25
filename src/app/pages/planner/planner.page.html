@@ -1,4 +1,6 @@
+<!-- Planner template: renders the schedule data prepared by PlannerPage from bookings and upcoming adventures. -->
 <ion-header class="ion-no-border">
+  <!-- The header action starts the page's add-adventure flow. -->
   <ion-toolbar>
     <ion-title>Planner</ion-title>
     <ion-buttons slot="end">
@@ -11,6 +13,7 @@
 
 <ion-content [fullscreen]="true">
   <div class="page-pad">
+    <!-- Upcoming adventures come from UserService and each card opens its trail. -->
     <p class="section-title">Upcoming Adventures</p>
 
     <ng-container *ngIf="userService.upcoming().length; else empty">
@@ -27,6 +30,7 @@
       </div>
     </ng-container>
 
+    <!-- When no adventures exist, this template offers the same plan-a-hike action. -->
     <ng-template #empty>
       <div class="empty-state">
         <ion-icon name="calendar-outline"></ion-icon>

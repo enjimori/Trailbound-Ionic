@@ -22,6 +22,7 @@ export class MentionTextComponent {
   @Input() mentions: MentionRef[] | undefined;
   @Output() openUser = new EventEmitter<string>();
 
+  /** Splits the text into plain-text and mention segments for styled rendering. */
   get segments() {
     return toSegments(this.text, this.mentions);
   }

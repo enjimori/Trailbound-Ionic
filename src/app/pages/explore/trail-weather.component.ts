@@ -1,4 +1,7 @@
-import { Component, Input, booleanAttribute, computed, signal } from '@angular/core';
+/**
+ * Trail-weather component: presents the weather information supplied by its parent or weather service for the selected trail.
+ */
+import { Component, Input, booleanAttribute, computed, effect, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { IonIcon } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
@@ -10,6 +13,8 @@ import {
 } from 'ionicons/icons';
 
 import { TRAILS_30 } from './explore-trails.data';
+import { TrailService } from '../../services/trail.service';
+import { CatalogService } from '../../services/catalog.service';
 import {
   ForecastRequest, TrailWeatherService,
 } from './trail-weather.service';
@@ -46,9 +51,8 @@ function parseElevation(text: string | undefined): number | undefined {
  *       Current conditions, the next 12 hours, a 5-day outlook and every
  *       alert. For the detail page, where the decision gets made.
  *
- * Coordinates and summit elevation come from explore-trails.data.ts, so a
- * trail that is not in that dataset says so rather than showing a forecast
- * for the wrong place.
+ * Coordinates and summit elevation come from the built-in dataset or shared
+ * catalog, so forecasts use the selected trail's actual location.
  * ═══════════════════════════════════════════════════════════════════════════
  */
 @Component({
@@ -446,13 +450,13 @@ function parseElevation(text: string | undefined): number | undefined {
   `],
 })
 export class TrailWeatherComponent {
+  private readonly trailService = inject(TrailService);
+  private readonly catalog = inject(CatalogService);
   private readonly id = signal<string>('');
 
   @Input({ required: true }) set trailId(value: string) {
     this.id.set(value ?? '');
     this.expanded.set(false);
-    const req = this.request();
-    if (req) this.svc.load(req);
   }
 
   /** Single row plus the worst alert. For the Explore sheet. */
@@ -461,19 +465,23 @@ export class TrailWeatherComponent {
   expanded = signal(false);
 
   /**
-   * Coordinates, summit elevation and trail type, read from the Explore
-   * dataset. Null for any id that is not in it — the seeded t1–t6 trails have
-   * no coordinates, and a forecast for the wrong mountain is worse than none.
+   * Coordinates and elevation come from the Explore dataset or shared
+   * catalog. Trails without valid coordinates do not get a guessed forecast.
    */
   request = computed<ForecastRequest | null>(() => {
-    const t = TRAILS_30.find(x => x.id === this.id());
-    if (!t) return null;
+    const id = this.id();
+    const found = TRAILS_30.find(x => x.id === id) ?? this.trailService.getById(id);
+    const t = found ? this.catalog.withTrailOverrides([found])[0] : undefined;
+    if (
+      !t || typeof t.lat !== 'number' || !Number.isFinite(t.lat) ||
+      typeof t.lng !== 'number' || !Number.isFinite(t.lng)
+    ) return null;
     return {
       id: t.id,
       lat: t.lat,
       lng: t.lng,
       elevationM: parseElevation(t.elevation),
-      trailType: t.trailType,
+      trailType: 'trailType' in t && typeof t.trailType === 'string' ? t.trailType : undefined,
     };
   });
 
@@ -487,12 +495,19 @@ export class TrailWeatherComponent {
     return this.compact && !this.expanded() ? all.slice(0, 1) : all;
   });
 
-  constructor(public svc: TrailWeatherService) {}
+  constructor(public svc: TrailWeatherService) {
+    effect(() => {
+      const req = this.request();
+      if (req) this.svc.load(req, true);
+    });
+  }
 
+  /** Switches the requested setting or panel between its available states. */
   toggle() {
     if (this.compact) this.expanded.update(v => !v);
   }
 
+  /** Requests fresh data and updates the state consumed by the view. */
   refresh(ev: Event, req: ForecastRequest) {
     ev.stopPropagation();
     this.svc.load(req, true);

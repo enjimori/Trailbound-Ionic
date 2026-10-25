@@ -1,11 +1,23 @@
+/**
+ * Booking state and persistence: owns the in-progress draft, computes prices,
+ * creates bookings, and synchronizes the saved booking list for pages and
+ * checkout.
+ */
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { onAuthStateChanged } from 'firebase/auth';
-import { collection, doc, getDocs, query, setDoc, where } from 'firebase/firestore';
 import {
-  Booking, BookingDraft, BookingQuote, HikeActivity, MerchLine,
+  collection, doc, getDocs, query, serverTimestamp, setDoc, updateDoc, where,
+} from 'firebase/firestore';
+import {
+  Booking, BookingDraft, BookingQuote, GroupHiker, HikeActivity, MerchLine,
 } from '../models/booking.model';
+import { balanceFor, depositFor, initialPaperwork } from '../models/booking-workflow';
 import { auth, db } from './firebase.client';
+import { CatalogService } from './catalog.service';
 import { UserService } from './user.service';
+import { CertificateService } from './certificate.service';
+import { RiskAckService } from './risk-ack.service';
+import { permitFeeFor, permitFor } from '../pages/explore/trail-permits';
 import {
   TRANSACTION_FEE, activityById, guideById, merchById, packageById,
 } from '../pages/booking/booking-catalog';
@@ -21,18 +33,22 @@ import {
  *                 mid-flow it is gone, which is correct — an abandoned basket
  *                 should not come back to life a week later.
  *
- *   the BOOKINGS  persisted to localStorage. Confirmed, paid, real.
+ *   the BOOKINGS  persisted to localStorage. Real, and tracked.
  *
- * When the team wires up Firestore, only `load()` and `save()` change — every
- * page reads through the signals below.
+ * ── PAYING IS NO LONGER CONFIRMING ────────────────────────────────────────
+ * A new booking starts at status 'pending'. The hiker pays a DEPOSIT, which
+ * holds the date; the balance falls due once the permit is released, and only
+ * an admin moves the booking to 'confirmed'. The three status fields
+ * (status / paperwork / payment) move independently — see booking-workflow.ts
+ * for why one field could not express this.
  *
  * ADMIN PANEL HOOK-UP
- *   Each confirmed booking is ALSO copied to Firestore  bookings/{id}  with the
- *   hiker's uid, name and email, so the admin panel can see every booking.
- *   When a hiker signs in, their bookings are read back from Firestore, so a
- *   booking an admin cancels or completes shows that status here too, and a
- *   booking made on another phone appears. The Bookings tab only lists the
- *   signed-in hiker's own bookings (plus older ones saved before this change).
+ *   Each booking is ALSO copied to Firestore  bookings/{id}  with the hiker's
+ *   uid, name and email, so the admin panel can see every booking. When a
+ *   hiker signs in, their bookings are read back from Firestore, so a status
+ *   an admin changed shows here too, and a booking made on another phone
+ *   appears. The Bookings tab only lists the signed-in hiker's own bookings
+ *   (plus older ones saved before this change).
  * ═══════════════════════════════════════════════════════════════════════════
  */
 
@@ -40,7 +56,10 @@ const STORAGE_KEY = 'TrailBound.bookings.v1';
 
 @Injectable({ providedIn: 'root' })
 export class BookingService {
+  private readonly catalog = inject(CatalogService);
   private readonly userService = inject(UserService);
+  private readonly certs = inject(CertificateService);
+  private readonly riskAck = inject(RiskAckService);
   private readonly _draft = signal<BookingDraft | null>(null);
   private readonly _bookings = signal<Booking[]>(this.load());
   private readonly _uid = signal<string | null>(null);
@@ -53,6 +72,7 @@ export class BookingService {
   });
 
   constructor() {
+    // Keep the booking owner current and merge server bookings after sign-in.
     onAuthStateChanged(auth, user => {
       this._uid.set(user?.uid ?? null);
       if (user) void this.syncFromServer(user.uid);
@@ -61,10 +81,12 @@ export class BookingService {
 
   // ── draft ───────────────────────────────────────────────────────────────
 
+  /** Hands the current selection from the booking page to checkout. */
   setDraft(draft: BookingDraft) {
     this._draft.set(draft);
   }
 
+  /** Prevents a confirmed or abandoned booking from being reused at checkout. */
   clearDraft() {
     this._draft.set(null);
   }
@@ -81,7 +103,8 @@ export class BookingService {
    * hiker should get the better half of an ambiguity they did not create.
    */
   quote(draft: BookingDraft): BookingQuote {
-    const pkg = packageById(draft.packageId);
+    const pkg = this.catalog.packages().find((item) => item.id === draft.packageId)
+      ?? packageById(draft.packageId);
 
     const selected = draft.activityIds
       .map(id => activityById(id))
@@ -98,7 +121,7 @@ export class BookingService {
     const merchLines: MerchLine[] = Object.entries(draft.merch)
       .filter(([, qty]) => qty > 0)
       .map(([id, qty]) => {
-        const item = merchById(id);
+        const item = this.catalog.merch().find((merch) => merch.id === id) ?? merchById(id);
         if (!item) return null;
         return {
           id: item.id,
@@ -112,7 +135,17 @@ export class BookingService {
 
     const activitiesTotal = paid.reduce((sum, a) => sum + a.price, 0);
     const merchTotal = merchLines.reduce((sum, l) => sum + l.lineTotal, 0);
-    const subtotal = pkg.price + activitiesTotal + merchTotal;
+    const groupSize = pkg.id === 'group' ? (draft.groupHikers?.length ?? 0) : 0;
+    const groupSurcharge = groupSize > 20
+      ? (10 * 1200) + ((groupSize - 20) * 1500)
+      : Math.max(0, groupSize - 10) * 1200;
+    const subtotal = pkg.price + activitiesTotal + merchTotal + groupSurcharge;
+    const total = subtotal + TRANSACTION_FEE;
+
+    // Carved out of the total, not added to it. The package already covers
+    // barangay registration, the environmental fee and the trail fee, so
+    // adding the permit fee on top would charge the hiker twice for it.
+    const deposit = depositFor(permitFeeFor(draft.trailName), TRANSACTION_FEE);
 
     return {
       packageName: pkg.name,
@@ -122,25 +155,39 @@ export class BookingService {
       merchLines,
       activitiesTotal,
       merchTotal,
+      groupSurcharge,
       subtotal,
       transactionFee: TRANSACTION_FEE,
-      total: subtotal + TRANSACTION_FEE,
+      total,
+      deposit,
+      balance: balanceFor(total, deposit),
     };
   }
 
-  // ── confirming ──────────────────────────────────────────────────────────
+  // ── creating ────────────────────────────────────────────────────────────
 
   /**
    * Writes the booking and returns it. The caller navigates to the
    * confirmation screen with the returned id.
+   *
+   * The booking starts PENDING, not confirmed: the deposit holds the date,
+   * and an admin confirms once the documents, the permit, the guide and the
+   * balance are all settled.
    *
    * `cardLast4` is the ONLY thing kept from the payment form. The full number,
    * expiry and CVV are never passed in here and never stored.
    */
   confirm(draft: BookingDraft, paymentMethod: string, cardLast4: string | null): Booking {
     const q = this.quote(draft);
-    const pkg = packageById(draft.packageId);
+    const pkg = this.catalog.packages().find((item) => item.id === draft.packageId)
+      ?? packageById(draft.packageId);
     const guide = guideById(draft.guideId);
+    const permit = permitFor(draft.trailName);
+
+    // Where the paperwork starts depends on what this trail asks for and what
+    // the hiker already has on file.
+    const medical = this.certs.records()['medical']?.status ?? 'none';
+    const ack = this.riskAck.ackFor(draft.trailId);
 
     const user = auth.currentUser;
     const booking: Booking = {
@@ -158,11 +205,31 @@ export class BookingService {
       ],
       guideName: guide?.name ?? null,
       merch: q.merchLines,
+      groupHikers: pkg.id === 'group'
+        ? (draft.groupHikers ?? []).map((hiker): GroupHiker => ({ ...hiker }))
+        : [],
+      groupSurcharge: q.groupSurcharge,
       total: q.total,
       paymentMethod,
       cardLast4,
       createdAt: new Date().toISOString(),
-      status: 'confirmed',
+
+      status: 'pending',
+      paperwork: initialPaperwork(permit.requiresMedical, medical),
+      payment: 'deposit_paid',
+      deposit: q.deposit,
+      balanceDueBy: null,
+
+      // Filled in by an admin once the office answers.
+      permitRef: null,
+      permitIssuedAt: null,
+      permitOffice: permit.authority === 'none' ? null : permit.office,
+      permitFeeLodged: 0,
+
+      // The record of what the hiker agreed to, and which wording they saw.
+      riskAckAt: ack ? ack.at.toISOString() : null,
+      riskAckVersion: ack?.version ?? null,
+
       uid: user?.uid,
       userName: this.userService.profile().name || user?.displayName || '',
       userEmail: user?.email ?? '',
@@ -171,17 +238,72 @@ export class BookingService {
     this._bookings.update(list => [booking, ...list]);
     this.save();
     this.clearDraft();
+    // The acknowledgment belonged to this booking. The next one asks again,
+    // against whatever the wording says then.
+    this.riskAck.clear(draft.trailId);
     void this.upload(booking);
 
     return booking;
   }
 
+  /** Looks up one booking by its local or Firestore document id. */
   byId(id: string): Booking | undefined {
     return this._bookings().find(b => b.id === id);
   }
 
+  /** Returns bookings for a trail, used by trail-specific booking views. */
   forTrail(trailId: string): Booking[] {
     return this._bookings().filter(b => b.trailId === trailId);
+  }
+
+  /** Whether Firestore has a demo-only balance marker for this booking. */
+  hasDemoBalancePayment(id: string): boolean {
+    return this.bookings().find((booking) => booking.id === id)?.demoBalancePaid === true;
+  }
+
+  /**
+   * Saves a demo-only marker to the user's booking so the admin can see it.
+   * The real payment status remains unchanged; this is not money received.
+   */
+  async simulateDemoBalancePayment(id: string, method: string): Promise<boolean> {
+    const booking = this.bookings().find(b => b.id === id);
+    const allowedMethods = ['Card', 'QRPh', 'Apple Pay', 'Maya'];
+    if (
+      !booking ||
+      !booking.uid ||
+      booking.uid !== auth.currentUser?.uid ||
+      booking.paperwork !== 'cleared' ||
+      booking.payment !== 'balance_due' ||
+      booking.status !== 'pending' ||
+      this.hasDemoBalancePayment(id) ||
+      !allowedMethods.includes(method)
+    ) {
+      return false;
+    }
+
+    await updateDoc(doc(db, 'bookings', id), {
+      demoBalancePaid: true,
+      demoBalancePaidAt: serverTimestamp(),
+      demoBalancePaymentMethod: method,
+    });
+    this._bookings.update((bookings) => bookings.map((item) =>
+      item.id === id
+        ? {
+            ...item,
+            demoBalancePaid: true,
+            demoBalancePaidAt: new Date().toISOString(),
+            demoBalancePaymentMethod: method,
+          }
+        : item,
+    ));
+    this.save();
+    return true;
+  }
+
+  /** Refreshes server changes when the hiker returns to their booking history. */
+  refreshForCurrentUser(): Promise<void> {
+    const uid = auth.currentUser?.uid;
+    return uid ? this.syncFromServer(uid) : Promise.resolve();
   }
 
   /**
@@ -267,6 +389,7 @@ export class BookingService {
     }
   }
 
+  /** Persists the current changes through the owning service and updates saved state. */
   private save() {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(this._bookings()));

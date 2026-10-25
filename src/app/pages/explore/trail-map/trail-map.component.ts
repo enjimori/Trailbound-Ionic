@@ -1,3 +1,6 @@
+/**
+ * Trail-map component: turns trail and map inputs into the interactive map shown in its template and reports map interactions to its parent.
+ */
 import {
   AfterViewInit, Component, ElementRef, EventEmitter, Input, NgZone,
   OnDestroy, Output, ViewChild, ViewEncapsulation,
@@ -75,12 +78,15 @@ const CARTO_ATTRIBUTION =
  */
 const CARTO_API_KEY = 'cb1_3rcx_1_1b19d566ff6f23f63ab03470';
 
+/** The project's own mountain mark, drawn at its own colours. */
+const PIN_IMAGE = 'assets/logo/mountain-icon.png';
+
 /**
  * Self-contained Leaflet + CARTO map for the Explore module.
  *
- * Owns no shared state. Takes trails in, emits selections out. Coordinates are
- * joined on internally from trail-geo.ts, so the shared Trail model does not
- * need a lat/lng field.
+ * Owns no shared state. Takes trails in, emits selections out. Coordinates
+ * come from each trail when present, with built-in trail coordinates resolved
+ * through trail-geo.ts.
  *
  * encapsulation: None is required, not stylistic — Leaflet builds marker and
  * control elements outside Angular's view, so they never receive the
@@ -99,7 +105,7 @@ export class TrailMapComponent implements AfterViewInit, OnDestroy {
 
   private _trails: MappedTrail[] = [];
 
-  /** Shared trails from TrailService. Coordinates are joined on internally. */
+  /** Shared trails from TrailService; records with coordinates get map markers. */
   @Input() set trails(value: readonly Trail[] | null) {
     this._trails = withGeo(value ?? []);
 
@@ -145,12 +151,14 @@ export class TrailMapComponent implements AfterViewInit, OnDestroy {
 
   constructor(private zone: NgZone) {}
 
+  /** Runs after the component view exists; initializes view-dependent behavior. */
   ngAfterViewInit() {
     // Leaflet fires a lot of events; keeping init outside Angular avoids
     // hundreds of pointless change-detection cycles while panning.
     this.zone.runOutsideAngular(() => this.initMap());
   }
 
+  /** Runs when the component is removed; releases resources owned by this component. */
   ngOnDestroy() {
     this.resizeObserver?.disconnect();
     this.clearRoute();
@@ -289,6 +297,7 @@ export class TrailMapComponent implements AfterViewInit, OnDestroy {
     this.resizeObserver.observe(this.host.nativeElement);
   }
 
+  /** Changes the visual base layer used underneath the map markers. */
   private setBasemap(key: BasemapKey) {
     if (!this.map) return;
 
@@ -349,6 +358,7 @@ export class TrailMapComponent implements AfterViewInit, OnDestroy {
     this.basemap = key;
   }
 
+  /** Creates map markers from the trail data supplied to the map. */
   private renderMarkers() {
     if (!this.map) return;
 
@@ -364,6 +374,9 @@ export class TrailMapComponent implements AfterViewInit, OnDestroy {
       const marker = L.marker([trail.lat, trail.lng], {
         icon: this.buildIcon(trail),
         title: trail.name,
+        // The selected pin grows, so it has to sit above its neighbours or the
+        // one you just tapped ends up half-hidden behind the one next to it.
+        zIndexOffset: trail.id === this._selectedId ? 1000 : 0,
       }).addTo(this.map);
 
       marker.on('click', () => {
@@ -375,31 +388,55 @@ export class TrailMapComponent implements AfterViewInit, OnDestroy {
     }
   }
 
+  /**
+   * Creates the map icon used to display a trail marker.
+   *
+   * The project's own mountain mark, in its own colours, with the difficulty
+   * carried by a coloured glow behind it. Nothing is drawn around the
+   * artwork — no pin shape, no ring, no disc — so the mark reads as itself
+   * rather than as a stencil inside a generic marker.
+   *
+   * The glow does the work a ring would: it separates the mark from whatever
+   * is underneath, which matters most over satellite imagery where a dark
+   * silhouette would otherwise disappear into the terrain.
+   *
+   * className is deliberately '' — Leaflet's default 'leaflet-div-icon' comes
+   * with a white box and a grey border, which would frame every marker.
+   *
+   * iconAnchor is the CENTRE here, unlike a teardrop pin, which anchors at
+   * its point. The mark sits on the coordinate rather than above it.
+   */
   private buildIcon(trail: MappedTrail): L.DivIcon {
     const classes = [
-      'trailmap-marker',
-      isClosed(trail) ? 'trailmap-marker--closed' : '',
-      trail.id === this._selectedId ? 'trailmap-marker--selected' : '',
+      'trailmap-pin',
+      `trailmap-pin--${isClosed(trail) ? 'closed' : difficultyOf(trail)}`,
+      trail.id === this._selectedId ? 'trailmap-pin--selected' : '',
     ].filter(Boolean).join(' ');
 
     return L.divIcon({
       className: '',
-      html: `<div class="${classes}"></div>`,
-      iconSize: [26, 26],
-      iconAnchor: [13, 13],
+      html: `<div class="${classes}"><img class="pin-img" src="${PIN_IMAGE}" alt="" draggable="false"></div>`,
+      iconSize: [34, 34],
+      iconAnchor: [17, 17],
+      popupAnchor: [0, -18],
     });
   }
 
+  /** Updates marker appearance to reflect the current selected trail. */
   private applySelectionStyles() {
     if (!this.map) return;
 
     // LOOP: re-renders the icon for each trail when selection changes.
     // This updates the highlighted state without recreating all markers.
     for (const trail of this._trails) {
-      this.markers.get(trail.id)?.setIcon(this.buildIcon(trail));
+      const marker = this.markers.get(trail.id);
+      if (!marker) continue;
+      marker.setIcon(this.buildIcon(trail));
+      marker.setZIndexOffset(trail.id === this._selectedId ? 1000 : 0);
     }
   }
 
+  /** Adjusts the map bounds so the relevant trail markers are visible. */
   private fitToTrails() {
     if (!this.map) return;
 
@@ -473,4 +510,24 @@ export class TrailMapComponent implements AfterViewInit, OnDestroy {
       );
     });
   }
+}
+
+/**
+ * 'easy' | 'moderate' | 'hard' for the pin colour.
+ *
+ * Read through an index rather than trail.difficulty because the field's name
+ * is not guaranteed across the Trail model and the Explore data — a wrong
+ * guess here would fail the build rather than degrade. Anything unrecognised
+ * falls through to 'moderate', so an unlabelled trail gets a neutral pin
+ * instead of silently claiming to be easy.
+ *
+ * Once you have confirmed the field name, simplify this to read it directly.
+ */
+function difficultyOf(trail: MappedTrail): 'easy' | 'moderate' | 'hard' {
+  const raw = trail as unknown as Record<string, unknown>;
+  const value = String(raw['difficulty'] ?? raw['level'] ?? raw['grade'] ?? '').toLowerCase();
+
+  if (/hard|difficult|challeng|advanc|strenuous/.test(value)) return 'hard';
+  if (/easy|beginner|light|gentle/.test(value)) return 'easy';
+  return 'moderate';
 }

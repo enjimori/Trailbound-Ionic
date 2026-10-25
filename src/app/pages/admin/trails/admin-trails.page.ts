@@ -1,7 +1,6 @@
 /**
- * Trails — the 30 trails hikers can book. Close a trail (with a reason the
- * hiker sees) to stop new bookings, reopen it later. Trail details themselves
- * live in explore-trails.data.ts, so they are read-only here.
+ * Trails — manage the built-in trails and add new Firestore-backed trails.
+ * Close a trail (with a reason hikers see) to stop new bookings, reopen it later.
  */
 import { Component, computed, effect, inject, signal, untracked } from '@angular/core';
 import { DatePipe } from '@angular/common';
@@ -11,11 +10,13 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { IonIcon } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
 import {
-  closeOutline, lockClosedOutline, lockOpenOutline, openOutline, searchOutline, star, trailSignOutline,
+  addOutline, closeOutline, lockClosedOutline, lockOpenOutline, openOutline, pencilOutline, searchOutline, star, trailSignOutline,
 } from 'ionicons/icons';
 
 import { AdminDataService, countsAsRevenue } from '../admin-data.service';
 import { AdminUiService } from '../admin-ui.service';
+import { CatalogService } from '../../../services/catalog.service';
+import { TrailService } from '../../../services/trail.service';
 import { dayKey, matches, peso } from '../admin-utils';
 import { allTrails } from '../../explore/trail-lookup';
 import type { Trail } from '../../../models/trail.model';
@@ -30,9 +31,41 @@ type Filter = 'all' | 'open' | 'closed';
     <div class="tba-head">
       <div>
         <h1>Trails</h1>
-        <p>{{ trails.length }} trails · {{ trails.length - data.closedCount() }} open · {{ data.closedCount() }} closed for booking</p>
+        <p>{{ trails().length }} trails · {{ trails().length - data.closedCount() }} open · {{ data.closedCount() }} closed for booking</p>
       </div>
+      <button type="button" class="tba-btn primary" (click)="toggleCreateForm()">
+        <ion-icon name="add-outline"></ion-icon>Add trail
+      </button>
     </div>
+
+    @if (createOpen()) {
+      <section class="tba-card create">
+        <h2>Add a trail</h2>
+        <div class="create-grid">
+          <label class="tba-field">Trail name<input class="tba-input-box" [(ngModel)]="newName" maxlength="80" /></label>
+          <label class="tba-field">Region<input class="tba-input-box" [(ngModel)]="newRegion" maxlength="100" /></label>
+          <label class="tba-field">Image URL<input class="tba-input-box" type="url" [(ngModel)]="newImage" placeholder="https://…" /></label>
+          <label class="tba-field">Difficulty
+            <select class="tba-input-box" [(ngModel)]="newDifficulty">
+              @for (level of difficulties.slice(1); track level) { <option [value]="level">{{ level }}</option> }
+            </select>
+          </label>
+          <label class="tba-field">Distance<input class="tba-input-box" [(ngModel)]="newDistance" maxlength="30" placeholder="e.g. 8 km" /></label>
+          <label class="tba-field">Elevation<input class="tba-input-box" [(ngModel)]="newElevation" maxlength="30" placeholder="e.g. 1,200 m" /></label>
+          <label class="tba-field">Duration<input class="tba-input-box" [(ngModel)]="newDuration" maxlength="30" placeholder="e.g. 4–6 hrs" /></label>
+          <label class="tba-field">Latitude<input class="tba-input-box" type="number" min="-90" max="90" step="any" [(ngModel)]="newLat" placeholder="e.g. 16.3897" required /></label>
+          <label class="tba-field">Longitude<input class="tba-input-box" type="number" min="-180" max="180" step="any" [(ngModel)]="newLng" placeholder="e.g. 120.6924" required /></label>
+          <p class="coordinate-hint full">Enter the trailhead coordinates in decimal degrees so hikers can find it on the Explore map.</p>
+          <label class="tba-field full">Description<textarea class="tba-input-box" [(ngModel)]="newDescription" maxlength="600" rows="3"></textarea></label>
+        </div>
+        <div class="create-actions">
+          <button type="button" class="tba-btn" (click)="createOpen.set(false)">Cancel</button>
+          <button type="button" class="tba-btn primary" [disabled]="busy()" (click)="createTrail()">
+            {{ busy() ? 'Saving…' : 'Save trail' }}
+          </button>
+        </div>
+      </section>
+    }
 
     <div class="tba-toolbar">
       <label class="tba-filter">
@@ -93,49 +126,83 @@ type Filter = 'all' | 'open' | 'closed';
               <span class="tba-badge" [attr.data-tone]="data.isClosed(t.id) ? 'red' : 'green'">{{ data.isClosed(t.id) ? 'Closed' : 'Open' }}</span>
             </div>
 
-            @if (state(t.id); as s) {
-              @if (s.status === 'closed') {
-                <div class="closed-note">
-                  <ion-icon name="lock-closed-outline"></ion-icon>
-                  <div>
-                    <b>Closed for booking</b>
-                    <p>{{ s.note || 'No reason given.' }}</p>
-                    @if (s.updatedAt) { <small>Since {{ s.updatedAt | date: 'MMM d, y, h:mm a' }}</small> }
+            @if (editingId() === t.id) {
+              <div class="edit-grid">
+                <label class="tba-field">Trail name<input class="tba-input-box" [(ngModel)]="editName" maxlength="80" /></label>
+                <label class="tba-field">Region<input class="tba-input-box" [(ngModel)]="editRegion" maxlength="100" /></label>
+                <label class="tba-field">Image URL<input class="tba-input-box" type="url" [(ngModel)]="editImage" /></label>
+                <label class="tba-field">Difficulty
+                  <select class="tba-input-box" [(ngModel)]="editDifficulty">
+                    @for (level of difficulties.slice(1); track level) { <option [value]="level">{{ level }}</option> }
+                  </select>
+                </label>
+                <label class="tba-field">Distance<input class="tba-input-box" [(ngModel)]="editDistance" maxlength="30" /></label>
+                <label class="tba-field">Elevation<input class="tba-input-box" [(ngModel)]="editElevation" maxlength="30" /></label>
+                <label class="tba-field">Duration<input class="tba-input-box" [(ngModel)]="editDuration" maxlength="30" /></label>
+                <label class="tba-field">Latitude<input class="tba-input-box" type="number" min="-90" max="90" step="any" [(ngModel)]="editLat" /></label>
+                <label class="tba-field">Longitude<input class="tba-input-box" type="number" min="-180" max="180" step="any" [(ngModel)]="editLng" /></label>
+                <label class="tba-field full">Description<textarea class="tba-input-box" [(ngModel)]="editDescription" maxlength="600" rows="4"></textarea></label>
+              </div>
+            } @else {
+              @if (state(t.id); as s) {
+                @if (s.status === 'closed') {
+                  <div class="closed-note">
+                    <ion-icon name="lock-closed-outline"></ion-icon>
+                    <div>
+                      <b>Closed for booking</b>
+                      <p>{{ s.note || 'No reason given.' }}</p>
+                      @if (s.updatedAt) { <small>Since {{ s.updatedAt | date: 'MMM d, y, h:mm a' }}</small> }
+                    </div>
                   </div>
-                </div>
+                }
               }
+
+              <p class="desc">{{ t.description }}</p>
+
+              <div class="facts">
+                <div><span>Difficulty</span><b>{{ t.difficulty }}</b></div>
+                <div><span>Distance</span><b>{{ t.distance }}</b></div>
+                <div><span>Elevation</span><b>{{ t.elevation }}</b></div>
+                <div><span>Duration</span><b>{{ t.duration }}</b></div>
+              </div>
+
+              <p class="tba-section-title">Bookings</p>
+              <dl class="tba-dl">
+                <div><dt>Total bookings</dt><dd>{{ stats()[t.id]?.count ?? 0 }}</dd></div>
+                <div><dt>Upcoming hikes</dt><dd>{{ stats()[t.id]?.upcoming ?? 0 }}</dd></div>
+                <div><dt>Revenue</dt><dd>{{ peso(stats()[t.id]?.revenue ?? 0) }}</dd></div>
+                <div><dt>Reviews</dt><dd>{{ ratings()[t.id] ? ratings()[t.id].avg + ' ★ from ' + ratings()[t.id].n : 'None yet' }}</dd></div>
+              </dl>
             }
-
-            <p class="desc">{{ t.description }}</p>
-
-            <div class="facts">
-              <div><span>Difficulty</span><b>{{ t.difficulty }}</b></div>
-              <div><span>Distance</span><b>{{ t.distance }}</b></div>
-              <div><span>Elevation</span><b>{{ t.elevation }}</b></div>
-              <div><span>Duration</span><b>{{ t.duration }}</b></div>
-            </div>
-
-            <p class="tba-section-title">Bookings</p>
-            <dl class="tba-dl">
-              <div><dt>Total bookings</dt><dd>{{ stats()[t.id]?.count ?? 0 }}</dd></div>
-              <div><dt>Upcoming hikes</dt><dd>{{ stats()[t.id]?.upcoming ?? 0 }}</dd></div>
-              <div><dt>Revenue</dt><dd>{{ peso(stats()[t.id]?.revenue ?? 0) }}</dd></div>
-              <div><dt>Reviews</dt><dd>{{ ratings()[t.id] ? ratings()[t.id].avg + ' ★ from ' + ratings()[t.id].n : 'None yet' }}</dd></div>
-            </dl>
           </div>
           <footer>
-            @if (data.isClosed(t.id)) {
-              <button type="button" class="tba-btn primary" [disabled]="busy()" (click)="reopen(t)"><ion-icon name="lock-open-outline"></ion-icon>Reopen for booking</button>
+            @if (editingId() === t.id) {
+              <button type="button" class="tba-btn" [disabled]="busy()" (click)="editingId.set(null)">Cancel</button>
+              <button type="button" class="tba-btn primary" [disabled]="busy()" (click)="saveTrailEdits(t)">
+                {{ busy() ? 'Saving…' : 'Save changes' }}
+              </button>
             } @else {
-              <button type="button" class="tba-btn danger" [disabled]="busy()" (click)="closeTrail(t)"><ion-icon name="lock-closed-outline"></ion-icon>Close for booking</button>
+              <button type="button" class="tba-btn" [disabled]="busy()" (click)="startEditing(t)"><ion-icon name="pencil-outline"></ion-icon>Edit details</button>
+              @if (data.isClosed(t.id)) {
+                <button type="button" class="tba-btn primary" [disabled]="busy()" (click)="reopen(t)"><ion-icon name="lock-open-outline"></ion-icon>Reopen for booking</button>
+              } @else {
+                <button type="button" class="tba-btn danger" [disabled]="busy()" (click)="closeTrail(t)"><ion-icon name="lock-closed-outline"></ion-icon>Close for booking</button>
+              }
+              <a class="tba-btn" [href]="'/trail/' + t.id" target="_blank" rel="noopener"><ion-icon name="open-outline"></ion-icon>View in app</a>
             }
-            <a class="tba-btn" [href]="'/trail/' + t.id" target="_blank" rel="noopener"><ion-icon name="open-outline"></ion-icon>View in app</a>
           </footer>
         </aside>
       </div>
     }
   `,
   styles: [`
+    .create { margin-bottom: 18px; }
+    .create h2 { margin-bottom: 14px; font-size: 17px; }
+    .create-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+    .create-grid .full { grid-column: 1 / -1; }
+    .coordinate-hint { margin: -4px 0 0; color: var(--tba-muted); font-size: 12px; line-height: 1.45; }
+    .create-grid textarea { height: auto; padding: 10px 14px; resize: vertical; }
+    .create-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; }
     .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 16px; }
     .wide { grid-column: 1 / -1; }
     .trail { border: 1px solid var(--tba-line); border-radius: 18px; overflow: hidden; background: #fff; cursor: pointer; transition: box-shadow .15s, transform .15s; }
@@ -170,15 +237,26 @@ type Filter = 'all' | 'open' | 'closed';
     .facts div { background: var(--tba-soft); border-radius: 12px; padding: 10px 12px; }
     .facts span { display: block; font-size: 11.5px; color: var(--tba-muted); }
     .facts b { font-size: 13.5px; }
+    .edit-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 18px; }
+    .edit-grid .full { grid-column: 1 / -1; }
+    .edit-grid textarea { height: auto; min-height: 96px; padding: 10px 14px; resize: vertical; }
+    @media (max-width: 520px) {
+      .edit-grid { grid-template-columns: 1fr; }
+      .edit-grid .full { grid-column: auto; }
+    }
   `],
 })
 export class AdminTrailsPage {
   readonly data = inject(AdminDataService);
+  private readonly catalog = inject(CatalogService);
+  private readonly trailService = inject(TrailService);
   private readonly ui = inject(AdminUiService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
 
-  readonly trails = allTrails();
+  readonly trails = computed(() =>
+    this.catalog.withTrailOverrides([...allTrails(), ...this.trailService.addedTrails()]),
+  );
   readonly filters: { id: Filter; label: string }[] = [
     { id: 'all', label: 'All' },
     { id: 'open', label: 'Open' },
@@ -187,10 +265,32 @@ export class AdminTrailsPage {
   readonly difficulties = ['Any', 'Easy', 'Moderate', 'Hard'];
 
   readonly q = signal('');
+  readonly createOpen = signal(false);
   readonly filter = signal<Filter>('all');
   readonly difficulty = signal('Any');
   readonly openId = signal<string | null>(null);
+  readonly editingId = signal<string | null>(null);
   readonly busy = signal(false);
+  newName = '';
+  newRegion = '';
+  newImage = '';
+  newDifficulty = 'Moderate';
+  newDistance = '';
+  newElevation = '';
+  newDuration = '';
+  newLat: number | null = null;
+  newLng: number | null = null;
+  newDescription = '';
+  editName = '';
+  editRegion = '';
+  editImage = '';
+  editDifficulty: Trail['difficulty'] = 'Moderate';
+  editDistance = '';
+  editElevation = '';
+  editDuration = '';
+  editLat: number | null = null;
+  editLng: number | null = null;
+  editDescription = '';
   private readonly params = toSignal(this.route.queryParamMap);
 
   readonly shown = computed(() => {
@@ -198,7 +298,7 @@ export class AdminTrailsPage {
     const d = this.difficulty();
     const q = this.q();
     this.data.trailStatus();
-    return this.trails.filter(
+    return this.trails().filter(
       (t) =>
         (f === 'all' || (f === 'closed') === this.data.isClosed(t.id)) &&
         (d === 'Any' || t.difficulty === d) &&
@@ -232,11 +332,11 @@ export class AdminTrailsPage {
 
   readonly selected = computed(() => {
     const id = this.openId();
-    return id ? this.trails.find((t) => t.id === id) ?? null : null;
+    return id ? this.trails().find((t) => t.id === id) ?? null : null;
   });
 
   constructor() {
-    addIcons({ closeOutline, lockClosedOutline, lockOpenOutline, openOutline, searchOutline, star, trailSignOutline });
+    addIcons({ addOutline, closeOutline, lockClosedOutline, lockOpenOutline, openOutline, pencilOutline, searchOutline, star, trailSignOutline });
     effect(() => {
       const p = this.params();
       if (!p) return;
@@ -247,10 +347,125 @@ export class AdminTrailsPage {
     }, { allowSignalWrites: true });
   }
 
+  /** Returns the current admin closure state for the requested trail. */
   state(id: string) {
     return this.data.trailStatus()[id];
   }
 
+  toggleCreateForm(): void {
+    this.createOpen.update((open) => !open);
+  }
+
+  startEditing(trail: Trail): void {
+    this.editName = trail.name;
+    this.editRegion = trail.region;
+    this.editImage = trail.image;
+    this.editDifficulty = trail.difficulty;
+    this.editDistance = trail.distance;
+    this.editElevation = trail.elevation;
+    this.editDuration = trail.duration;
+    this.editLat = trail.lat ?? null;
+    this.editLng = trail.lng ?? null;
+    this.editDescription = trail.description;
+    this.editingId.set(trail.id);
+  }
+
+  async saveTrailEdits(trail: Trail): Promise<void> {
+    const values = [
+      this.editName.trim(), this.editRegion.trim(), this.editImage.trim(), this.editDistance.trim(),
+      this.editElevation.trim(), this.editDuration.trim(), this.editDescription.trim(),
+    ];
+    if (values.some((value) => !value)) {
+      this.ui.toast('Complete all trail fields before saving.', 'error');
+      return;
+    }
+    try {
+      const url = new URL(this.editImage.trim());
+      if (url.protocol !== 'https:' && url.protocol !== 'http:') throw new Error('Invalid image URL');
+    } catch {
+      this.ui.toast('Enter a valid http or https image URL.', 'error');
+      return;
+    }
+    const lat = this.editLat;
+    const lng = this.editLng;
+    if (
+      lat === null || !Number.isFinite(lat) || lat < -90 || lat > 90 ||
+      lng === null || !Number.isFinite(lng) || lng < -180 || lng > 180
+    ) {
+      this.ui.toast('Enter valid latitude and longitude coordinates for the trail.', 'error');
+      return;
+    }
+    await this.run(async () => {
+      await this.catalog.updateTrail({
+        ...trail,
+        name: this.editName.trim(),
+        region: this.editRegion.trim(),
+        image: this.editImage.trim(),
+        difficulty: this.editDifficulty,
+        distance: this.editDistance.trim(),
+        elevation: this.editElevation.trim(),
+        duration: this.editDuration.trim(),
+        lat,
+        lng,
+        description: this.editDescription.trim(),
+      });
+      this.editingId.set(null);
+    }, 'Trail details updated');
+  }
+
+  async createTrail(): Promise<void> {
+    const values = [
+      this.newName.trim(), this.newRegion.trim(), this.newImage.trim(), this.newDistance.trim(),
+      this.newElevation.trim(), this.newDuration.trim(), this.newDescription.trim(),
+    ];
+    if (values.some((value) => !value)) {
+      this.ui.toast('Complete all trail fields before saving.', 'error');
+      return;
+    }
+    try {
+      const url = new URL(this.newImage.trim());
+      if (url.protocol !== 'https:' && url.protocol !== 'http:') throw new Error('Invalid image URL');
+    } catch {
+      this.ui.toast('Enter a valid http or https image URL.', 'error');
+      return;
+    }
+    const lat = this.newLat;
+    const lng = this.newLng;
+    if (
+      lat === null || !Number.isFinite(lat) || lat < -90 || lat > 90 ||
+      lng === null || !Number.isFinite(lng) || lng < -180 || lng > 180
+    ) {
+      this.ui.toast('Enter valid latitude and longitude coordinates for the trail.', 'error');
+      return;
+    }
+    const difficulty = this.newDifficulty as Trail['difficulty'];
+    await this.run(async () => {
+      await this.catalog.createTrail({
+        name: this.newName.trim(),
+        region: this.newRegion.trim(),
+        image: this.newImage.trim(),
+        difficulty,
+        distance: this.newDistance.trim(),
+        elevation: this.newElevation.trim(),
+        duration: this.newDuration.trim(),
+        lat,
+        lng,
+        description: this.newDescription.trim(),
+      });
+      this.newName = '';
+      this.newRegion = '';
+      this.newImage = '';
+      this.newDistance = '';
+      this.newElevation = '';
+      this.newDuration = '';
+      this.newLat = null;
+      this.newLng = null;
+      this.newDescription = '';
+      this.createOpen.set(false);
+    }, 'Trail added and available to hikers');
+  }
+
+  /** Closes the active view and restores the surrounding page state. */
   close(): void {
     this.openId.set(null);
     if (this.route.snapshot.queryParamMap.has('open')) {
@@ -258,6 +473,7 @@ export class AdminTrailsPage {
     }
   }
 
+  /** Closes or cancels the close trail flow and returns the interface to its previous state. */
   async closeTrail(t: Trail): Promise<void> {
     const note = await this.ui.ask({
       title: `Close ${t.name}?`,
@@ -270,10 +486,12 @@ export class AdminTrailsPage {
     await this.run(() => this.data.setTrailStatus(t.id, 'closed', note), `${t.name} closed for booking`);
   }
 
+  /** Performs the reopen operation for this feature and returns its result to the caller. */
   async reopen(t: Trail): Promise<void> {
     await this.run(() => this.data.setTrailStatus(t.id, 'open'), `${t.name} is open again`);
   }
 
+  /** Runs an admin trail action while showing progress and reporting its result. */
   private async run(job: () => Promise<void>, done: string): Promise<void> {
     this.busy.set(true);
     try {

@@ -1,7 +1,7 @@
 import { Component, OnDestroy, OnInit, computed, signal } from '@angular/core';
 import { CommonModule, Location } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import {
   IonContent, IonHeader, IonToolbar, IonTitle, IonIcon, IonInput,
   ToastController,
@@ -16,6 +16,9 @@ import {
 import { BookingService } from '../../services/booking.service';
 import { UserService } from '../../services/user.service';
 import { guideById } from '../booking/booking-catalog';
+import { balanceFor, depositFor } from '../../models/booking-workflow';
+import { permitFeeFor } from '../explore/trail-permits';
+import { RefundPolicyComponent } from './refund-policy.component';
 
 addIcons({
   arrowBackOutline, arrowForward, cardOutline, qrCodeOutline, walletOutline,
@@ -25,6 +28,7 @@ addIcons({
 
 /** Largest proof-of-payment image accepted for QRPh. */
 const MAX_PROOF_BYTES = 5 * 1024 * 1024;
+const TRANSACTION_FEE = 50;
 
 /**
  * Draws a QR-looking pattern for the demo QRPh option. It is decoration only:
@@ -71,15 +75,15 @@ interface PayMethod {
   styleUrls: ['./checkout.page.scss'],
   imports: [
     CommonModule, FormsModule, IonContent, IonHeader, IonToolbar, IonTitle,
-    IonIcon, IonInput,
+    IonIcon, IonInput, RefundPolicyComponent,
   ],
 })
 export class CheckoutPage implements OnInit, OnDestroy {
   /**
    * All four methods are selectable. None of them is connected to a real
-   * payment gateway — QRPh, Apple Pay and Maya are demo screens, and paying
-   * with any method only records the booking on this device (see the demo
-   * notice on the page). Set `available: false` to switch one back to "Soon".
+   * payment gateway. Balance checkout writes a demo-only marker to Firestore;
+   * new-booking checkout remains a simulation. Set `available: false` to
+   * switch one back to "Soon".
    */
   readonly methods: PayMethod[] = [
     { id: 'card', label: 'Card', icon: 'card-outline', available: true },
@@ -108,12 +112,52 @@ export class CheckoutPage implements OnInit, OnDestroy {
 
   draft = computed(() => this.bookingService.draft());
 
+  private readonly balanceBookingId = signal<string | null>(null);
+  readonly balanceCheckoutRequested = computed(() => !!this.balanceBookingId());
+  readonly balanceBooking = computed(() => {
+    const id = this.balanceBookingId();
+    return id ? this.bookingService.bookings().find((booking) => booking.id === id) ?? null : null;
+  });
+  readonly balanceDue = computed(() => {
+    const booking = this.balanceBooking();
+    if (!booking) return 0;
+    const deposit = Number(booking.deposit) || depositFor(permitFeeFor(booking.trailName), TRANSACTION_FEE);
+    return balanceFor(Number(booking.total) || 0, deposit);
+  });
+  readonly balancePaymentEligible = computed(() => {
+    const booking = this.balanceBooking();
+    return !!booking
+      && booking.status === 'pending'
+      && booking.paperwork === 'cleared'
+      && booking.payment === 'balance_due'
+      && !this.bookingService.hasDemoBalancePayment(booking.id);
+  });
+  readonly checkoutReady = computed(() =>
+    this.balanceCheckoutRequested()
+      ? !!this.balanceBooking() && this.balancePaymentEligible()
+      : !!this.draft() && !!this.quote(),
+  );
+
   quote = computed(() => {
     const d = this.draft();
     return d ? this.bookingService.quote(d) : null;
   });
 
   guideName = computed(() => guideById(this.draft()?.guideId ?? null)?.name ?? null);
+
+  /**
+   * What the hiker is charged right now: the trail's permit fee plus the
+   * transaction fee, not the whole package.
+   *
+   * Paying holds the date; it does not confirm the hike. The balance falls
+   * due once the permit is released, and holding someone's ₱4,250 for a week
+   * against a permit that might be refused is the thing that generates
+   * disputes — ₱190 is not.
+   */
+  payNow = computed(() => this.quote()?.deposit ?? 0);
+
+  /** What is left once the permit clears. */
+  balance = computed(() => this.quote()?.balance ?? 0);
 
   /** "Tue, Sep 15, 2026" for the order summary. */
   prettyDate = computed(() => {
@@ -126,6 +170,7 @@ export class CheckoutPage implements OnInit, OnDestroy {
 
   constructor(
     private router: Router,
+    private route: ActivatedRoute,
     private location: Location,
     private bookingService: BookingService,
     private userService: UserService,
@@ -133,6 +178,14 @@ export class CheckoutPage implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit() {
+    this.cardName = this.userService.profile().name;
+    const balanceId = this.route.snapshot.queryParamMap.get('balance');
+    if (balanceId) {
+      this.balanceBookingId.set(balanceId);
+      void this.loadBalanceBooking(balanceId);
+      return;
+    }
+
     // Landing here with no draft means a refresh or a stray link. The draft
     // lives in memory by design, so there is nothing to recover — send them
     // back rather than showing an empty receipt.
@@ -140,7 +193,6 @@ export class CheckoutPage implements OnInit, OnDestroy {
       this.router.navigate(['/tabs/home'], { replaceUrl: true });
       return;
     }
-    this.cardName = this.userService.profile().name;
   }
 
   ngOnDestroy() {
@@ -148,7 +200,20 @@ export class CheckoutPage implements OnInit, OnDestroy {
   }
 
   goBack() {
+    if (this.balanceCheckoutRequested()) {
+      void this.router.navigate(['/tabs/bookings']);
+      return;
+    }
     this.location.back();
+  }
+
+  private async loadBalanceBooking(id: string): Promise<void> {
+    await this.bookingService.refreshForCurrentUser();
+    const booking = this.bookingService.bookings().find((item) => item.id === id);
+    if (!booking || !this.balancePaymentEligible()) {
+      await this.toast('This booking has no balance payment due.');
+      await this.router.navigate(['/tabs/bookings'], { replaceUrl: true });
+    }
   }
 
   selectMethod(m: PayMethod) {
@@ -234,8 +299,7 @@ export class CheckoutPage implements OnInit, OnDestroy {
   // submmiting payment//
 
   async pay() {
-    const d = this.draft();
-    if (!d || this.processing()) return;
+    if (this.processing()) return;
 
     const m = this.methods.find(x => x.id === this.method()) ?? this.methods[0];
     let cardLast4: string | null = null;
@@ -272,6 +336,48 @@ export class CheckoutPage implements OnInit, OnDestroy {
       return;
     }
 
+    if (this.balanceCheckoutRequested()) {
+      const booking = this.balanceBooking();
+      if (!booking || !this.balancePaymentEligible()) {
+        await this.toast('This booking is no longer eligible for the balance demo.');
+        await this.router.navigate(['/tabs/bookings'], { replaceUrl: true });
+        return;
+      }
+
+      this.processing.set(true);
+      await new Promise(resolve => setTimeout(resolve, 900));
+      let recorded = false;
+      try {
+        const selectedMethod = this.methods.find((item) => item.id === this.method());
+        recorded = await this.bookingService.simulateDemoBalancePayment(
+          booking.id,
+          selectedMethod?.label ?? '',
+        );
+      } catch (e) {
+        console.error('Could not save demo balance payment marker.', e);
+        await this.toast('Could not submit the balance payment. Please try again.');
+        return;
+      } finally {
+        this.processing.set(false);
+      }
+
+      if (!recorded) {
+        await this.toast('This booking is no longer eligible for the balance demo.');
+        await this.router.navigate(['/tabs/bookings'], { replaceUrl: true });
+        return;
+      }
+
+      await this.toast('Balance submitted. No funds were collected; your booking is awaiting confirmation.');
+      await this.router.navigate(['/tabs/bookings'], {
+        queryParams: { demoBalancePaid: booking.id },
+        replaceUrl: true,
+      });
+      return;
+    }
+
+    const d = this.draft();
+    if (!d) return;
+
     this.processing.set(true);
 
     // Stands in for the payment gateway round-trip. Replace this with the real
@@ -281,6 +387,10 @@ export class CheckoutPage implements OnInit, OnDestroy {
     // Only the last four card digits are handed to the service. The full
     // number, expiry and CVV stay in this component and die with it.
     // QRPh, Apple Pay and Maya bookings have no card digits (null).
+    //
+    // What this charges is the DEPOSIT. confirm() writes the booking as
+    // pending with payment: 'deposit_paid' — the balance is collected later,
+    // once the permit is released.
     const booking = this.bookingService.confirm(d, m.label, cardLast4);
 
     // Mirror it into the shared upcoming list so it shows on the Profile tab

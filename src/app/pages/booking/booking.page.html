@@ -1,4 +1,8 @@
 <ion-content [fullscreen]="true" *ngIf="trail() as t">
+  <!--
+    BookingPage owns the state behind this view. User actions call its
+    selection methods; the draft and quote recompute from those signals.
+  -->
 
   <!-- ── Top bar ─────────────────────────────────────────────────────── -->
   <div class="bk-topbar">
@@ -6,6 +10,16 @@
       <ion-icon name="arrow-back-outline"></ion-icon>
     </button>
     <h1 class="bk-page-title">Book Your Hike</h1>
+    <!-- Opens the same acknowledgment gate used before checkout. -->
+    <button
+      type="button"
+      class="hdr-agreement"
+      [class.on]="hasAgreed()"
+      (click)="openAgreement()"
+      aria-label="View the hiking agreement"
+    >
+      <ion-icon name="shield-outline"></ion-icon>
+    </button>
   </div>
 
   <!-- ── Trail card ──────────────────────────────────────────────────── -->
@@ -29,6 +43,7 @@
   <div class="bk-body">
 
     <!-- ── Date ────────────────────────────────────────────────────────── -->
+    <!-- The modal emits a date; onDateChange stores it in BookingPage.date. -->
     <p class="bk-title">Select Date<span class="req" aria-hidden="true">*</span></p>
 
     <button type="button" id="bk-date-field" class="bk-date-field">
@@ -55,12 +70,18 @@
     </ion-modal>
 
     <!-- ── Package ─────────────────────────────────────────────────────── -->
+    <!-- Choosing a package updates packageId and may clear disallowed add-ons. -->
     <p class="bk-title">Hiking package<span class="req" aria-hidden="true">*</span></p>
+    <p class="bk-group-warning" *ngIf="!groupHikeAvailable()">
+      Group hikes are unavailable on Hard trails for safety; every hiker must submit an individual medical certificate.
+    </p>
 
     <button
       class="bk-pack"
-      *ngFor="let p of packages"
+      *ngFor="let p of packages()"
       [class.active]="p.id === packageId()"
+      [class.unavailable]="p.id === 'group' && !groupHikeAvailable()"
+      [disabled]="p.id === 'group' && !groupHikeAvailable()"
       (click)="selectPackage(p.id)"
     >
       <div class="bk-pack-main">
@@ -72,12 +93,58 @@
       <span class="bk-pack-price">₱{{ p.price | number }}</span>
     </button>
 
+    <section class="bk-group" *ngIf="packageId() === 'group'">
+      <p class="bk-title">Group hikers</p>
+      <p class="bk-hint">
+        Include yourself and every hiker (up to {{ maxGroupHikers }} total). The first 10 are included.
+        Hikers 11–20 add ₱1,200 each; each hiker from 21–{{ maxGroupHikers }} adds ₱1,500 for the additional guide.
+      </p>
+      <label class="bk-group-count">
+        <span>Number of hikers</span>
+        <input
+          type="number"
+          min="1"
+          [max]="maxGroupHikers"
+          inputmode="numeric"
+          [ngModel]="groupHikers().length"
+          (ngModelChange)="setGroupHikerCount($event)"
+          aria-label="Number of hikers including you"
+        />
+      </label>
+      <article class="bk-group-person" *ngFor="let hiker of groupHikers(); let i = index">
+        <h3>Hiker {{ i + 1 }}<span *ngIf="i === 0"> · Booking contact</span></h3>
+        <label>
+          <span>Full name</span>
+          <input [ngModel]="hiker.name" (ngModelChange)="updateGroupHiker(i, 'name', $event)" autocomplete="name" maxlength="100" />
+        </label>
+        <label>
+          <span>Home address</span>
+          <input [ngModel]="hiker.address" (ngModelChange)="updateGroupHiker(i, 'address', $event)" autocomplete="street-address" maxlength="250" />
+        </label>
+        <label>
+          <span>Emergency contact name</span>
+          <input [ngModel]="hiker.emergencyContactName" (ngModelChange)="updateGroupHiker(i, 'emergencyContactName', $event)" maxlength="100" />
+        </label>
+        <label>
+          <span>Emergency contact phone</span>
+          <input
+            type="tel"
+            inputmode="tel"
+            [ngModel]="hiker.emergencyContactPhone"
+            (ngModelChange)="updateGroupHiker(i, 'emergencyContactPhone', $event)"
+            autocomplete="tel"
+          />
+        </label>
+      </article>
+    </section>
+
     <!-- ── Activities ──────────────────────────────────────────────────── -->
+    <!-- The selected package controls whether these activity buttons are enabled. -->
     <p class="bk-title">Add-ons</p>
 
     <p class="bk-hint tight" *ngIf="!addonsAllowed()">
       Your package doesn't include an activity, so add-ons are unavailable.
-      Choose {{ activityPackageNames }} to add one.
+      Choose {{ activityPackageNames() }} to add one.
     </p>
 
     <div class="bk-acts" [class.locked]="!addonsAllowed()">
@@ -103,6 +170,7 @@
     </ng-container>
 
     <!-- ── Guide ───────────────────────────────────────────────────────── -->
+    <!-- Guide selection is required before BookingPage.proceed() allows checkout. -->
     <div class="bk-section-head">
       <p class="bk-title">Expert guide<span class="req" aria-hidden="true">*</span></p>
     </div>
@@ -157,6 +225,7 @@
     </div>
 
     <!-- ── Merchandise ─────────────────────────────────────────────────── -->
+    <!-- Quantity changes update the draft, which in turn recalculates the quote. -->
     <div class="bk-section-head">
       <p class="bk-title">Merchandise</p>
       <span class="bk-caption" *ngIf="merchCount() > 0">{{ merchCount() }} item(s)</span>
@@ -164,7 +233,7 @@
     <p class="bk-hint tight">Designs are location-specific and provided by guides.</p>
 
     <div class="bk-merch-grid">
-      <div class="bk-merch" *ngFor="let m of merchItems" [class.picked]="merchQty(m.id) > 0">
+      <div class="bk-merch" *ngFor="let m of merchItems()" [class.picked]="merchQty(m.id) > 0">
         <!-- Photo from src/assets/merch/ — the icon shows until one is added -->
         <span class="bk-merch-photo">
           <img
@@ -201,6 +270,7 @@
     </div>
 
     <!-- ── Running total ───────────────────────────────────────────────── -->
+    <!-- This breakdown is rendered from BookingService's computed quote. -->
     <div class="bk-summary" *ngIf="quote() as q">
       <p class="bk-sum-label">Total Trip Cost</p>
       <p class="bk-sum-total">₱{{ q.total | number }}</p>
@@ -225,6 +295,11 @@
         <span>₱{{ l.lineTotal | number }}</span>
       </div>
 
+      <div class="row" *ngIf="q.groupSurcharge > 0">
+        <span>Additional group hikers ({{ groupHikers().length - 10 }} at tiered rates)</span>
+        <span>₱{{ q.groupSurcharge | number }}</span>
+      </div>
+
       <div class="row">
         <span>Transaction fee</span>
         <span>₱{{ q.transactionFee | number }}</span>
@@ -240,6 +315,7 @@
   </div>
 
   <!-- ── Sticky footer — back, price, book ─────────────────────────────── -->
+  <!-- The same quote is repeated here so the total and Continue stay visible. -->
   <div class="bk-footer" *ngIf="quote() as q">
     <div class="bk-footer-price">
       <span class="l">Total price</span>

@@ -37,6 +37,7 @@ export class TrailStatusService {
     );
   }
 
+  /** Performs the closure for operation for this feature and returns its result to the caller. */
   closureFor(trailId: string): TrailClosure | null {
     return this._closures()[trailId] ?? null;
   }

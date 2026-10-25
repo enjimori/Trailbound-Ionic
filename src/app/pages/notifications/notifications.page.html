@@ -1,4 +1,6 @@
+<!-- Notifications template: displays notification data and forwards notification actions to NotificationsPage. -->
 <ion-header class="ion-no-border">
+  <!-- Header actions call NotificationsPage so navigation and read state stay in the controller. -->
   <ion-toolbar>
     <ion-buttons slot="start">
       <ion-button (click)="goBack()">
@@ -15,6 +17,7 @@
 
 <ion-content [fullscreen]="true">
   <div class="page-pad">
+    <!-- Each card is bound to NotificationService; tapping it delegates routing to the page handler. -->
     <div
       class="notif-card"
       *ngFor="let n of notificationService.notifications()"
@@ -36,6 +39,7 @@
       </div>
     </div>
 
+    <!-- Empty state is shown only when there are no notification cards to render. -->
     <p class="empty-state" *ngIf="notificationService.notifications().length === 0">
       No notifications yet. New posts from people you follow will show up here.
     </p>

@@ -32,30 +32,105 @@ app-trail-map {
   background: var(--app-card-bg, #121a14);
 }
 
-/* Leaflet builds these nodes itself, outside the Angular view. */
-.trailmap-marker {
-  /* 20px dot centred in the 26px icon box the map anchors on. */
-  width: 20px;
-  height: 20px;
-  margin: 3px 0 0 3px;
-  border-radius: 50%;
-  background: var(--app-accent, #e8d99c);
-  border: 3px solid rgba(11, 18, 16, 0.92);
-  box-shadow: 0 0 0 2px rgba(232, 217, 156, 0.35), 0 4px 12px rgba(0, 0, 0, 0.45);
-  box-sizing: border-box;
-  transition: width 0.15s ease, height 0.15s ease;
+/* ── trail markers ────────────────────────────────────────────────────────
+   The project's mountain mark, outlined in the trail's difficulty colour.
+   Leaflet builds these nodes itself, outside the Angular view, which is why
+   this file is unencapsulated.
 
-  &--closed {
-    background: #f0505a;
-    box-shadow: 0 0 0 2px rgba(240, 80, 90, 0.35), 0 4px 12px rgba(0, 0, 0, 0.45);
+   No tile, no background, no border-radius — the marker is the artwork and
+   nothing else.
+
+   ── HOW THE OUTLINE WORKS ───────────────────────────────────────────────
+   There is no CSS property that strokes the shape inside an image; `border`
+   only ever draws the element's rectangle. What does work is four
+   drop-shadows at zero blur, offset one pixel in each direction. Each one is
+   a copy of the image's ALPHA CHANNEL filled with a flat colour, so the four
+   together peek out by a pixel all the way around and read as an outline that
+   follows the mountain's own edge.
+
+   This depends entirely on the PNG being a true silhouette. If its alpha is a
+   rectangle — a logo exported on an opaque or near-opaque background — the
+   outline traces that rectangle instead, and you get a coloured box. That is
+   diagnostic: a boxy outline means the file still has a background, not that
+   the CSS is wrong.                                                        */
+
+.trailmap-pin {
+  --pin: #9aa39b;                 /* overridden per difficulty below */
+
+  width: 34px;
+  height: 34px;
+  transition: transform 0.18s ease;
+  cursor: pointer;
+
+  .pin-img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+
+    /* Four offsets = a 1px outline hugging the alpha shape, plus one soft
+       dark shadow underneath so the mark lifts off the map. Order matters:
+       filters compose left to right, so the depth shadow comes last and
+       falls behind the finished outlined shape rather than behind the bare
+       artwork. */
+    filter:
+      drop-shadow(1px 0 0 var(--pin))
+      drop-shadow(-1px 0 0 var(--pin))
+      drop-shadow(0 1px 0 var(--pin))
+      drop-shadow(0 -1px 0 var(--pin))
+      drop-shadow(0 2px 3px rgba(0, 0, 0, 0.55));
+
+    transition: filter 0.18s ease;
   }
 
+  /* ── difficulty ────────────────────────────────────────────────────────
+     Tuned to the app's badge palette. If your Explore badges use different
+     values, change these three lines and nothing else.                    */
+
+  &--easy     { --pin: #5fd97a; }
+  &--moderate { --pin: #e8b24a; }
+  &--hard     { --pin: #f0565c; }
+
+  /* A closed trail keeps its marker rather than disappearing — a hiker
+     looking for it should find it and learn it is shut, not conclude the app
+     lost it. */
+  &--closed {
+    --pin: #8d9490;
+    opacity: 0.7;
+
+    .pin-img {
+      filter:
+        grayscale(1)
+        drop-shadow(1px 0 0 var(--pin))
+        drop-shadow(-1px 0 0 var(--pin))
+        drop-shadow(0 1px 0 var(--pin))
+        drop-shadow(0 -1px 0 var(--pin))
+        drop-shadow(0 2px 3px rgba(0, 0, 0, 0.5));
+    }
+  }
+
+  /* Bigger, with a thicker outline in the brand accent. The component also
+     raises the marker's z-index, or the one you just tapped would grow
+     underneath its neighbour. */
   &--selected {
-    width: 32px;
-    height: 32px;
-    margin: -3px 0 0 -3px;
-    border-color: #ffffff;
-    box-shadow: 0 0 0 6px rgba(232, 217, 156, 0.28), 0 6px 16px rgba(0, 0, 0, 0.5);
+    transform: scale(1.3);
+
+    .pin-img {
+      filter:
+        drop-shadow(1.5px 0 0 var(--app-accent, #e8d99c))
+        drop-shadow(-1.5px 0 0 var(--app-accent, #e8d99c))
+        drop-shadow(0 1.5px 0 var(--app-accent, #e8d99c))
+        drop-shadow(0 -1.5px 0 var(--app-accent, #e8d99c))
+        drop-shadow(0 3px 5px rgba(0, 0, 0, 0.6));
+    }
+  }
+}
+
+/* The scale is decoration, not information — the outline colour already
+   carries the state. */
+@media (prefers-reduced-motion: reduce) {
+  .trailmap-pin {
+    transition: none;
   }
 }
 

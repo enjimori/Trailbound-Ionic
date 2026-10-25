@@ -81,10 +81,12 @@ export class FollowAlertsService {
     });
   }
 
+  /** Performs the mark read operation for this feature and returns its result to the caller. */
   markRead(id: string) {
     this.add([id]);
   }
 
+  /** Marks every currently available notification as read. */
   markAllRead() {
     this.add(this.alerts().map((a) => a.id));
   }
@@ -95,6 +97,7 @@ export class FollowAlertsService {
     return `trailbound.followAlerts.read.${uid}`;
   }
 
+  /** Reads previously saved state and returns the initial data used by the service. */
   private load(uid: string): Set<string> {
     try {
       const raw = localStorage.getItem(this.key(uid));
@@ -104,6 +107,7 @@ export class FollowAlertsService {
     }
   }
 
+  /** Records newly followed accounts so the user can be alerted to their posts. */
   private add(ids: string[]) {
     const uid = this.follows.myUid();
     if (!uid || !ids.length) return;

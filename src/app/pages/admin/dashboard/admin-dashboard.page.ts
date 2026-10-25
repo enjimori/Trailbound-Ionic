@@ -274,7 +274,7 @@ const MONTHS = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', '
     .rail-promo { position: relative; background: var(--tba-ink); color: #fff; display: flex; gap: 12px; overflow: hidden; }
     .rail-promo > div { position: relative; z-index: 1; }
     .promo-eyebrow { margin: 0; font-size: 12px; color: rgba(255,255,255,.6); }
-    .rail-promo h3 { color: var(--tba-sand); font-size: 19px; font-weight: 700; margin: 4px 0 6px; }
+    .rail-promo h3 { color: #fff; font-size: 19px; font-weight: 700; margin: 4px 0 6px; }
     .promo-sub { margin: 0 0 16px; max-width: 62%; font-size: 12.5px; line-height: 1.45; color: rgba(255,255,255,.72); }
     .promo-btn { display: inline-flex; height: 38px; align-items: center; padding: 0 20px; border-radius: 999px; background: #fff; color: var(--tba-ink) !important; font-size: 13px; font-weight: 600; }
     .promo-art { position: absolute; right: 14px; bottom: 14px; width: 112px; color: rgba(255,255,255,.85); }
@@ -478,37 +478,45 @@ export class AdminDashboardPage {
     addIcons({ arrowDown, arrowForward, arrowUp, cashOutline, peopleOutline, receiptOutline, send, trendingUp });
   }
 
+  /** Performs the pct operation for this feature and returns its result to the caller. */
   pct(v: number): number {
     return Math.min(100, (v / this.chartMax()) * 100);
   }
 
+  /** Performs the dpct operation for this feature and returns its result to the caller. */
   dpct(v: number): number {
     return (v / this.community().max) * 92;
   }
 
+  /** Converts a record status into the readable text shown in the interface. */
   statusLabel(b: AdminBooking): string {
     const s = effectiveStatus(b);
     return s === 'cancelled' ? 'Cancelled' : s === 'completed' ? 'Completed' : 'Upcoming';
   }
 
+  /** Maps a status value to the visual style used by the interface. */
   tone(b: AdminBooking): string {
     const s = effectiveStatus(b);
     return s === 'cancelled' ? 'red' : s === 'completed' ? 'ink' : 'green';
   }
 
+  /** Opens the booking detail view for the selected record. */
   openBooking(b: AdminBooking): void {
     this.router.navigate(['/admin/bookings'], { queryParams: { open: b.id } });
   }
 
+  /** Opens the hiker detail view for the selected record. */
   openHiker(uid: string): void {
     this.router.navigate(['/admin/hikers'], { queryParams: { open: uid } });
   }
 
+  /** Looks up a hiker record for the supplied identifier. */
   findHiker(): void {
     const q = this.hikerQuery.trim();
     this.router.navigate(['/admin/hikers'], { queryParams: q ? { q } : {} });
   }
 
+  /** Performs the hide img operation for this feature and returns its result to the caller. */
   hideImg(e: Event): void {
     (e.target as HTMLImageElement).style.visibility = 'hidden';
   }

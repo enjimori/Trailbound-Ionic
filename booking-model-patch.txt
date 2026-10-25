@@ -1,0 +1,57 @@
+═══════════════════════════════════════════════════════════════════════════
+TWO SMALL EDITS — booking.model.ts and booking.service.ts
+
+Both files are long and working, so these are hand edits rather than whole
+replacements. Each is a few lines.
+═══════════════════════════════════════════════════════════════════════════
+
+
+── 1. src/app/models/booking.model.ts ────────────────────────────────────
+
+FIND (inside `export interface Booking`, around line 140):
+
+  activityNames: string[];
+  guideName: string | null;
+  merch: MerchLine[];
+
+REPLACE WITH:
+
+  activityNames: string[];
+  guideName: string | null;
+  /**
+   * Which guide from the roster, by id ('g1'…).
+   *
+   * guideName is what the hiker reads on their receipt. This is what a guide's
+   * own account matches against: their user document carries the same roster
+   * id, so "my hikes" is a query rather than a comparison of display names
+   * that breaks the day two guides share one or a profile gets renamed.
+   *
+   * Optional, because bookings made before guides had accounts have no value
+   * here. Those simply never appear on a guide's screen, which is correct —
+   * nobody was assigned.
+   */
+  guideId?: string | null;
+  merch: MerchLine[];
+
+
+── 2. src/app/services/booking.service.ts ────────────────────────────────
+
+FIND (inside `confirm()`, around line 195):
+
+      guideName: guide?.name ?? null,
+
+REPLACE WITH:
+
+      guideName: guide?.name ?? null,
+      // The roster id the hiker actually picked. draft.guideId already holds
+      // it; it was being thrown away here, which left nothing for a guide
+      // account to match on. null means "no preference" — an admin assigns
+      // one later.
+      guideId: draft.guideId ?? null,
+
+
+── That is all ───────────────────────────────────────────────────────────
+
+Nothing else changes. `quote()`, the deposit maths, the Firestore copy and
+the sync all carry the new field automatically — `upload()` serialises the
+whole booking object, and `syncFromServer()` spreads it back.

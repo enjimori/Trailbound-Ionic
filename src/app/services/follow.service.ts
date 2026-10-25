@@ -68,10 +68,12 @@ export class FollowService {
     });
   }
 
+  /** Checks whether the current user follows the supplied account. */
   isFollowing(uid: string): boolean {
     return this._following().has(uid);
   }
 
+  /** Checks whether a follow or unfollow request is currently in progress. */
   isBusy(uid: string): boolean {
     return this._busy().has(uid);
   }
@@ -176,6 +178,7 @@ export class FollowService {
     );
   }
 
+  /** Stores the set following selection so the related view and feature logic stay in sync. */
   private setFollowing(uid: string, on: boolean) {
     this._following.update((s) => {
       const next = new Set(s);
@@ -189,6 +192,7 @@ export class FollowService {
     });
   }
 
+  /** Stores the set busy selection so the related view and feature logic stay in sync. */
   private setBusy(uid: string, on: boolean) {
     this._busy.update((s) => {
       const next = new Set(s);

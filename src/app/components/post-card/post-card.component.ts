@@ -57,16 +57,19 @@ export class PostCardComponent {
     return this.post.original ?? this.post;
   }
 
+  /** Checks whether the post text exceeds the collapsed preview length. */
   get isLong(): boolean {
     return this.target.content.length > PREVIEW_CHARS;
   }
 
+  /** Opens the shown text interface for the user. */
   get shownText(): string {
     const text = this.target.content;
     if (this.expanded || !this.isLong) return text;
     return text.slice(0, PREVIEW_CHARS).trimEnd() + '…';
   }
 
+  /** Performs the format count operation for this feature and returns its result to the caller. */
   formatCount(n: number): string {
     const abs = Math.abs(n);
     if (abs >= 1000) return (n / 1000).toFixed(1).replace('.0', '') + 'k';

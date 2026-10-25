@@ -1,0 +1,67 @@
+// ═══════════════════════════════════════════════════════════════════════════
+// GUIDES — rules to merge into firestore.rules
+//
+// Adds to the bookings block you already edited for the permit office. The
+// isGuide() helper is already in firestore-rules-office.txt; if you skipped
+// it, add it now.
+//
+// Publish from the Firebase console (Firestore → Rules → Publish), or:
+//   firebase deploy --only firestore:rules
+// ═══════════════════════════════════════════════════════════════════════════
+
+// ── helper ────────────────────────────────────────────────────────────────
+// Which guide on the roster this account is. Null for everyone else, so the
+// comparison below can never accidentally match a booking with no guide.
+
+function myRosterId() {
+  return request.auth != null
+    && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+    ? get(/databases/$(database)/documents/users/$(request.auth.uid)).data.guideRosterId
+    : null;
+}
+
+
+// ── bookings ──────────────────────────────────────────────────────────────
+// Merge these two clauses into the bookings block. A guide sees only hikes
+// assigned to them, and may change only whether the hiker turned up.
+//
+// This is the whole reason the booking stores a roster id rather than the
+// guide's name: a rule can compare two stored fields, and could never compare
+// a display name to an account.
+
+match /bookings/{id} {
+  allow read: if isAdmin()
+                 || (request.auth != null && resource.data.uid == request.auth.uid)
+                 || (isOffice() && resource.data.permitLodged == true)
+                 // NEW — the guide assigned to this hike
+                 || (isGuide() && myRosterId() != null
+                     && resource.data.guideId == myRosterId());
+
+  // NEW — the trailhead record, and nothing else.
+  //
+  // Only from 'confirmed': a pending hike has not been arranged, so there is
+  // nothing to turn up for, and a completed or cancelled one is already
+  // settled. Only these two values, and only the status field — a guide
+  // cannot touch the price, the permit, the date or the hiker.
+  allow update: if isGuide()
+                && myRosterId() != null
+                && resource.data.guideId == myRosterId()
+                && resource.data.status == 'confirmed'
+                && request.resource.data.status in ['completed', 'no_show']
+                && request.resource.data.diff(resource.data).affectedKeys()
+                     .hasOnly(['status', 'updatedAt']);
+
+  // ... keep your existing hiker, admin and permit-office rules here
+}
+
+
+// ── users ─────────────────────────────────────────────────────────────────
+// No change needed beyond what the office file already adds. The clause that
+// stops an account editing its own role must also cover guideRosterId —
+// otherwise a guide could point themselves at a different guide's hikes:
+//
+//   !request.resource.data.diff(resource.data).affectedKeys()
+//      .hasAny(['role', 'office', 'guideRosterId', 'status'])
+//
+// If you already pasted the users block from firestore-rules-office.txt, add
+// 'guideRosterId' to that hasAny list.

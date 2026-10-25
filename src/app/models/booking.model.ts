@@ -11,8 +11,10 @@
  * rate sheet has none, and floating-point money is a bug waiting to happen.
  * ═══════════════════════════════════════════════════════════════════════════
  */
+import type { PaperworkStatus, PaymentStatus } from './booking-workflow';
 
-export type PackageId = 'basic' | 'activity' | 'overnight' | 'private' | 'group';
+export type PackageId = string;
+export const MAX_GROUP_HIKERS = 30;
 
 export interface HikePackage {
   id: PackageId;
@@ -55,6 +57,11 @@ export interface Guide {
   name: string;
   years: number;
   summits: number;
+  title?: string;
+  bio?: string;
+  specialties?: string[];
+  languages?: string[];
+  photoUrl?: string;
 }
 
 export interface SubscriptionPlan {
@@ -90,6 +97,15 @@ export interface BookingDraft {
   guideId: string | null;
   /** Item id -> quantity. Zero-quantity keys are pruned on write. */
   merch: Record<string, number>;
+  /** Required for group bookings; includes the person making the booking. */
+  groupHikers?: GroupHiker[];
+}
+
+export interface GroupHiker {
+  name: string;
+  address: string;
+  emergencyContactName: string;
+  emergencyContactPhone: string;
 }
 
 /** The priced breakdown of a draft. Computed, never stored. */
@@ -103,13 +119,24 @@ export interface BookingQuote {
   merchLines: MerchLine[];
   activitiesTotal: number;
   merchTotal: number;
+  groupSurcharge: number;
   subtotal: number;
   transactionFee: number;
   total: number;
+
+  /**
+   * Taken at checkout: this trail's permit or entrance fee plus the
+   * transaction fee. Carved OUT of the total, never added to it — the package
+   * price already covers barangay registration, the environmental fee and the
+   * trail fee, so adding the permit fee again would charge the hiker twice.
+   */
+  deposit: number;
+  /** What falls due once the permit is released. */
+  balance: number;
 }
 
 /**
- * A confirmed booking. Persisted.
+ * A booking. Persisted.
  *
  * Note what is NOT in here: no card number, no CVV, no expiry. Only the last
  * four digits and the method name, which is all a receipt ever needs. Storing
@@ -128,15 +155,52 @@ export interface Booking {
   activityNames: string[];
   guideName: string | null;
   merch: MerchLine[];
+  groupHikers?: GroupHiker[];
+  groupSurcharge?: number;
   total: number;
   paymentMethod: string;
   cardLast4: string | null;
   createdAt: string;
+
   /**
-   * 'confirmed' when paid. An admin can later mark it 'completed' or
-   * 'cancelled' from the admin panel; the Bookings tab picks that up.
+   * Where the trip stands.
+   *
+   * 'pending' is where a new booking now starts: paying the deposit holds the
+   * date, it does not confirm the hike. Only an admin moves it to 'confirmed',
+   * and only once the documents, the permit, the guide and the balance are all
+   * settled. 'no_show' is recorded by the guide at the trailhead.
    */
-  status: 'confirmed' | 'completed' | 'cancelled';
+  status: 'pending' | 'confirmed' | 'completed' | 'cancelled' | 'no_show';
+
+  /** Where the documents and the permit stand. See booking-workflow.ts. */
+  paperwork?: PaperworkStatus;
+  /** Where the money stands. */
+  payment?: PaymentStatus;
+
+  /** Pesos taken at checkout. The rest is the balance. */
+  deposit?: number;
+  /** ISO date the balance stops being payable and the slot is released. */
+  balanceDueBy?: string | null;
+
+  /** What the issuing office granted. Written by an admin, never by a hiker. */
+  permitRef?: string | null;
+  permitIssuedAt?: string | null;
+  permitOffice?: string | null;
+  /** Demo-only balance simulation. Never treat this as money received. */
+  demoBalancePaid?: boolean;
+  demoBalancePaidAt?: string | null;
+  demoBalancePaymentMethod?: string | null;
+  /**
+   * The part of the permit fee the office keeps even if the hike does not
+   * happen. Usually 0 — it comes straight out of the hiker's refund, so only
+   * fill it in with a receipt in hand.
+   */
+  permitFeeLodged?: number;
+
+  /** When the hiker accepted the risk sheet, and which wording they saw. */
+  riskAckAt?: string | null;
+  riskAckVersion?: string | null;
+
   /** Who booked it. Added so the admin panel can show every hiker's bookings. */
   uid?: string;
   userName?: string;

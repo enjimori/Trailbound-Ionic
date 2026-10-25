@@ -1,3 +1,4 @@
+<!-- Signup template: binds registration fields to SignupPage and forwards form submission to account-creation logic. -->
 <ion-header class="ion-no-border">
   <ion-toolbar>
     <ion-buttons slot="start">
@@ -13,12 +14,15 @@
 
 <ion-content [fullscreen]="true" class="login-content">
   <div class="signup-wrap">
+    <!-- Branding introduces the account form and keeps sign-up consistent with sign-in. -->
     <div class="brand">
       <img class="brand-logo" src="assets/logo/walato.png" alt="TrailBound logo" />
       <p>Create your trail profile</p>
     </div>
 
+    <!-- Reactive form binds field validation to SignupPage.submit(). -->
     <form class="form-block" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+      <!-- Personal fields form the profile created together with the authentication account. -->
       <p class="group-label">Personal Information</p>
 
       <div class="field-group">
@@ -94,6 +98,7 @@
         <p class="err" *ngIf="err('gender') as msg">{{ msg }}</p>
       </div>
 
+      <!-- Security fields are checked together before the account-creation request is sent. -->
       <p class="group-label">Security</p>
 
       <div class="field-group">

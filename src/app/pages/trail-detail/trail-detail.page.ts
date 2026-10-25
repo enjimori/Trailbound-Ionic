@@ -1,4 +1,7 @@
-import { Component, OnInit, signal, computed } from '@angular/core';
+/**
+ * Trail-detail controller: resolves the selected trail, loads related information, and connects trail actions such as booking to their next screens.
+ */
+import { Component, OnInit, inject, signal, computed } from '@angular/core';
 import { CommonModule, Location } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -9,6 +12,7 @@ import { addIcons } from 'ionicons';
 import { lockClosedOutline, mapOutline } from 'ionicons/icons';
 
 import { TrailService } from '../../services/trail.service';
+import { CatalogService } from '../../services/catalog.service';
 import { UserService } from '../../services/user.service';
 import { ReviewService, TrailReview } from '../../services/review.service';
 import { TrailStatusService } from '../../services/trail-status.service';
@@ -35,6 +39,7 @@ addIcons({ mapOutline, lockClosedOutline });
   ],
 })
 export class TrailDetailPage implements OnInit {
+  private readonly catalog = inject(CatalogService);
   trail = signal<Trail | undefined>(undefined);
   saved = signal(false);
 
@@ -88,13 +93,15 @@ export class TrailDetailPage implements OnInit {
     private trailStatus: TrailStatusService,
   ) {}
 
+  /** Runs when the component initializes; prepares the state its template needs. */
   ngOnInit() {
     const id = this.route.snapshot.paramMap.get('id');
     if (id) {
       // TrailService holds the 6 seeded trails (t1-t6); the Explore dataset
       // holds the 30 Philippine trails (T001-T030). Check both, or every card
       // on Home and every marker on the map lands on "Trail not found".
-      this.trail.set(this.trailService.getById(id) ?? trailById(id));
+      const found = this.trailService.getById(id) ?? trailById(id);
+      this.trail.set(found ? this.catalog.withTrailOverrides([found])[0] : undefined);
       this.saved.set(this.userService.upcoming().some(u => u.trailId === id));
 
       // Pre-fill the reviewer name from the profile, since we know it.
@@ -108,10 +115,12 @@ export class TrailDetailPage implements OnInit {
     this.showReviewForm.update(open => !open);
   }
 
+  /** Stores the set draft rating selection so the related view and feature logic stay in sync. */
   setDraftRating(n: number) {
     this.draftRating.set(n);
   }
 
+  /** Performs the submit review operation for this feature and returns its result to the caller. */
   async submitReview() {
     const t = this.trail();
     if (!t) return;
@@ -139,11 +148,13 @@ export class TrailDetailPage implements OnInit {
     return this.reviewService.canDelete(r);
   }
 
+  /** Performs the delete review operation for this feature and returns its result to the caller. */
   deleteReview(id: string) {
     this.reviewService.remove(id);
     this.reviewTick.update(n => n + 1);
   }
 
+  /** Performs the time ago operation for this feature and returns its result to the caller. */
   timeAgo(iso: string): string {
     return this.reviewService.timeAgo(iso);
   }
@@ -168,6 +179,7 @@ export class TrailDetailPage implements OnInit {
     this.router.navigate(['/tabs/explore'], { queryParams: { trail: t.id } });
   }
 
+  /** Performs the toggle save operation for this feature and returns its result to the caller. */
   toggleSave() {
     const t = this.trail();
     if (!t) return;
@@ -188,10 +200,12 @@ export class TrailDetailPage implements OnInit {
     this.saved.set(true);
   }
 
+  /** Starts the hike-related action for the selected trail. */
   async startHike() {
     this.toast('Hike started! Stay safe on the trails. 🥾', 'success');
   }
 
+  /** Starts the booking route for the trail currently being viewed. */
   bookNow() {
     const t = this.trail();
     if (!t) return;
@@ -202,6 +216,7 @@ export class TrailDetailPage implements OnInit {
     this.router.navigate(['/booking', t.id]);
   }
 
+  /** Shows a brief Ionic notification so the user can understand the action result. */
   private async toast(message: string, color: string = 'dark') {
     const t = await this.toastCtrl.create({
       message, duration: 1800, position: 'top', color,

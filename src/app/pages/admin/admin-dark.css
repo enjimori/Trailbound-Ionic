@@ -1,0 +1,311 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   ADMIN PANEL — DARK MODE
+
+   The panel's own theme, independent of the hiker app. AdminThemeService
+   writes data-tba-theme onto the shell element, and every rule below is
+   scoped under `.tba`, so none of this can reach the hiker app — which is the
+   reason the flag lives on the shell rather than on <html>.
+
+   HOW THIS FILE WORKS
+   The shell sets most colours from --tba-* tokens, so the token block below
+   does most of the work. The rest exists because the light styles hard-code a
+   colour in about twenty places; each selector here is deliberately more
+   specific than the light rule it replaces, so this file wins wherever Angular
+   puts it in the stylesheet order.
+
+   ADDING NEW ADMIN PAGES
+   Build them from .tba-card, .tba-table, .tba-btn and the tokens and they go
+   dark for free. Write a literal #fff and you will have to add a line here.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── tokens ───────────────────────────────────────────────────────────────
+   Matched to the hiker app's palette: a deep desaturated green-black, bone
+   text, and the same sand accent the brand uses elsewhere.
+
+   One role changes meaning in dark mode. --tba-ink is the "strong fill" for
+   the active nav item, the primary button, ink badges and the success toast.
+   In light mode it is near-black with white text on top; here it becomes the
+   accent green, so the text on top has to go dark instead — that is every
+   `color: #11180f` further down.                                           */
+
+.tba[data-tba-theme='dark'] {
+  --tba-ink: #dfe3b6;          /* strong fill: active nav, primary button */
+  --tba-ink-hover: #c6cc9b;
+  --tba-ink-2: #cdd4ca;        /* secondary text: nav labels, sidebar footer */
+  --tba-text: #eef0e7;
+  --tba-muted: #a8b0a6;
+  --tba-on-accent: #161d18;
+  --tba-faint: #6c776f;
+  --tba-line: rgba(222, 232, 206, 0.09);
+  --tba-soft: #18241f;         /* hover fill */
+  --tba-sand: #e8d99c;
+  --tba-sand-soft: #3b3427;
+  --tba-cream: #131d19;
+  --tba-sage: #1e2c26;
+  --tba-up: #4f8b57;
+  --tba-down: #f0505a;
+  --tba-amber: #f2c14e;
+
+  /* New in dark mode: the surfaces the light styles write as #fff. */
+  --tba-surface: #131d19;      /* cards, drawers, modals, popovers, sidebar */
+  --tba-surface-2: #0b1210;    /* the page behind them */
+
+  background: var(--tba-surface-2);
+  /* Draws scrollbars and form controls dark. */
+  color-scheme: dark;
+}
+
+/* ── surfaces that were #fff ──────────────────────────────────────────── */
+
+.tba[data-tba-theme='dark'] .tba-side,
+.tba[data-tba-theme='dark'] .tba-card,
+.tba[data-tba-theme='dark'] .tba-pop,
+.tba[data-tba-theme='dark'] .tba-filter,
+.tba[data-tba-theme='dark'] .tba-btn,
+.tba[data-tba-theme='dark'] .tba-drawer,
+.tba[data-tba-theme='dark'] .tba-modal,
+.tba[data-tba-theme='dark'] .tba-input-box {
+  background: var(--tba-surface);
+}
+
+.tba[data-tba-theme='dark'] select,
+.tba[data-tba-theme='dark'] textarea,
+.tba[data-tba-theme='dark'] input:not([type='checkbox']):not([type='radio']) {
+  color: var(--tba-text);
+}
+
+.tba[data-tba-theme='dark'] select option {
+  background: var(--tba-surface);
+  color: var(--tba-text);
+}
+
+.tba[data-tba-theme='dark'] .trail,
+.tba[data-tba-theme='dark'] .face,
+.tba[data-tba-theme='dark'] .line,
+.tba[data-tba-theme='dark'] .pkg,
+.tba[data-tba-theme='dark'] .missing button,
+.tba[data-tba-theme='dark'] .tags span,
+.tba[data-tba-theme='dark'] .mobile-booking {
+  background: var(--tba-surface);
+  color: var(--tba-text);
+}
+
+.tba[data-tba-theme='dark'] .missing button:hover {
+  background: var(--tba-soft);
+}
+
+.tba[data-tba-theme='dark'] .find {
+  background: var(--tba-soft);
+}
+
+.tba[data-tba-theme='dark'] .find input::placeholder {
+  color: var(--tba-muted);
+}
+
+.tba[data-tba-theme='dark'] .find button,
+.tba[data-tba-theme='dark'] .tip,
+.tba[data-tba-theme='dark'] .tba-btn.sand,
+.tba[data-tba-theme='dark'] .pkg .tba-badge,
+.tba[data-tba-theme='dark'] .tba-btn.danger-fill {
+  color: var(--tba-on-accent);
+}
+
+.tba[data-tba-theme='dark'] .tba-btn.primary {
+  background: var(--tba-ink);
+  border-color: var(--tba-ink);
+  color: var(--tba-on-accent);
+}
+
+.tba[data-tba-theme='dark'] .tba-btn.sand {
+  background: var(--tba-sand);
+  border-color: var(--tba-sand);
+  color: var(--tba-on-accent);
+}
+
+.tba[data-tba-theme='dark'] .tba-btn.danger-fill {
+  background: var(--tba-down);
+  border-color: var(--tba-down);
+}
+
+.tba[data-tba-theme='dark'] .rail-promo {
+  color: #11180f;
+}
+
+.tba[data-tba-theme='dark'] .rail-promo .promo-eyebrow,
+.tba[data-tba-theme='dark'] .rail-promo .promo-sub {
+  color: #11180f;
+}
+
+.tba[data-tba-theme='dark'] .rail-promo h3 {
+  color: var(--tba-on-accent);
+}
+
+.tba[data-tba-theme='dark'] .rail-promo .promo-art {
+  color: rgba(17, 24, 15, 0.72);
+}
+
+.tba[data-tba-theme='dark'] .rail-promo .promo-btn {
+  background: var(--tba-surface);
+  color: var(--tba-text) !important;
+}
+
+.tba[data-tba-theme='dark'] tr.hl td {
+  background: #332b1b;
+}
+
+/* The sticky top bar is translucent so content blurs under it. */
+.tba[data-tba-theme='dark'] .tba-top {
+  background: rgba(13, 21, 17, 0.9);
+}
+
+/* Shadows have to get heavier: a soft grey shadow is invisible on dark. */
+.tba[data-tba-theme='dark'] .tba-pop {
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.5);
+}
+
+.tba[data-tba-theme='dark'] .tba-drawer {
+  box-shadow: -20px 0 50px rgba(0, 0, 0, 0.45);
+}
+
+.tba[data-tba-theme='dark'] .tba-modal {
+  box-shadow: 0 30px 70px rgba(0, 0, 0, 0.6);
+}
+
+/* The unread dot punches a hole in the top bar, so its ring must match. */
+.tba[data-tba-theme='dark'] .tba-dot {
+  border-color: var(--tba-surface-2);
+}
+
+/* ── strong fills: light text becomes dark text ───────────────────────── */
+
+.tba[data-tba-theme='dark'] .tba-nav a.active,
+.tba[data-tba-theme='dark'] .tba-btn.primary,
+.tba[data-tba-theme='dark'] .tba-badge[data-tone='ink'],
+.tba[data-tba-theme='dark'] .tba-chips button.on {
+  color: var(--tba-on-accent);
+}
+
+.tba[data-tba-theme='dark'] .tba-btn.primary:hover {
+  background: var(--tba-ink-hover);
+  border-color: var(--tba-ink-hover);
+}
+
+/* The sidebar count badge sits on sand, which stays light in both themes. */
+.tba[data-tba-theme='dark'] .tba-count {
+  color: #1d2420;
+}
+
+/* Initial avatars: dark letters on the pale tint no longer work. */
+.tba[data-tba-theme='dark'] .tba-avatar {
+  color: var(--tba-text);
+}
+
+/* ── tables ───────────────────────────────────────────────────────────── */
+
+.tba[data-tba-theme='dark'] .tba-table tr.click:hover td {
+  background: var(--tba-soft);
+}
+
+/* ── badges: the light tints are far too bright on dark ───────────────── */
+
+.tba[data-tba-theme='dark'] .tba-badge {
+  background: var(--tba-soft);
+  color: var(--tba-ink-2);
+}
+
+.tba[data-tba-theme='dark'] .tba-badge[data-tone='green'] {
+  background: #17301f;
+  color: #7fd09a;
+}
+
+.tba[data-tba-theme='dark'] .tba-badge[data-tone='amber'] {
+  background: #332912;
+  color: #e5b457;
+}
+
+.tba[data-tba-theme='dark'] .tba-badge[data-tone='red'] {
+  background: #341b1a;
+  color: #f08682;
+}
+
+.tba[data-tba-theme='dark'] .tba-badge[data-tone='sand'] {
+  background: #35301f;
+  color: #e0c193;
+}
+
+/* ── destructive buttons ──────────────────────────────────────────────── */
+
+.tba[data-tba-theme='dark'] .tba-btn.danger {
+  border-color: #5a2b29;
+}
+
+.tba[data-tba-theme='dark'] .tba-btn.danger:hover {
+  background: #2c1917;
+}
+
+/* ── the "Firebase is blocking some admin data" banner ────────────────── */
+
+.tba[data-tba-theme='dark'] .tba-alert {
+  background: #2b2111;
+  border-color: #57421f;
+  color: #e8cf9c;
+}
+
+.tba[data-tba-theme='dark'] .tba-alert code {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.tba[data-tba-theme='dark'] .form-err,
+.tba[data-tba-theme='dark'] .note,
+.tba[data-tba-theme='dark'] .closed-note,
+.tba[data-tba-theme='dark'] .warning,
+.tba[data-tba-theme='dark'] .danger-note {
+  background: #341b1a;
+  color: #f3a19c;
+}
+
+.tba[data-tba-theme='dark'] .trail .photo .tba-badge {
+  background: var(--tba-surface);
+  color: var(--tba-text);
+}
+
+.tba[data-tba-theme='dark'] .tba-table td,
+.tba[data-tba-theme='dark'] .tba-table th {
+  border-color: var(--tba-line);
+}
+
+.tba[data-tba-theme='dark'] .tba-table tr.click:hover td {
+  background: var(--tba-soft);
+}
+
+/* ── toasts ───────────────────────────────────────────────────────────────
+   The success toast uses --tba-ink as its background, which is now the accent
+   green, so its white text has to go dark. The error toast keeps its own deep
+   red and stays white — it needs re-asserting because the rule above it here
+   is more specific than the shell's own .tba-toast.error.                   */
+
+.tba[data-tba-theme='dark'] .tba-toast {
+  color: #11180f;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+}
+
+.tba[data-tba-theme='dark'] .tba-toast ion-icon {
+  color: #1f3a25;
+}
+
+.tba[data-tba-theme='dark'] .tba-toast.error {
+  background: #8f2e2b;
+  color: #fff;
+}
+
+.tba[data-tba-theme='dark'] .tba-toast.error ion-icon {
+  color: #fff;
+}
+
+/* ── scrims: darker, since the page underneath is already dark ────────── */
+
+.tba[data-tba-theme='dark'] .tba-modal-wrap,
+.tba[data-tba-theme='dark'] .tba-drawer-wrap,
+.tba[data-tba-theme='dark'].nav-open .tba-scrim {
+  background: rgba(0, 0, 0, 0.55);
+}

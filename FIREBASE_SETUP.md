@@ -13,12 +13,27 @@ Build → **Firestore Database** → Create database → choose a location near 
 
 Then open the **Rules** tab and paste the contents of `firestore.rules`, then **Publish**.
 
-## 4. Install the SDK
+## 4. Enable admin access
+The admin panel uses the same Firebase configuration, Authentication session, and
+Firestore database as the hiker app. It does not need a second Firebase app or
+separate credentials.
+
+- Enable **Email/Password** sign-in and create/sign in to the admin account in
+  Firebase Authentication.
+- The built-in owner account is listed in `src/app/pages/admin/admin.config.ts`.
+  Its email must also be allowed by `isAdmin()` in `firestore.rules`.
+- To grant admin access to another account, sign in as an owner and promote the
+  hiker from **Admin → Hikers**. The account then signs in with its regular app
+  credentials.
+- Publish `firestore.rules` after changing admin access rules. The panel cannot
+  read or manage Firestore data until the deployed rules allow that admin.
+
+## 5. Install the SDK
 ```bash
 npm install firebase
 ```
 
-## 5. Run
+## 6. Run
 ```bash
 ionic serve
 ```

@@ -1,3 +1,6 @@
+/**
+ * Tab route configuration: maps each tab URL to its page and guards access before the route is opened.
+ */
 import { Routes } from '@angular/router';
 import { TabsPage } from './tabs.page';
 

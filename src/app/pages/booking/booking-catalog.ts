@@ -41,6 +41,7 @@ export const PACKAGES: HikePackage[] = [
     name: 'Basic Day Hike',
     price: 1440,
     includes: [
+      'Joiner hike — join other hikers on a shared departure',
       'Tour guide',
       'Barangay registration / certification',
       'Environmental fee',
@@ -55,6 +56,7 @@ export const PACKAGES: HikePackage[] = [
     name: 'Day Hike + Activity',
     price: 1800,
     includes: [
+      'Joiner hike — join other hikers on a shared departure',
       'Everything in Basic Day Hike',
       '1 selected activity — waterfall stop or tree planting',
     ],
@@ -66,6 +68,7 @@ export const PACKAGES: HikePackage[] = [
     name: 'Overnight Hike',
     price: 2400,
     includes: [
+      'Joiner hike — join other hikers on a shared departure',
       'Everything in Basic Day Hike',
       '1 selected activity — waterfall stop or tree planting',
       '1-night accommodation',
@@ -91,12 +94,13 @@ export const PACKAGES: HikePackage[] = [
   {
     id: 'group',
     name: 'Group Hike',
-    price: 4200,
+    price: 13500,
     includes: [
-      'Group tour guide',
+      'Private group departure for up to 10 hikers',
       'Everything in Day Hike + Activity',
       '1 selected activity — waterfall stop or tree planting',
       'Group itinerary',
+      'Hikers 11–20: ₱1,200 each; hikers 21–30: ₱1,500 each for additional guide support',
     ],
     // RESTORED: also lost in the placeholder version.
     includedActivities: 1,

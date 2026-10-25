@@ -1,3 +1,6 @@
+/**
+ * Application shell: hosts the Ionic app and router outlet where the active route page is rendered.
+ */
 import { Component } from '@angular/core';
 import { IonApp, IonRouterOutlet } from '@ionic/angular/standalone';
 import { ThemeService } from './services/theme.service';

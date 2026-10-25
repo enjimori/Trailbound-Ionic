@@ -1,28 +1,34 @@
 /**
  * Admin routes.
  *
- *   /admin/login        username + password
+ *   /admin/login        redirects to the shared app login
  *   /admin              dashboard
- *   /admin/bookings     every booking, change status, cancel
+ *   /admin/bookings     every booking, move it through the permit workflow
  *   /admin/hikers       every account, suspend, promote to admin
- *   /admin/trails       the 30 trails, open / close for booking
+ *   /admin/staff        grant and remove staff roles
+ *   /admin/trails       manage trails and open / close for booking
  *   /admin/community    posts and comments, remove
  *   /admin/reviews      trail reviews, remove
- *   /admin/certificates medical certificates + barangay clearances, approve / reject
+ *   /admin/certificates medical certificates, approve / reject
  *   /admin/packages     packages, activities, guides, merchandise
  *   /admin/settings     admin account and password
  *
  * Everything below the shell is guarded by adminGuard. The shell holds the
  * sidebar and top bar; each page renders into its <router-outlet>.
+ *
+ * The permit office is NOT here. It lives at /office with its own guard and
+ * its own small shell, because adminGuard protects this whole shell — hanging
+ * a non-admin page off it would mean loosening one guard for nine admin pages
+ * so that one account could reach a tenth.
  */
 import type { Routes } from '@angular/router';
-import { adminGuard, adminGuestGuard } from './admin.guard';
+import { adminGuard } from './admin.guard';
 
 export const ADMIN_ROUTES: Routes = [
   {
     path: 'login',
-    canActivate: [adminGuestGuard],
-    loadComponent: () => import('./login/admin-login.page').then((m) => m.AdminLoginPage),
+    redirectTo: '/login',
+    pathMatch: 'full',
   },
   {
     path: '',
@@ -43,6 +49,10 @@ export const ADMIN_ROUTES: Routes = [
       {
         path: 'hikers',
         loadComponent: () => import('./hikers/admin-hikers.page').then((m) => m.AdminHikersPage),
+      },
+      {
+        path: 'staff',
+        loadComponent: () => import('./staff/admin-staff.page').then((m) => m.AdminStaffPage),
       },
       {
         path: 'trails',

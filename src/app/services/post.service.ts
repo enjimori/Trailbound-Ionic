@@ -1,3 +1,6 @@
+/**
+ * Community-post service: centralizes post and comment data operations used by the feed and reusable post components.
+ */
 import { Injectable, computed, effect, inject, signal, untracked } from '@angular/core';
 import {
   DocumentData, FirestoreError, Timestamp, Unsubscribe,
@@ -266,6 +269,7 @@ export class PostService {
     return map;
   });
 
+  /** Performs the post by id operation for this feature and returns its result to the caller. */
   postById(id: string | null | undefined): Post | null {
     return id ? this.byId().get(id) ?? null : null;
   }
@@ -408,11 +412,13 @@ export class PostService {
     );
   }
 
+  /** Retries the operation that previously failed and updates the displayed result. */
   retry() {
     this.loading.set(true);
     this.listenToFeed();
   }
 
+  /** Fetches the next page of records and appends it to the current feed. */
   loadMore() {
     this._pageSize.update((n) => n + PAGE_SIZE);
     this.listenToFeed();
@@ -447,6 +453,7 @@ export class PostService {
     return this._postDocs().find((p) => p.id === id)?.data ?? this._originals()[id];
   }
 
+  /** Builds the related context needed by the post or comment workflow. */
   private buildContext() {
     return {
       now: this._now(),
@@ -571,6 +578,7 @@ export class PostService {
     }
   }
 
+  /** Performs the update post operation for this feature and returns its result to the caller. */
   async updatePost(postId: string, draft: PostDraft): Promise<WriteResult> {
     const uid = this.requireUid();
     const clean = this.validateDraft(draft);
@@ -777,6 +785,7 @@ export class PostService {
     );
   }
 
+  /** Closes or cancels the close history flow and returns the interface to its previous state. */
   closeHistory() {
     this.historyUnsub?.();
     this.historyUnsub = undefined;
@@ -821,6 +830,7 @@ export class PostService {
     );
   }
 
+  /** Closes or cancels the close thread flow and returns the interface to its previous state. */
   closeThread() {
     this.commentsUnsub?.();
     this.commentsUnsub = undefined;
@@ -829,6 +839,7 @@ export class PostService {
     this.commentsError.set(null);
   }
 
+  /** Performs the add comment operation for this feature and returns its result to the caller. */
   async addComment(postId: string, text: string, mentions?: MentionRef[]): Promise<WriteResult> {
     const uid = this.requireUid();
     const body = text.trim();
@@ -858,6 +869,7 @@ export class PostService {
     }
   }
 
+  /** Performs the delete comment operation for this feature and returns its result to the caller. */
   async deleteComment(postId: string, commentId: string): Promise<void> {
     this.requireUid();
     const batch = writeBatch(db);
@@ -906,6 +918,7 @@ export class PostService {
     if (this.profileKey(me) !== this.publishedKey) await this.publishMyProfile();
   }
 
+  /** Performs the publish my profile operation for this feature and returns its result to the caller. */
   private async publishMyProfile(): Promise<void> {
     const uid = this.myUid();
     if (!uid) return;
@@ -936,12 +949,14 @@ export class PostService {
     return this.me().name.slice(0, 60);
   }
 
+  /** Ensures an authenticated user id exists before a user-owned operation continues. */
   private requireUid(): string {
     const uid = this.myUid();
     if (!uid) throw new CommunityError('Please sign in first.', 'unauthenticated');
     return uid;
   }
 
+  /** Checks the draft input before it is accepted by the post workflow. */
   private validateDraft(draft: PostDraft): PostDraft {
     const text = (draft.text ?? '').trim();
     const images = (draft.images ?? []).slice(0, POST_PHOTO_MAX);
@@ -961,6 +976,7 @@ export class PostService {
     };
   }
 
+  /** Checks the supplied content against the configured size limit. */
   private checkSize(payload: DocumentData) {
     const approx = JSON.stringify(payload).length;
     if (approx > POST_CHARS_MAX) {

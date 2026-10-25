@@ -1,3 +1,6 @@
+/**
+ * Planner-page controller: gathers bookings and upcoming adventures into the schedule displayed by the planner template.
+ */
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
@@ -28,10 +31,12 @@ export class PlannerPage {
     private toastCtrl: ToastController,
   ) {}
 
+  /** Opens the detail screen for the selected trail. */
   openTrail(adv: UpcomingAdventure) {
     this.router.navigate(['/trail', adv.trailId]);
   }
 
+  /** Performs the remove adventure operation for this feature and returns its result to the caller. */
   async removeAdventure(adv: UpcomingAdventure, ev: Event) {
     ev.stopPropagation();
     const alert = await this.alertCtrl.create({
@@ -49,6 +54,7 @@ export class PlannerPage {
     alert.present();
   }
 
+  /** Performs the add random trail operation for this feature and returns its result to the caller. */
   async addRandomTrail() {
     const trails = this.trailService.trails();
     const existingIds = this.userService.upcoming().map(u => u.trailId);

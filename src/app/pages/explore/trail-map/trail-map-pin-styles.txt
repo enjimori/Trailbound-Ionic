@@ -1,0 +1,135 @@
+═══════════════════════════════════════════════════════════════════════════
+APPEND TO  trail-map.component.scss
+
+Paste this at the END of the file. The old `.trailmap-marker` rules no
+longer match anything — the component renders `.trailmap-pin` now — so you
+can delete that block once you have seen the pins render. Leave it for now
+in case you want to go back.
+
+REQUIRES the asset rename:
+    Rename-Item "src\assets\logo\mountain icon.png" "mountain-icon.png"
+A space in a filename needs %20 in every CSS reference and breaks silently
+on some static hosts, so the rename is not cosmetic.
+═══════════════════════════════════════════════════════════════════════════
+
+/* ── trail pins ───────────────────────────────────────────────────────────
+   One SVG teardrop per trail, coloured by difficulty, with the project's own
+   mountain mark inside.
+
+   Everything is driven by the --pin custom property, so a difficulty state
+   is one line rather than a repeated block, and the closed and selected
+   states layer on top without fighting it.
+
+   These selectors are global on purpose: Leaflet builds marker elements
+   outside Angular's view, so they never get the _ngcontent attribute that
+   scoped styles key off. That is also why the component sets
+   ViewEncapsulation.None. The `trailmap-` prefix is what keeps the leak
+   contained.                                                              */
+
+.trailmap-pin {
+  --pin: #9aa39b;                 /* overridden per difficulty below */
+  --ring: #ffffff;
+
+  position: relative;             /* the mountain mark positions against this */
+  width: 32px;
+  height: 40px;
+  transform-origin: 50% 100%;     /* grow from the point, not the middle */
+  transition: transform 0.18s ease;
+  cursor: pointer;
+}
+
+.trailmap-pin svg {
+  display: block;
+  width: 32px;
+  height: 40px;
+  /* A drop-shadow on the element, not a box-shadow: it follows the teardrop
+     outline instead of drawing a rectangle behind a transparent SVG. This is
+     what keeps a pin readable over bright satellite imagery. */
+  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.45));
+}
+
+.trailmap-pin .pin-body {
+  fill: var(--pin);
+  stroke: var(--ring);
+  stroke-width: 2;
+}
+
+/* The pale disc the mark sits in — keeps it legible whatever the fill colour
+   underneath. */
+.trailmap-pin .pin-disc {
+  fill: rgba(255, 255, 255, 0.93);
+}
+
+/* ── the mountain mark ────────────────────────────────────────────────────
+   mountain-icon.png used as a MASK, not as an image.
+
+   A mask uses only the file's alpha channel as a stencil and fills it with
+   var(--pin), so the mark comes out green, amber or red to match its pin. An
+   <img> would paint whatever colours are baked into the PNG, and all three
+   difficulties would carry an identical glyph — which is the whole point of
+   colouring them.
+
+   The absolute path (leading slash) is deliberate: Angular leaves it alone
+   rather than trying to resolve it against this SCSS file at build time.
+   If you ever deploy under a sub-path, this is the line to revisit.
+
+   Centred on the disc: cx 16, cy 13.7, r 7.3 in a 32x40 box, so a 14px square
+   sits at top 6.7px.                                                        */
+
+.trailmap-pin .pin-mark {
+  position: absolute;
+  top: 6.7px;
+  left: 50%;
+  width: 14px;
+  height: 14px;
+  transform: translateX(-50%);
+  background: var(--pin);
+
+  -webkit-mask: url('/assets/logo/mountain-icon.png') center / contain no-repeat;
+  mask: url('/assets/logo/mountain-icon.png') center / contain no-repeat;
+}
+
+/* ── difficulty ───────────────────────────────────────────────────────────
+   Tuned to the app's existing badge palette. If your Explore badges use
+   different values, change these three lines and nothing else.            */
+
+.trailmap-pin--easy     { --pin: #6ec07a; }
+.trailmap-pin--moderate { --pin: #e0b15c; }
+.trailmap-pin--hard     { --pin: #e2705f; }
+
+/* ── closed ───────────────────────────────────────────────────────────────
+   A closed trail keeps its pin rather than disappearing — a hiker looking for
+   it should find it and learn it is shut, not conclude the app lost it.    */
+
+.trailmap-pin--closed {
+  --pin: #8d9490;
+  opacity: 0.8;
+}
+
+.trailmap-pin--closed .pin-disc {
+  fill: rgba(255, 255, 255, 0.72);
+}
+
+/* ── selected ─────────────────────────────────────────────────────────────
+   Bigger, with the brand accent as the ring. The component also raises the
+   marker's z-index, or the pin you just tapped would grow underneath its
+   neighbour.                                                               */
+
+.trailmap-pin--selected {
+  transform: scale(1.28);
+}
+
+.trailmap-pin--selected .pin-body {
+  stroke: var(--app-accent, #e8d99c);
+  stroke-width: 2.6;
+}
+
+.trailmap-pin--selected svg {
+  filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.55));
+}
+
+/* Respect a reduced-motion preference — the scale is decoration, not
+   information, and the colour and ring already carry the state. */
+@media (prefers-reduced-motion: reduce) {
+  .trailmap-pin { transition: none; }
+}

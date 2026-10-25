@@ -1,0 +1,48 @@
+═══════════════════════════════════════════════════════════════════════════
+ONE EDIT — src/app/models/booking.model.ts
+
+Two optional fields on Guide, so a guide added from the admin panel can
+carry the same details the three hard-coded ones have.
+═══════════════════════════════════════════════════════════════════════════
+
+FIND (around line 54):
+
+export interface Guide {
+  id: string;
+  name: string;
+  years: number;
+  summits: number;
+}
+
+REPLACE WITH:
+
+export interface Guide {
+  id: string;
+  name: string;
+  years: number;
+  summits: number;
+
+  /**
+   * Role line and specialties, for guides added from Admin -> Packages.
+   *
+   * The three guides in booking-catalog.ts keep theirs in guide-profiles.ts,
+   * a side table keyed by name. That file is static code, so a guide created
+   * at runtime can never have an entry in it — these fields are where their
+   * equivalent lives instead.
+   *
+   * Optional, so neither the static roster nor any existing code has to
+   * change: anything reading a Guide today keeps working, and the Packages
+   * page falls back to guide-profiles.ts when they are absent.
+   */
+  title?: string;
+  specialties?: string[];
+}
+
+
+── Why not move the three static guides into Firestore too? ─────────────
+
+It would be tidier, but it would also mean the booking page shows nothing
+until Firestore answers, and nothing at all to a signed-out visitor if the
+read is ever refused. Keeping the defaults in code means the roster always
+renders, and added guides are additive. That is the same reason PACKAGES and
+MERCH still live in booking-catalog.ts.
