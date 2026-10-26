@@ -229,6 +229,39 @@ ion-title {
 .adventure-date {
   font-size: 12.5px;
   color: var(--app-text-dim);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* "3 trails" beside the Wishlist heading. */
+.wish-count {
+  font-size: 12.5px;
+  color: var(--app-text-dim);
+}
+
+/* Filled heart on each wishlist row: tap to remove, same red as every heart. */
+.wish-heart {
+  flex-shrink: 0;
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border-radius: 50%;
+  border: 1px solid rgba(240, 80, 90, 0.4);
+  background: rgba(240, 80, 90, 0.12);
+  color: var(--app-heart);
+  cursor: pointer;
+
+  ion-icon { font-size: 18px; }
+
+  &:active { transform: scale(0.92); }
+
+  &:focus-visible {
+    outline: 2px solid var(--app-accent);
+    outline-offset: 2px;
+  }
 }
 
 .account-list {
@@ -435,4 +468,19 @@ ion-title {
   font-size: 13px;
   font-weight: 600;
   color: var(--app-accent);
+}
+
+/* ── Light theme ─────────────────────────────────────────────────────────
+   The avatar ring and the ridge line behind the header were drawn in the
+   dark theme's sand, which looks washed out on the light background. Light
+   mode uses the green accent everywhere else, so these follow it. */
+:host-context(html[data-theme='light']) {
+  .avatar-wrap {
+    background: linear-gradient(160deg, rgba(83, 109, 66, 0.75), rgba(83, 109, 66, 0.12));
+  }
+
+  .page-pad::before {
+    opacity: 0.35;
+    background: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 120' preserveAspectRatio='none'><path d='M0 95 L40 70 L62 82 L98 40 L120 58 L150 28 L182 66 L210 50 L240 78 L270 46 L300 62 L330 30 L360 58 L400 44' fill='none' stroke='%23536d42' stroke-opacity='0.22' stroke-width='1.2'/><path d='M0 110 L50 88 L90 100 L140 72 L190 96 L235 80 L280 98 L330 74 L400 92' fill='none' stroke='%23536d42' stroke-opacity='0.12' stroke-width='1'/></svg>") center / 100% 100% no-repeat;
+  }
 }

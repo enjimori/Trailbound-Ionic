@@ -9,23 +9,35 @@
     </ion-buttons>
     <ion-title>Notifications</ion-title>
     <ion-buttons slot="end">
-      <ion-button (click)="markAllRead()" fill="clear" class="mark-btn">Mark all</ion-button>
+      <ion-button
+        (click)="markAllRead()"
+        fill="clear"
+        class="mark-btn"
+        [disabled]="notificationService.unreadCount() === 0"
+      >Mark all read</ion-button>
     </ion-buttons>
   </ion-toolbar>
-  <p class="subtitle">Stay updated with your trail community</p>
+  <p class="subtitle">Your bookings, permits, documents and people you follow</p>
 </ion-header>
 
 <ion-content [fullscreen]="true">
   <div class="page-pad">
     <!-- Each card is bound to NotificationService; tapping it delegates routing to the page handler. -->
-    <div
+    <button
+      type="button"
       class="notif-card"
-      *ngFor="let n of notificationService.notifications()"
+      *ngFor="let n of notificationService.notifications(); trackBy: trackById"
       [class.unread]="!n.read"
       (click)="onTapNotification(n)"
     >
-      <div class="notif-icon" [style.background]="n.iconColor + '26'">
-        <ion-icon [name]="n.icon" [style.color]="n.iconColor"></ion-icon>
+      <!-- tone -> theme colours (see .notif-icon[data-tone]); iconColor is the
+           fallback for anything that sets no tone. -->
+      <div
+        class="notif-icon"
+        [attr.data-tone]="n.tone || null"
+        [style.background]="n.tone ? null : n.iconColor + '26'"
+      >
+        <ion-icon [name]="n.icon" [style.color]="n.tone ? null : n.iconColor"></ion-icon>
       </div>
       <div class="notif-body">
         <div class="notif-title-row">
@@ -37,12 +49,14 @@
         </div>
         <p class="notif-message">{{ n.message }}</p>
       </div>
-    </div>
+    </button>
 
     <!-- Empty state is shown only when there are no notification cards to render. -->
-    <p class="empty-state" *ngIf="notificationService.notifications().length === 0">
-      No notifications yet. New posts from people you follow will show up here.
-    </p>
+    <div class="empty-state" *ngIf="notificationService.notifications().length === 0">
+      <ion-icon name="notifications-outline"></ion-icon>
+      <p>No notifications yet.</p>
+      <p class="empty-sub">Updates on your bookings, permits and documents, and new posts from people you follow, will show up here.</p>
+    </div>
 
     <div class="bottom-spacer"></div>
   </div>

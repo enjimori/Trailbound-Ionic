@@ -176,6 +176,31 @@
   border-color: var(--tba-surface-2);
 }
 
+/* The light hover tint is a dark wash, which disappears on a dark bar. */
+.tba[data-tba-theme='dark'] .tba-icon-btn:hover {
+  background: rgba(255, 255, 255, 0.07);
+}
+
+/* ── notification bell ────────────────────────────────────────────────── */
+
+.tba[data-tba-theme='dark'] .tba-bell-count {
+  border-color: var(--tba-surface-2);
+}
+
+.tba[data-tba-theme='dark'] .tba-note.unread {
+  background: rgba(232, 217, 156, 0.06);
+}
+
+.tba[data-tba-theme='dark'] .tba-note.unread:hover {
+  background: var(--tba-soft);
+}
+
+.tba[data-tba-theme='dark'] .tba-note-icon[data-tone='accent']  { background: rgba(232, 217, 156, .14); color: #e8d99c; }
+.tba[data-tba-theme='dark'] .tba-note-icon[data-tone='success'] { background: rgba(127, 208, 154, .14); color: #7fd09a; }
+.tba[data-tba-theme='dark'] .tba-note-icon[data-tone='warning'] { background: rgba(242, 193, 78, .15);  color: #f2c14e; }
+.tba[data-tba-theme='dark'] .tba-note-icon[data-tone='danger']  { background: rgba(240, 80, 90, .15);   color: #f08682; }
+.tba[data-tba-theme='dark'] .tba-note-icon[data-tone='info']    { background: rgba(143, 179, 217, .15); color: #9fc2e6; }
+
 /* ── strong fills: light text becomes dark text ───────────────────────── */
 
 .tba[data-tba-theme='dark'] .tba-nav a.active,
@@ -195,9 +220,23 @@
   color: #1d2420;
 }
 
+/* On the active nav item (now a light fill) the badge flips to dark. */
+.tba[data-tba-theme='dark'] .tba-nav a.active .tba-count {
+  background: var(--tba-on-accent);
+  color: var(--tba-sand);
+}
+
 /* Initial avatars: dark letters on the pale tint no longer work. */
 .tba[data-tba-theme='dark'] .tba-avatar {
   color: var(--tba-text);
+}
+
+/* Dashboard: the third stat circle (Hikers) is a hard-coded near-white
+   tint in light mode, which hid its light icon in dark mode. .tba-page is
+   only there to out-rank the dashboard's own encapsulated rule. */
+.tba[data-tba-theme='dark'] .tba-page .stat:nth-child(3) .stat-icon {
+  background: rgba(143, 179, 217, 0.15);
+  color: #9fc2e6;
 }
 
 /* ── tables ───────────────────────────────────────────────────────────── */

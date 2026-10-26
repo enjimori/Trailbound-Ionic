@@ -69,8 +69,8 @@ ion-title {
   height: 40px;
   flex-shrink: 0;
   border-radius: 50%;
-  background: var(--app-accent-soft, rgba(232, 217, 156, 0.14));
-  border: 1px solid rgba(232, 217, 156, 0.35);
+  background: var(--app-accent-soft, rgba(var(--app-accent-rgb), 0.14));
+  border: 1px solid rgba(var(--app-accent-rgb), 0.35);
   color: var(--co-green);
   display: flex;
   align-items: center;
@@ -153,9 +153,9 @@ ion-title {
   ion-icon { font-size: 22px; color: var(--co-text); }
 
   &.active {
-    border-color: rgba(232, 217, 156, 0.6);
+    border-color: rgba(var(--app-accent-rgb), 0.6);
     background:
-      linear-gradient(0deg, rgba(232, 217, 156, 0.07), rgba(232, 217, 156, 0.07)),
+      linear-gradient(0deg, rgba(var(--app-accent-rgb), 0.07), rgba(var(--app-accent-rgb), 0.07)),
       var(--co-card);
 
     ion-icon { color: var(--co-green); }

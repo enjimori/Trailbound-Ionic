@@ -16,6 +16,7 @@ import { CatalogService } from '../../services/catalog.service';
 import { UserService } from '../../services/user.service';
 import { ReviewService, TrailReview } from '../../services/review.service';
 import { TrailStatusService } from '../../services/trail-status.service';
+import { WishlistService } from '../../services/wishlist.service';
 import { Trail } from '../../models/trail.model';
 
 // Falls back to the 30-trail dataset for ids TrailService does not hold.
@@ -40,8 +41,18 @@ addIcons({ mapOutline, lockClosedOutline });
 })
 export class TrailDetailPage implements OnInit {
   private readonly catalog = inject(CatalogService);
+  private readonly wishlist = inject(WishlistService);
   trail = signal<Trail | undefined>(undefined);
-  saved = signal(false);
+
+  /**
+   * Whether the heart is filled. Read live from the wishlist, so it stays
+   * right when the trail is hearted elsewhere (Home, Explore) or the profile
+   * finishes loading after this page opened.
+   */
+  saved = computed(() => {
+    const t = this.trail();
+    return t ? this.wishlist.has(t.id) : false;
+  });
 
   /** Set when an admin has closed this trail for booking. */
   closure = computed(() => {
@@ -102,7 +113,6 @@ export class TrailDetailPage implements OnInit {
       // on Home and every marker on the map lands on "Trail not found".
       const found = this.trailService.getById(id) ?? trailById(id);
       this.trail.set(found ? this.catalog.withTrailOverrides([found])[0] : undefined);
-      this.saved.set(this.userService.upcoming().some(u => u.trailId === id));
 
       // Pre-fill the reviewer name from the profile, since we know it.
       this.draftAuthor = this.userService.profile().name;
@@ -179,25 +189,11 @@ export class TrailDetailPage implements OnInit {
     this.router.navigate(['/tabs/explore'], { queryParams: { trail: t.id } });
   }
 
-  /** Performs the toggle save operation for this feature and returns its result to the caller. */
+  /** Hearts or un-hearts this trail (the Profile tab's Wishlist). */
   toggleSave() {
     const t = this.trail();
     if (!t) return;
-    if (this.saved()) {
-      const existing = this.userService.upcoming().find(u => u.trailId === t.id);
-      if (existing) this.userService.removeUpcoming(existing.id);
-      this.saved.set(false);
-      return;
-    }
-    this.userService.addUpcoming({
-      id: 'u' + Date.now(),
-      trailId: t.id,
-      name: t.name,
-      image: t.image,
-      date: 'To be scheduled',
-      duration: t.duration,
-    });
-    this.saved.set(true);
+    void this.wishlist.toggle(t);
   }
 
   /** Starts the hike-related action for the selected trail. */

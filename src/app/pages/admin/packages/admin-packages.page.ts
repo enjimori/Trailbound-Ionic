@@ -6,7 +6,7 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { IonIcon } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
-import { addOutline, checkmarkOutline, informationCircleOutline } from 'ionicons/icons';
+import { addOutline, checkmarkOutline, informationCircleOutline, trailSignOutline } from 'ionicons/icons';
 
 import { AdminDataService, countsAsRevenue } from '../admin-data.service';
 import { AdminUiService } from '../admin-ui.service';
@@ -14,6 +14,9 @@ import { CatalogService } from '../../../services/catalog.service';
 import { initials, peso, tintFor } from '../admin-utils';
 import { ACTIVITIES } from '../../booking/booking-catalog';
 import { GUIDE_PROFILES } from '../../booking/guide-profiles';
+import { TrailService } from '../../../services/trail.service';
+import { allTrails } from '../../explore/trail-lookup';
+import { dayKey, matches } from '../admin-utils';
 
 @Component({
   selector: 'app-admin-packages',
@@ -148,10 +151,63 @@ import { GUIDE_PROFILES } from '../../booking/guide-profiles';
               <small>{{ g.title }}</small>
               <p>{{ g.years }} yrs · {{ g.summits }} summits · <strong>{{ g.count }} bookings</strong></p>
               <div class="tags">@for (s of g.specialties; track s) { <span>{{ s }}</span> }</div>
+              <!-- Which mountains this guide is offered on (guide_trails/{id}). -->
+              <div class="g-trails">
+                <span class="g-trails-label"><ion-icon name="trail-sign-outline"></ion-icon>Mountains</span>
+                <span class="g-trails-list">{{ assignedLabel(g.id) }}</span>
+                <button type="button" class="tba-btn sm" (click)="editTrails(g)">Edit mountains</button>
+              </div>
             </div>
           </div>
         }
       </div>
+
+      @if (editingGuide(); as eg) {
+        <div class="trail-editor">
+          <h3>Mountains {{ eg.name }} guides</h3>
+          <p class="hint">
+            <ion-icon name="information-circle-outline"></ion-icon>
+            Hikers only see {{ eg.name }} on the booking page for the mountains ticked here, and TrailBound
+            cannot confirm a booking with them on any other mountain.
+          </p>
+          <div class="tba-chips" role="group" aria-label="Restriction">
+            <button type="button" [class.on]="trailMode() === 'any'" (click)="trailMode.set('any')">Any mountain</button>
+            <button type="button" [class.on]="trailMode() === 'only'" (click)="trailMode.set('only')">Only these mountains</button>
+          </div>
+
+          @if (trailMode() === 'only') {
+            <label class="tba-filter trail-find">
+              <input [ngModel]="trailQuery()" (ngModelChange)="trailQuery.set($event)" placeholder="Find a mountain" />
+            </label>
+            <div class="trail-checks">
+              @for (t of filteredTrails(); track t.id) {
+                <label class="trail-check" [class.on]="picked().has(t.id)">
+                  <input type="checkbox" [checked]="picked().has(t.id)" (change)="toggleTrail(t.id)" />
+                  <span><b>{{ t.name }}</b><small>{{ t.region }}</small></span>
+                </label>
+              } @empty {
+                <p class="none">No mountain matches “{{ trailQuery() }}”.</p>
+              }
+            </div>
+            <p class="picked-count">{{ picked().size }} selected</p>
+            @if (conflicts().length) {
+              <p class="warn">
+                {{ conflicts().length }} upcoming {{ conflicts().length === 1 ? 'booking' : 'bookings' }} with {{ eg.name }}
+                {{ conflicts().length === 1 ? 'is' : 'are' }} on a mountain not ticked here
+                ({{ conflictNames() }}). {{ conflicts().length === 1 ? 'It stays' : 'They stay' }} as booked, but cannot be
+                confirmed until that mountain is added back or the booking is cancelled.
+              </p>
+            }
+          }
+
+          <div class="editor-acts">
+            <button type="button" class="tba-btn ghost" [disabled]="saving()" (click)="editingGuide.set(null)">Cancel</button>
+            <button type="button" class="tba-btn primary" [disabled]="saving()" (click)="saveTrails()">
+              {{ saving() ? 'Saving…' : 'Save mountains' }}
+            </button>
+          </div>
+        </div>
+      }
     </section>
   `,
   styles: [`
@@ -197,6 +253,24 @@ import { GUIDE_PROFILES } from '../../booking/guide-profiles';
     .g-body p { margin: 6px 0 8px; font-size: 12.5px; color: var(--tba-ink-2); }
     .tags { display: flex; flex-wrap: wrap; gap: 5px; }
     .tags span { font-size: 11px; padding: 3px 8px; border-radius: 99px; background: var(--tba-surface); color: var(--tba-ink-2); }
+    .g-trails { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--tba-line); font-size: 12px; }
+    .g-trails-label { display: inline-flex; align-items: center; gap: 5px; color: var(--tba-muted); font-weight: 600; }
+    .g-trails-list { flex: 1 1 100%; color: var(--tba-text); line-height: 1.45; }
+    .trail-editor { display: grid; gap: 12px; margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--tba-line); }
+    .trail-editor h3 { font-size: 15px; font-weight: 700; }
+    .trail-editor .tba-chips { justify-self: start; }
+    .trail-editor .hint { display: flex; gap: 8px; margin: 0; font-size: 12px; line-height: 1.5; color: var(--tba-muted); }
+    .trail-editor .hint ion-icon { flex: none; margin-top: 1px; font-size: 15px; }
+    .trail-find { max-width: 320px; }
+    .trail-checks { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 6px; max-height: 320px; overflow-y: auto; padding: 2px; }
+    .trail-check { display: flex; align-items: flex-start; gap: 9px; padding: 9px 10px; border: 1px solid var(--tba-line); border-radius: 10px; background: var(--tba-surface); cursor: pointer; }
+    .trail-check.on { border-color: var(--tba-sand); background: var(--tba-sand-soft); }
+    .trail-check input { margin-top: 2px; accent-color: var(--tba-ink); }
+    .trail-check b { display: block; font-size: 12.5px; font-weight: 600; }
+    .trail-check small { display: block; font-size: 11px; color: var(--tba-muted); }
+    .trail-editor .none, .picked-count { margin: 0; font-size: 12px; color: var(--tba-muted); }
+    .trail-editor .warn { margin: 0; padding: 10px 12px; border-radius: 10px; background: var(--tba-sand-soft); font-size: 12.5px; line-height: 1.5; }
+    .editor-acts { display: flex; gap: 8px; justify-content: flex-end; }
     @media (max-width: 640px) {
       .entry-form .pair { grid-template-columns: 1fr; }
     }
@@ -279,6 +353,83 @@ export class AdminPackagesPage {
    * matching on a display name is exactly the fragility the id was added to
    * fix, so it is a fallback and nothing more.
    */
+  // ── guide-to-mountain assignment ─────────────────────────────────────────
+
+  private readonly trailService = inject(TrailService);
+
+  /** Every mountain a booking can be made for — the same list as Admin → Trails. */
+  readonly allMountains = computed(() =>
+    this.catalog.withTrailOverrides([...allTrails(), ...this.trailService.addedTrails()]),
+  );
+
+  readonly editingGuide = signal<{ id: string; name: string } | null>(null);
+  readonly trailMode = signal<'any' | 'only'>('any');
+  readonly picked = signal<Set<string>>(new Set());
+  readonly trailQuery = signal('');
+
+  readonly filteredTrails = computed(() => {
+    const q = this.trailQuery();
+    return this.allMountains().filter((t) => matches(q, t.name, t.region));
+  });
+
+  /** Upcoming bookings with the guide being edited, on mountains not ticked. */
+  readonly conflicts = computed(() => {
+    const g = this.editingGuide();
+    if (!g || this.trailMode() !== 'only') return [];
+    const today = dayKey(new Date());
+    const picked = this.picked();
+    return this.data.bookings().filter((b) =>
+      b.guideId === g.id && b.date >= today && (b.status === 'pending' || b.status === 'confirmed')
+      && !picked.has(b.trailId));
+  });
+
+  conflictNames(): string {
+    return [...new Set(this.conflicts().map((b) => b.trailName))].join(', ');
+  }
+
+  /** "Any mountain", or the assigned mountains by name. */
+  assignedLabel(guideId: string): string {
+    const ids = this.data.guideTrailsFor(guideId);
+    if (ids === null) return 'Any mountain (not restricted yet)';
+    const byId = new Map(this.allMountains().map((t) => [t.id, t.name]));
+    return ids.map((id) => byId.get(id) ?? id).join(', ') || 'None';
+  }
+
+  editTrails(g: { id: string; name: string }): void {
+    const current = this.data.guideTrailsFor(g.id);
+    this.editingGuide.set({ id: g.id, name: g.name });
+    this.trailMode.set(current === null ? 'any' : 'only');
+    this.picked.set(new Set(current ?? []));
+    this.trailQuery.set('');
+  }
+
+  toggleTrail(id: string): void {
+    this.picked.update((set) => {
+      const next = new Set(set);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  async saveTrails(): Promise<void> {
+    const g = this.editingGuide();
+    if (!g) return;
+    let ok: boolean;
+    if (this.trailMode() === 'any') {
+      ok = await this.save(() => this.data.clearGuideTrails(g.id), `${g.name} can be booked on any mountain`);
+    } else {
+      if (!this.picked().size) {
+        this.ui.toast('Tick at least one mountain, or choose Any mountain.', 'error');
+        return;
+      }
+      const ids = [...this.picked()];
+      ok = await this.save(() => this.data.setGuideTrails(g.id, ids), `Mountains saved for ${g.name}`);
+    }
+    // Stays open on failure so nothing ticked is lost.
+    if (ok) this.editingGuide.set(null);
+  }
+
   readonly guideStats = computed(() => {
     const paid = this.paid();
     return this.catalog.guides().map((g) => {
@@ -294,7 +445,7 @@ export class AdminPackagesPage {
   });
 
   constructor() {
-    addIcons({ addOutline, checkmarkOutline, informationCircleOutline });
+    addIcons({ addOutline, checkmarkOutline, informationCircleOutline, trailSignOutline });
   }
 
   togglePackageForm(): void {
@@ -384,13 +535,16 @@ export class AdminPackagesPage {
     }, 'Guide added');
   }
 
-  private async save(write: () => Promise<void>, success: string): Promise<void> {
+  /** One write with the saving flag and error toast every form shares. True when it saved. */
+  private async save(write: () => Promise<void>, success: string): Promise<boolean> {
     this.saving.set(true);
     try {
       await write();
       this.ui.toast(success);
+      return true;
     } catch (error) {
       this.ui.fail(error);
+      return false;
     } finally {
       this.saving.set(false);
     }

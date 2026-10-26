@@ -393,16 +393,10 @@ export class CheckoutPage implements OnInit, OnDestroy {
     // once the permit is released.
     const booking = this.bookingService.confirm(d, m.label, cardLast4);
 
-    // Mirror it into the shared upcoming list so it shows on the Profile tab
-    // alongside everything else the user has planned.
-    this.userService.addUpcoming({
-      id: 'u' + Date.now(),
-      trailId: d.trailId,
-      name: d.trailName,
-      image: d.trailImage,
-      date: this.prettyDate(),
-      duration: d.trailDuration,
-    });
+    // Bookings are no longer copied into users/{uid}.upcoming. That list is
+    // now the hiker's Wishlist (hearted trails) on the Profile tab, and a
+    // copy here would show every booked trail as hearted. The booking itself
+    // is listed in the Bookings tab.
 
     this.processing.set(false);
     this.router.navigate(['/booking-confirmed', booking.id], { replaceUrl: true });

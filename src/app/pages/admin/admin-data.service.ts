@@ -41,7 +41,7 @@ import {
   updateDoc,
   writeBatch,
 } from 'firebase/firestore';
-import { adminDb } from './admin-firebase';
+import { adminAuth, adminDb } from './admin-firebase';
 import { dayKey, toDate } from './admin-utils';
 import type { GroupHiker, MerchLine } from '../../models/booking.model';
 import {
@@ -52,6 +52,10 @@ import {
 import { trailById } from '../explore/trail-lookup';
 import { TrailService } from '../../services/trail.service';
 import type { CertificateRecord, CertificateStatus, CertificateType } from '../../models/certificate.model';
+import {
+  type AttendanceRecord, type GuideStatus, type GuideTrails, DEFAULT_GUIDE_STATUS,
+  toAttendance, toGuideStatus, toGuideTrails,
+} from '../../models/guide-ops.model';
 
 // ── Shapes the screens use ─────────────────────────────────────────────────
 
@@ -154,6 +158,8 @@ export interface AdminBooking {
   permitFeeLodged: number;
   /** True once an application has been sent, which is what a permit officer sees. */
   permitLodged: boolean;
+  /** The office's reason when it refused the permit. */
+  permitNote?: string;
 
   /** When the hiker accepted the risk sheet, and which wording. */
   riskAckAt: Date | null;
@@ -209,7 +215,8 @@ export interface TrailState {
 }
 
 export type CollectionName =
-  | 'users' | 'bookings' | 'posts' | 'profiles' | 'reviews' | 'trail_status' | 'certificates';
+  | 'users' | 'bookings' | 'posts' | 'profiles' | 'reviews' | 'trail_status' | 'certificates'
+  | 'attendance' | 'guide_status' | 'guide_trails';
 
 export type AdminCertificate = CertificateRecord;
 
@@ -252,6 +259,12 @@ export class AdminDataService {
   private readonly _reviews = signal<AdminReview[]>([]);
   private readonly _trailStatus = signal<Record<string, TrailState>>({});
   private readonly _certificates = signal<AdminCertificate[]>([]);
+  /** Guides' attendance checklists, by booking id. */
+  private readonly _attendance = signal<Record<string, AttendanceRecord>>({});
+  /** Guides' availability and capacity, by roster id. */
+  private readonly _guideStatus = signal<Record<string, GuideStatus>>({});
+  /** Mountains each guide is assigned to, by roster id. Missing = not restricted. */
+  private readonly _guideTrails = signal<Record<string, string[]>>({});
 
   private readonly _loaded = signal<Partial<Record<CollectionName, boolean>>>({});
   private readonly _errors = signal<Partial<Record<CollectionName, string>>>({});
@@ -261,6 +274,9 @@ export class AdminDataService {
   readonly reviews = this._reviews.asReadonly();
   readonly trailStatus = this._trailStatus.asReadonly();
   readonly certificates = this._certificates.asReadonly();
+  readonly attendance = this._attendance.asReadonly();
+  readonly guideStatus = this._guideStatus.asReadonly();
+  readonly guideTrails = this._guideTrails.asReadonly();
   readonly pendingCertificates = computed(() => this._certificates().filter((c) => c.status === 'pending').length);
   readonly errors = this._errors.asReadonly();
   readonly loaded = this._loaded.asReadonly();
@@ -353,6 +369,29 @@ export class AdminDataService {
       this._trailStatus.set(map);
     });
 
+    // Written by guides on /guide. See guide-ops.model.ts.
+    this.listen('attendance', collection(adminDb, 'attendance'), (docs) => {
+      const map: Record<string, AttendanceRecord> = {};
+      for (const { id, data } of docs) map[id] = toAttendance(id, data, toDate);
+      this._attendance.set(map);
+    });
+
+    this.listen('guide_status', collection(adminDb, 'guide_status'), (docs) => {
+      const map: Record<string, GuideStatus> = {};
+      for (const { id, data } of docs) map[id] = toGuideStatus(data, toDate);
+      this._guideStatus.set(map);
+    });
+
+    // Set from Admin → Packages → Guides. See guide-ops.model.ts.
+    this.listen('guide_trails', collection(adminDb, 'guide_trails'), (docs) => {
+      const map: Record<string, string[]> = {};
+      for (const { id, data } of docs) {
+        const ids = toGuideTrails(data);
+        if (ids) map[id] = ids;
+      }
+      this._guideTrails.set(map);
+    });
+
     this.listen('certificates', collection(adminDb, 'certificates'), (docs) =>
       this._certificates.set(
         docs
@@ -374,6 +413,9 @@ export class AdminDataService {
     this._reviews.set([]);
     this._trailStatus.set({});
     this._certificates.set([]);
+    this._attendance.set({});
+    this._guideStatus.set({});
+    this._guideTrails.set({});
     this._loaded.set({});
     this._errors.set({});
   }
@@ -420,6 +462,32 @@ export class AdminDataService {
   /** Performs the trail image operation for this feature and returns its result to the caller. */
   trailImage(id: string): string {
     return trailById(id)?.image ?? this.trailService.getById(id)?.image ?? '';
+  }
+
+  /** A guide's availability and capacity. No document = available, no limit. */
+  guideStatusFor(rosterId: string | null): GuideStatus {
+    return (rosterId && this._guideStatus()[rosterId]) || DEFAULT_GUIDE_STATUS;
+  }
+
+  /** The mountains a guide is assigned to, or null when not restricted. */
+  guideTrailsFor(rosterId: string | null): GuideTrails {
+    return (rosterId && this._guideTrails()[rosterId]) || null;
+  }
+
+  /** Restricts a guide to these mountains (at least one). */
+  setGuideTrails(rosterId: string, trailIds: string[]): Promise<void> {
+    const ids = [...new Set(trailIds.map(String))];
+    if (!ids.length) return Promise.reject(new Error('Pick at least one mountain.'));
+    return setDoc(doc(adminDb, 'guide_trails', rosterId), {
+      trailIds: ids,
+      updatedAt: serverTimestamp(),
+      updatedBy: adminAuth.currentUser?.uid ?? '',
+    });
+  }
+
+  /** Lifts the restriction: the guide may be offered on any mountain again. */
+  clearGuideTrails(rosterId: string): Promise<void> {
+    return deleteDoc(doc(adminDb, 'guide_trails', rosterId));
   }
 
   /** Checks whether the trail is closed based on the admin trail data. */
@@ -698,6 +766,7 @@ export class AdminDataService {
         : null,
       permitFeeLodged: Number(d['permitFeeLodged'] ?? 0) || 0,
       permitLodged: !!d['permitLodged'],
+      permitNote: d['permitNote'] ? String(d['permitNote']) : '',
 
       riskAckAt: toDate(d['riskAckAt']),
       riskAckVersion: String(d['riskAckVersion'] ?? ''),

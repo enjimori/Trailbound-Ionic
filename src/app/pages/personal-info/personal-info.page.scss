@@ -27,7 +27,7 @@
     border-radius: 50%;
     object-fit: cover;
     border: 3px solid var(--app-bg);
-    box-shadow: 0 0 0 2px rgba(232, 217, 156, 0.75);
+    box-shadow: 0 0 0 2px rgba(var(--app-accent-rgb), 0.75);
   }
 }
 
@@ -37,7 +37,7 @@
   height: 100%;
   border-radius: 50%;
   border: 3px solid var(--app-bg);
-  box-shadow: 0 0 0 2px rgba(232, 217, 156, 0.75);
+  box-shadow: 0 0 0 2px rgba(var(--app-accent-rgb), 0.75);
   background: var(--app-card-hi);
   display: flex;
   align-items: center;

@@ -68,6 +68,7 @@ export class FollowAlertsService {
           read: read.has(id),
           icon: 'people-outline',
           iconColor: '#E8D99C',
+          tone: 'accent' as const,
         };
       });
   });

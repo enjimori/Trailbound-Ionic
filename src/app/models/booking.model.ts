@@ -154,6 +154,19 @@ export interface Booking {
   packageName: string;
   activityNames: string[];
   guideName: string | null;
+  /**
+   * Which guide from the roster, by id ('g1'…).
+   *
+   * guideName is what the hiker reads on their receipt. This is what a guide's
+   * own account matches against: their user document carries the same roster
+   * id, so "my hikes" is a query rather than a comparison of display names
+   * that breaks the day two guides share one or a profile gets renamed.
+   *
+   * Optional, because bookings made before guides had accounts have no value
+   * here. Those simply never appear on a guide's screen, which is correct —
+   * nobody was assigned.
+   */
+  guideId?: string | null;
   merch: MerchLine[];
   groupHikers?: GroupHiker[];
   groupSurcharge?: number;

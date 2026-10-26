@@ -204,6 +204,11 @@ export class BookingService {
         ...q.paidActivities.map(a => a.name),
       ],
       guideName: guide?.name ?? null,
+      // The roster id the hiker actually picked. draft.guideId already holds
+      // it; it was being thrown away here, which left nothing for a guide
+      // account to match on. null means "no preference" — an admin assigns
+      // one later.
+      guideId: draft.guideId ?? null,
       merch: q.merchLines,
       groupHikers: pkg.id === 'group'
         ? (draft.groupHikers ?? []).map((hiker): GroupHiker => ({ ...hiker }))

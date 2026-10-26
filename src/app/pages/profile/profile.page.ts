@@ -19,6 +19,9 @@ import { CertificateService } from '../../services/certificate.service';
 import { AdminAuthService } from '../admin/admin-auth.service';
 import { AdminDataService } from '../admin/admin-data.service';
 import { UpcomingAdventure } from '../../models/user.model';
+import { WishlistService } from '../../services/wishlist.service';
+import { TrailService } from '../../services/trail.service';
+import { trailById } from '../explore/trail-lookup';
 
 @Component({
   selector: 'app-profile',
@@ -62,6 +65,8 @@ export class ProfilePage {
     public certs: CertificateService,
     private adminAuth: AdminAuthService,
     private adminData: AdminDataService,
+    private wishlist: WishlistService,
+    private trailService: TrailService,
     private router: Router,
     private alertCtrl: AlertController,
     private toastCtrl: ToastController,
@@ -121,6 +126,24 @@ export class ProfilePage {
   /** Opens the open adventure interface for the user. */
   openAdventure(adv: UpcomingAdventure) {
     this.router.navigate(['/trail', adv.trailId]);
+  }
+
+  /** Un-hearts a wishlist trail without opening it. */
+  removeFromWishlist(adv: UpcomingAdventure, ev: Event) {
+    ev.stopPropagation();
+    void this.wishlist.remove(adv.trailId, adv.name);
+  }
+
+  /** Region and difficulty from the trail itself; the saved duration if the trail is unknown. */
+  wishSubtitle(adv: UpcomingAdventure): string {
+    const t = trailById(adv.trailId) ?? this.trailService.getById(adv.trailId);
+    if (!t) return adv.duration;
+    return [t.region, t.difficulty].filter(Boolean).join(' · ');
+  }
+
+  /** The trail's current photo, falling back to the one saved with the heart. */
+  wishImage(adv: UpcomingAdventure): string {
+    return trailById(adv.trailId)?.image || adv.image;
   }
 
   /** Opens the show coming soon interface for the user. */

@@ -3,6 +3,17 @@
   <div class="trail-image" [style.backgroundImage]="'url(' + trail.image + ')'"></div>
   <div class="trail-shade"></div>
 
+  <button
+    type="button"
+    class="heart-btn"
+    [class.on]="wishlist.has(trail.id)"
+    (click)="onHeart($event)"
+    [attr.aria-label]="wishlist.has(trail.id) ? 'Remove from wishlist' : 'Add to wishlist'"
+    [attr.aria-pressed]="wishlist.has(trail.id)"
+  >
+    <ion-icon [name]="wishlist.has(trail.id) ? 'heart' : 'heart-outline'"></ion-icon>
+  </button>
+
   <div class="trail-body">
     <span class="diff-badge" [ngClass]="trail.difficulty.toLowerCase()">{{ trail.difficulty }}</span>
     <h3>{{ trail.name }}</h3>

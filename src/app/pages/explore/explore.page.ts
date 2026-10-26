@@ -30,6 +30,7 @@ import { CatalogService } from '../../services/catalog.service';
 import { TrailStatusService } from '../../services/trail-status.service';
 import { UserService } from '../../services/user.service';
 import { WeatherService } from '../../services/weather.service';
+import { WishlistService } from '../../services/wishlist.service';
 import { Trail } from '../../models/trail.model';
 
 addIcons({
@@ -141,14 +142,14 @@ export class ExplorePage implements ViewDidEnter, OnDestroy {
   });
 
   /**
-   * Saved trails, resolved from UserService.upcoming() back to the Explore
-   * catalog. Saving writes to the shared UserService, so built-in and
-   * admin-added trails appear here and in the Profile tab.
+   * Wishlisted (hearted) trails, resolved from UserService.wishlist() back to
+   * the Explore catalog. Hearting writes to the shared UserService, so
+   * built-in and admin-added trails appear here and in the Profile tab.
    */
   // LOOP: walk the saved ids once and map them back to the Explore catalog.
-  // This keeps the bookmark list synced with the shared user data store.
+  // This keeps the wishlist panel synced with the shared user data store.
   savedTrails = computed(() => {
-    const ids = new Set(this.userService.upcoming().map(u => u.trailId));
+    const ids = this.userService.wishlistIds();
     return this.catalog
       .withTrailOverrides([...TRAILS_30, ...this.trailService.addedTrails()])
       .filter(t => ids.has(t.id));
@@ -156,6 +157,7 @@ export class ExplorePage implements ViewDidEnter, OnDestroy {
 
   private readonly trailStatus = inject(TrailStatusService);
   private readonly catalog = inject(CatalogService);
+  private readonly wishlist = inject(WishlistService);
 
   constructor(
     public trailService: TrailService,
@@ -264,29 +266,14 @@ export class ExplorePage implements ViewDidEnter, OnDestroy {
     if (label) this.toast(label);
   }
 
-  /** Adds or removes the trail from the user?s saved list. */
+  /** Hearts or un-hearts the trail (the same Wishlist as the Profile tab). */
   async toggleBookmark(trail: Trail) {
-    if (this.isSaved(trail)) {
-      const existing = this.userService.upcoming().find(u => u.trailId === trail.id);
-      if (existing) this.userService.removeUpcoming(existing.id);
-      this.toast('Removed from saved trails');
-      return;
-    }
-
-    this.userService.addUpcoming({
-      id: 'u' + Date.now(),
-      trailId: trail.id,
-      name: trail.name,
-      image: trail.image,
-      date: 'To be scheduled',
-      duration: trail.duration,
-    });
-    this.toast('Saved — find it under the bookmark icon');
+    await this.wishlist.toggle(trail);
   }
 
-  /** Whether this trail is in the user's saved list. */
+  /** Whether this trail is in the user's wishlist. */
   isSaved(trail: Trail): boolean {
-    return this.userService.upcoming().some(u => u.trailId === trail.id);
+    return this.wishlist.has(trail.id);
   }
 
   /** Shows or hides the panel containing saved trails. */
@@ -304,8 +291,7 @@ export class ExplorePage implements ViewDidEnter, OnDestroy {
   /** Removes from the panel without opening the trail. */
   removeSaved(trail: Trail, ev: Event) {
     ev.stopPropagation();
-    const existing = this.userService.upcoming().find(u => u.trailId === trail.id);
-    if (existing) this.userService.removeUpcoming(existing.id);
+    void this.wishlist.remove(trail.id, trail.name);
   }
 
   /** Closes or cancels the dismiss weather alert flow and returns the interface to its previous state. */

@@ -14,6 +14,9 @@
 import { Component, computed, effect, inject, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { ActivatedRoute } from '@angular/router';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { map } from 'rxjs';
 import { IonIcon } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
 import { getAuth } from 'firebase/auth';
@@ -204,6 +207,14 @@ export class OfficeQueuePage {
   readonly office = inject(OfficeDataService);
   private readonly ui = inject(AdminUiService);
 
+  /** ?open=<booking id>, sent by a tapped notification. */
+  private readonly openParam = toSignal(
+    inject(ActivatedRoute).queryParamMap.pipe(map((p) => p.get('open'))),
+    { initialValue: null },
+  );
+  /** The last ?open= value already acted on, so closing the drawer stays closed. */
+  private handledOpen: string | null = null;
+
   readonly filters: { id: Filter; label: string }[] = [
     { id: 'waiting', label: 'Waiting' },
     { id: 'issued', label: 'Issued' },
@@ -261,6 +272,18 @@ export class OfficeQueuePage {
         (m) => this.medical.set(m),
         () => this.medical.set({ exists: false, status: null, fileName: '', uploadedAt: null, note: '' }),
       );
+    }, { allowSignalWrites: true });
+
+    // A notification asked for one application: switch to the tab it sits
+    // under and open it, once the queue has loaded it.
+    effect(() => {
+      const id = this.openParam();
+      if (!id || id === this.handledOpen) return;
+      const app = this.office.applications().find((a) => a.id === id);
+      if (!app) return;
+      this.handledOpen = id;
+      this.filter.set(bucket(app));
+      this.openId.set(id);
     }, { allowSignalWrites: true });
   }
 

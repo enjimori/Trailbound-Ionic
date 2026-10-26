@@ -51,7 +51,11 @@
 .tba-nav a ion-icon, .tba-side-foot ion-icon { font-size: 19px; }
 .tba-nav a:hover, .tba-side-foot a:hover, .tba-side-foot button:hover { background: var(--tba-soft); }
 .tba-nav a.active { background: var(--tba-ink); color: #fff; }
-.tba-count { margin-left: auto; min-width: 22px; height: 22px; padding: 0 7px; border-radius: 999px; display: grid; place-items: center; font-style: normal; font-size: 11.5px; font-weight: 700; background: var(--tba-sand); color: var(--tba-ink); }
+/* Text uses --tba-on-accent: in light mode --tba-sand and --tba-ink are the
+   same green, so the old color: var(--tba-ink) made the number invisible. */
+.tba-count { margin-left: auto; min-width: 22px; height: 22px; padding: 0 7px; border-radius: 999px; display: grid; place-items: center; font-style: normal; font-size: 11.5px; font-weight: 700; background: var(--tba-sand); color: var(--tba-on-accent); }
+/* On the active (filled) nav item the badge flips, so it stays visible. */
+.tba-nav a.active .tba-count { background: var(--tba-on-accent); color: var(--tba-ink); }
 .tba-side-foot { margin-top: auto; display: flex; flex-direction: column; gap: 4px; }
 
 /* ── main column ── */
@@ -85,11 +89,37 @@
 .tba-icon-btn:hover { background: rgba(29,36,32,.06); }
 .tba-dot { position: absolute; top: 7px; right: 8px; width: 8px; height: 8px; border-radius: 50%; background: var(--tba-down); border: 2px solid #fff; }
 .tba-bell-pop { right: -6px; width: 320px; max-height: 420px; overflow: auto; }
+@media (max-width: 599px) { .tba-bell-pop { right: -60px; } }
 .tba-bell-pop h4 { font-size: 13px; padding: 8px 10px 6px; }
 .tba-act { display: flex; gap: 11px; align-items: flex-start; width: 100%; padding: 9px 10px; border: 0; background: none; border-radius: 10px; text-align: left; font-size: 13px; line-height: 1.4; }
 .tba-act:hover { background: var(--tba-soft); }
 .tba-act ion-icon { font-size: 17px; margin-top: 1px; color: var(--tba-muted); }
 .tba-act small { display: block; color: var(--tba-muted); font-size: 11.5px; margin-top: 2px; }
+
+/* ── notification bell (staff-bell.component.ts) ──
+   Shared by the admin shell and the /guide and /office shell. */
+.tba-bell-count { position: absolute; top: 2px; right: 1px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 999px; display: grid; place-items: center; font-style: normal; font-size: 10.5px; font-weight: 700; line-height: 1; background: var(--tba-down); color: #fff; border: 2px solid var(--tba-surface); }
+.tba-bell-pop { width: 360px; max-width: calc(100vw - 24px); max-height: min(480px, 70vh); }
+.tba-bell-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 6px 10px 8px; }
+.tba-bell-head h4 { padding: 0; font-size: 14px; }
+.tba-bell-mark { border: 0; background: none; padding: 4px 6px; border-radius: 8px; font-size: 12.5px; font-weight: 600; color: var(--tba-sand); }
+.tba-bell-mark:hover { background: var(--tba-sand-soft); }
+.tba-note { position: relative; align-items: flex-start; color: var(--tba-text); }
+.tba-note.unread { background: rgba(83, 109, 66, .07); }
+.tba-note.unread:hover { background: var(--tba-soft); }
+.tba-note:focus-visible { outline: 2px solid var(--tba-sand); outline-offset: -2px; }
+.tba-note-icon { flex: none; width: 32px; height: 32px; border-radius: 10px; display: grid; place-items: center; }
+.tba-note-icon ion-icon { margin: 0; font-size: 16px; color: inherit; }
+.tba-note-icon[data-tone='accent']  { background: rgba(83, 109, 66, .12);  color: #536d42; }
+.tba-note-icon[data-tone='success'] { background: rgba(57, 122, 77, .12);  color: #397a4d; }
+.tba-note-icon[data-tone='warning'] { background: rgba(154, 106, 31, .13); color: #8a5d16; }
+.tba-note-icon[data-tone='danger']  { background: rgba(200, 63, 72, .11);  color: #b0373f; }
+.tba-note-icon[data-tone='info']    { background: rgba(61, 106, 148, .12); color: #3d6a94; }
+.tba-note-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; padding-right: 10px; }
+.tba-note-body b { font-size: 13px; font-weight: 600; line-height: 1.35; }
+.tba-note-body span { font-size: 12.5px; color: var(--tba-muted); line-height: 1.4; }
+.tba-note-body small { margin-top: 2px; }
+.tba-note-dot { position: absolute; top: 14px; right: 10px; width: 7px; height: 7px; border-radius: 50%; background: var(--tba-sand); }
 
 .tba-avatar { width: 38px; height: 38px; border-radius: 50%; display: inline-grid; place-items: center; font-size: 13px; font-weight: 700; color: var(--tba-ink); overflow: hidden; flex: none; background: var(--tba-sand-soft); }
 .tba-avatar img { width: 100%; height: 100%; object-fit: cover; }

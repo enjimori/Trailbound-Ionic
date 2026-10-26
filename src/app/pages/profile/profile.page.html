@@ -73,23 +73,34 @@
       <ion-icon name="chevron-forward-outline"></ion-icon>
     </button>
 
+    <!-- Wishlist: every trail hearted anywhere in the app (trail page, Home
+         cards, Explore). Reads UserService.wishlist(), so it updates live. -->
     <div class="section-header">
-      <span class="section-title">Upcoming Adventures</span>
-      <span class="view-all-link" *ngIf="userService.upcoming().length" (click)="goPlanner()">View all</span>
+      <span class="section-title">Wishlist</span>
+      <span class="wish-count" *ngIf="userService.wishlist().length">
+        {{ userService.wishlist().length }} {{ userService.wishlist().length === 1 ? 'trail' : 'trails' }}
+      </span>
     </div>
 
-    <div class="adventure-item" *ngFor="let adv of userService.upcoming()" (click)="openAdventure(adv)">
-      <img [src]="adv.image" alt="" />
+    <div class="adventure-item" *ngFor="let adv of userService.wishlist()" (click)="openAdventure(adv)">
+      <img [src]="wishImage(adv)" alt="" />
       <div class="adventure-body">
         <span class="adventure-name">{{ adv.name }}</span>
-        <span class="adventure-date">{{ adv.date }} &middot; {{ adv.duration }}</span>
+        <span class="adventure-date">{{ wishSubtitle(adv) }}</span>
       </div>
-      <ion-icon name="chevron-forward-outline"></ion-icon>
+      <button
+        type="button"
+        class="wish-heart"
+        (click)="removeFromWishlist(adv, $event)"
+        [attr.aria-label]="'Remove ' + adv.name + ' from wishlist'"
+      >
+        <ion-icon name="heart"></ion-icon>
+      </button>
     </div>
 
-    <div class="empty-card" *ngIf="!userService.upcoming().length">
-      <ion-icon name="trail-sign-outline"></ion-icon>
-      <p>No upcoming adventures yet.</p>
+    <div class="empty-card" *ngIf="!userService.wishlist().length">
+      <ion-icon name="heart-outline"></ion-icon>
+      <p>No trails in your wishlist yet. Tap the heart on any trail to save it here.</p>
       <button class="empty-btn" (click)="goExplore()">Explore Trails</button>
     </div>
 

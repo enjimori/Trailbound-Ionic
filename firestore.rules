@@ -64,6 +64,10 @@ rules_version = '2';
 //   users  (+ wishlist, notifications)
 //   certificates  certificate_files  certificate_access
 //   settings   activity   admins
+//   guide_status  attendance        -> guide availability and the
+//                                      guide's attendance checklist
+//   guide_trails                    -> which mountains each guide
+//                                      may lead (admin-set)
 // ==========================================================
 
 service cloud.firestore {
@@ -169,6 +173,17 @@ service cloud.firestore {
       return request.resource.data.diff(resource.data)
         .affectedKeys()
         .hasAny(['role', 'disabled', 'status', 'office', 'guideRosterId']);
+    }
+
+    // Used by bookings/create. A new booking with no guide, or with a
+    // guide not restricted to particular mountains (no guide_trails
+    // document), passes exactly as before. A guide who IS restricted
+    // can only be booked for one of their own mountains.
+    function guideMayLeadTrail() {
+      return request.resource.data.get('guideId', null) == null
+        || !exists(/databases/$(database)/documents/guide_trails/$(request.resource.data.guideId))
+        || request.resource.data.get('trailId', '')
+             in get(/databases/$(database)/documents/guide_trails/$(request.resource.data.guideId)).data.get('trailIds', []);
     }
 
     /* ==========================================================
@@ -277,7 +292,8 @@ service cloud.firestore {
                   || (isGuide() && myRosterId() != ''
                       && resource.data.get('guideId', '') == myRosterId());
 
-      allow create: if signedIn() && request.resource.data.uid == request.auth.uid;
+      allow create: if signedIn() && request.resource.data.uid == request.auth.uid
+                    && guideMayLeadTrail();
 
       allow update, delete: if isAdmin();
 
@@ -318,6 +334,119 @@ service cloud.firestore {
                     && request.resource.data.status in ['completed', 'no_show']
                     && request.resource.data.diff(resource.data).affectedKeys()
                          .hasOnly(['status', 'updatedAt']);
+    }
+
+    /* ==========================================================
+       GUIDE AVAILABILITY & CAPACITY
+       guide_status/{rosterId}  { available, maxGuests, updatedAt,
+                                  updatedBy }
+
+       Set by the guide on /guide. Public read, because the booking
+       page shows it to signed-out visitors too and it holds nothing
+       private. Only the guide whose roster id it is (or an admin)
+       may write it, and only these four fields. maxGuests is null
+       (no limit) or a whole number from 1 to 30, the same ceiling as
+       a group booking.
+
+       No document means available with no limit — how every guide
+       behaved before this existed.
+       ========================================================== */
+
+    match /guide_status/{rosterId} {
+      allow read: if true;
+      allow create, update: if (isAdmin() || (isGuide() && myRosterId() == rosterId))
+                            && request.resource.data.keys().hasOnly(
+                                 ['available', 'maxGuests', 'updatedAt', 'updatedBy'])
+                            && request.resource.data.available is bool
+                            && (request.resource.data.maxGuests == null
+                                || (request.resource.data.maxGuests is int
+                                    && request.resource.data.maxGuests >= 1
+                                    && request.resource.data.maxGuests <= 30))
+                            && request.resource.data.updatedBy == request.auth.uid
+                            && request.resource.data.updatedAt == request.time;
+      allow delete: if isAdmin();
+    }
+
+    /* ==========================================================
+       GUIDE-TO-MOUNTAIN ASSIGNMENT
+       guide_trails/{rosterId}  { trailIds, updatedAt, updatedBy }
+
+       Which mountains (trail ids) a guide may lead. Set by an admin
+       in Admin -> Packages -> Guides; a guide cannot assign
+       themselves. Public read, because the booking page only offers
+       a guide on their own mountains, to signed-out visitors too.
+
+       No document = not restricted yet: the guide is offered on
+       every mountain, which is how every guide behaved before this
+       existed. An admin lifts a restriction by deleting the document.
+       ========================================================== */
+
+    match /guide_trails/{rosterId} {
+      allow read: if true;
+      allow create, update: if isAdmin()
+                            && request.resource.data.keys().hasOnly(['trailIds', 'updatedAt', 'updatedBy'])
+                            && request.resource.data.trailIds is list
+                            && request.resource.data.trailIds.size() >= 1
+                            && request.resource.data.trailIds.size() <= 200
+                            && request.resource.data.updatedBy == request.auth.uid
+                            && request.resource.data.updatedAt == request.time;
+      allow delete: if isAdmin();
+    }
+
+    /* ==========================================================
+       HIKER ATTENDANCE
+       attendance/{bookingId}  one checklist per booking
+
+       Written ONLY by the guide the booking is assigned to (the
+       booking's guideId is their roster id), and only once the
+       booking is confirmed — or after it was closed as completed or
+       no-show, so a mistake can be corrected. The document must name
+       the same booking, the same hiker and the same guide, so it
+       cannot be filed against someone else's booking.
+
+       Admins read every record (the dashboard and booking drawer).
+       A guide reads their own. Nobody else — not hikers, not other
+       guides, not the permit office — can read or change one, and
+       only an admin can delete one.
+
+       The record backs up the existing no-show status, whose refund
+       rule (not refundable) lives in booking-workflow.ts; nothing
+       here changes that rule.
+       ========================================================== */
+
+    function attendanceBooking(bookingId) {
+      return get(/databases/$(database)/documents/bookings/$(bookingId));
+    }
+
+    function guideOwnsBooking(bookingId) {
+      return isGuide() && myRosterId() != ''
+        && exists(/databases/$(database)/documents/bookings/$(bookingId))
+        && attendanceBooking(bookingId).data.get('guideId', '') == myRosterId();
+    }
+
+    match /attendance/{bookingId} {
+      allow read: if isAdmin()
+                  || (isGuide() && myRosterId() != ''
+                      && resource.data.get('guideId', '') == myRosterId());
+
+      allow create, update: if guideOwnsBooking(bookingId)
+                            && attendanceBooking(bookingId).data.get('status', '')
+                                 in ['confirmed', 'completed', 'no_show']
+                            && request.resource.data.keys().hasOnly(
+                                 ['bookingId', 'uid', 'guideId', 'reference', 'trailName',
+                                  'date', 'entries', 'recordedBy', 'updatedAt'])
+                            && request.resource.data.bookingId == bookingId
+                            && request.resource.data.guideId == myRosterId()
+                            && request.resource.data.uid
+                                 == attendanceBooking(bookingId).data.get('uid', '')
+                            && request.resource.data.entries is map
+                            && request.resource.data.entries.size() >= 1
+                            && request.resource.data.entries.size() <= 30
+                            && request.resource.data.recordedBy
+                                 == request.auth.token.get('email', '')
+                            && request.resource.data.updatedAt == request.time;
+
+      allow delete: if isAdmin();
     }
 
     /* ==========================================================

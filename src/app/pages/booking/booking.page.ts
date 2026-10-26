@@ -16,7 +16,9 @@ import {
 
 
 import { Trail } from '../../models/trail.model';
-import { BookingDraft, GroupHiker, MAX_GROUP_HIKERS, PackageId } from '../../models/booking.model';
+import { BookingDraft, Guide, GroupHiker, MAX_GROUP_HIKERS, PackageId } from '../../models/booking.model';
+import { GuideStatusService } from '../../services/guide-status.service';
+import { guestCount, guideBlockReason, guideTrailReason } from '../../models/guide-ops.model';
 import { BookingService } from '../../services/booking.service';
 import { ACTIVITIES, GUIDES, MERCH, PACKAGES, packageById } from './booking-catalog';
 import { GUIDE_PROFILES, GuideProfile, guidePhotoPath, merchPhotoPath } from './guide-profiles';
@@ -96,6 +98,8 @@ export class BookingPage implements OnInit {
   private riskAck = inject(RiskAckService);
   private certs = inject(CertificateService);
   private userService = inject(UserService);
+  /** Each guide's availability and capacity, set by the guide on /guide. */
+  private guideStatus = inject(GuideStatusService);
 
 
   /** Guards against presenting the sheet twice if the view re-enters quickly. */
@@ -459,7 +463,38 @@ export class BookingPage implements OnInit {
 
   /** A guide is required, so tapping the chosen guide again keeps them chosen. */
   selectGuide(id: string) {
+    const g = this.visibleGuides().find(x => x.id === id);
+    if (!g) return;
+    const why = this.guideBlocked(g);
+    if (why) {
+      this.toast(why);
+      return;
+    }
     this.guideId.set(id);
+  }
+
+  /**
+   * The guides offered for THIS mountain: those an admin assigned to it, plus
+   * any guide not yet restricted to particular mountains (which is every
+   * guide until an admin assigns them, so nothing changes before then).
+   */
+  readonly visibleGuides = computed(() => {
+    const t = this.trail();
+    if (!t) return [];
+    return this.guides.filter(g => this.guideStatus.canLead(g.id, t.id));
+  });
+
+  /** How many hikers this booking brings, which is what a guide's limit is checked against. */
+  private readonly guests = computed(() =>
+    guestCount(this.packageId() === 'group' ? this.groupHikers() : []),
+  );
+
+  /**
+   * Why this guide cannot be picked for this booking (switched to Unavailable,
+   * or the group is larger than they take), or null when they can.
+   */
+  guideBlocked(g: Guide): string | null {
+    return guideBlockReason(g.name, this.guideStatus.statusFor(g.id), this.guests());
   }
 
 
@@ -537,7 +572,21 @@ export class BookingPage implements OnInit {
       return;
     }
     if (!d.guideId) {
-      this.toast('Choose your expert guide');
+      this.toast(this.visibleGuides().length
+        ? 'Choose your expert guide'
+        : 'No guide is assigned to this mountain yet, so it cannot be booked right now.');
+      return;
+    }
+    // Re-checked here because the group can grow after a guide is picked, and
+    // a guide can switch to Unavailable (or be taken off this mountain) while
+    // this page is open.
+    const chosenGuide = this.guides.find(g => g.id === d.guideId);
+    const guideIssue = chosenGuide
+      ? guideTrailReason(chosenGuide.name, this.guideStatus.trailsFor(chosenGuide.id), t.id, t.name)
+        ?? this.guideBlocked(chosenGuide)
+      : null;
+    if (guideIssue) {
+      this.toast(`${guideIssue} Choose another guide.`);
       return;
     }
     if (d.packageId === 'group') {

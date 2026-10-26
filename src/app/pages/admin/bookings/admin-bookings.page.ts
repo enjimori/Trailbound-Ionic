@@ -32,9 +32,13 @@ import {
   AdminBooking, AdminDataService, BookingStatus, countsAsRevenue, effectiveStatus, receivedFrom,
 } from '../admin-data.service';
 import { AdminUiService } from '../admin-ui.service';
-import { fromDayKey, matches, peso } from '../admin-utils';
+import { dayKey, fromDayKey, matches, peso } from '../admin-utils';
 import { CatalogService } from '../../../services/catalog.service';
 import type { PaperworkStatus, PaymentStatus } from '../../../models/booking-workflow';
+import { refundFor } from '../../../models/booking-workflow';
+import {
+  type AttendanceMark, guestCount, guideBlockReason, guideTrailReason, participantsOf, summarize,
+} from '../../../models/guide-ops.model';
 
 type Filter = 'all' | 'awaiting_confirmation' | BookingStatus;
 
@@ -189,7 +193,13 @@ const PAYMENT_LABEL: Record<PaymentStatus, string> = {
               <div><dt>Hike date</dt><dd>{{ hikeDate(b) | date: 'EEEE, MMM d, y' }}</dd></div>
               <div><dt>Package</dt><dd>{{ b.packageName }}</dd></div>
               <div><dt>Activities</dt><dd>{{ b.activityNames.length ? b.activityNames.join(', ') : 'None' }}</dd></div>
-              <div><dt>Guide</dt><dd>{{ b.guideName ?? 'No preference' }}</dd></div>
+              <div>
+                <dt>Guide</dt>
+                <dd>
+                  {{ b.guideName ?? 'No preference' }}
+                  @if (b.guideId) { <small class="sub">{{ guideAvailability(b) }}</small> }
+                </dd>
+              </div>
               @if (b.groupHikers.length) {
                 <div><dt>Group size</dt><dd>{{ b.groupHikers.length }} hikers</dd></div>
               }
@@ -206,6 +216,29 @@ const PAYMENT_LABEL: Record<PaymentStatus, string> = {
                   <div><dt>Emergency contact</dt><dd>{{ hiker.emergencyContactName }} · {{ hiker.emergencyContactPhone }}</dd></div>
                 </dl>
               }
+            }
+
+            <!-- ── attendance (recorded by the guide on /guide) ──────────── -->
+            <p class="tba-section-title gap">Attendance</p>
+            @if (data.attendance()[b.id]; as rec) {
+              <dl class="tba-dl">
+                @for (row of attendanceRows(b); track row.key) {
+                  <div>
+                    <dt>{{ row.name }}</dt>
+                    <dd>
+                      @if (row.status) {
+                        <span class="tba-badge" [attr.data-tone]="row.status === 'present' ? 'green' : 'red'">{{ row.status === 'present' ? 'Present' : 'Absent' }}</span>
+                      } @else { <span class="tba-badge">Not marked</span> }
+                    </dd>
+                  </div>
+                }
+                <div><dt>Showed up</dt><dd>{{ attendanceSummary(b).present }} of {{ attendanceSummary(b).total }}</dd></div>
+                <div><dt>Recorded by</dt><dd>{{ b.guideName || 'Guide' }}{{ rec.recordedBy ? ' · ' + rec.recordedBy : '' }}</dd></div>
+                @if (rec.updatedAt) { <div><dt>Recorded</dt><dd>{{ rec.updatedAt | date: 'MMM d, y, h:mm a' }}</dd></div> }
+              </dl>
+              @if (attendanceNote(b); as note) { <p class="hint att-note">{{ note }}</p> }
+            } @else {
+              <p class="hint">{{ noAttendanceText(b) }}</p>
             }
 
             <p class="tba-section-title gap">Hiker</p>
@@ -292,10 +325,11 @@ const PAYMENT_LABEL: Record<PaymentStatus, string> = {
           </div>
           <footer>
             @if (b.status === 'pending') {
-              <button type="button" class="tba-btn primary" [disabled]="busy() || !canConfirm(b)" (click)="confirmBooking(b)">
+              <button type="button" class="tba-btn primary" [disabled]="busy() || !canConfirm(b) || !!guideIssue(b)" (click)="confirmBooking(b)">
                 <ion-icon name="checkmark-outline"></ion-icon>Confirm booking
               </button>
               @if (!canConfirm(b)) { <p class="gate">{{ blockedReason(b) }}</p> }
+              @else if (guideIssue(b)) { <p class="gate">Cannot confirm yet — {{ guideIssue(b) }}</p> }
               <button type="button" class="tba-btn danger" [disabled]="busy()" (click)="cancel(b)"><ion-icon name="close-circle-outline"></ion-icon>Cancel booking</button>
             } @else if (b.status === 'cancelled' || b.status === 'no_show') {
               <button type="button" class="tba-btn" [disabled]="busy()" (click)="setStatus(b, 'confirmed')"><ion-icon name="refresh-outline"></ion-icon>Restore booking</button>
@@ -357,6 +391,8 @@ const PAYMENT_LABEL: Record<PaymentStatus, string> = {
       border-radius: 10px; background: var(--tba-sand-soft); font-size: 13px; font-weight: 600; }
     .acts { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
     .hint { margin: 10px 0 0; font-size: 12px; line-height: 1.5; color: var(--tba-muted); }
+    .hint.att-note { margin: -8px 0 0; color: var(--tba-text); }
+    dd small.sub { display: block; color: var(--tba-muted); font-size: 11.5px; margin-top: 2px; }
     .mono { font-variant-numeric: tabular-nums; letter-spacing: 0.02em; }
     .bad { color: var(--tba-down) !important; font-weight: 600; }
     footer .gate { grid-column: 1 / -1; margin: 0; font-size: 12px; color: var(--tba-amber); }
@@ -528,7 +564,7 @@ export class AdminBookingsPage {
     if (b.permitOffice && !b.permitLodged && b.paperwork !== 'cleared') {
       return `Permit application not sent to ${b.permitOffice} yet`;
     }
-    if (this.canConfirm(b)) return 'Waiting for booking confirmation';
+    if (this.canConfirm(b)) return this.guideIssue(b) ?? 'Waiting for booking confirmation';
     if (b.payment === 'balance_due') return 'Waiting on the balance payment';
     if (b.payment === 'lapsed') return 'Balance went unpaid past its due date';
     return 'Waiting on the permit';
@@ -552,6 +588,100 @@ export class AdminBookingsPage {
     const docsDone = b.paperwork === 'cleared' || b.paperwork === 'not_required';
     const why = docsDone ? PAYMENT_LABEL[b.payment] : PAPERWORK_LABEL[b.paperwork];
     return `Cannot confirm yet — ${why.toLowerCase()}.`;
+  }
+
+  // ── guide availability & capacity ────────────────────────────────────────
+
+  /** Hikers already confirmed with this booking's guide on the same date (this one excluded). */
+  private guideDayLoad(b: AdminBooking): number {
+    if (!b.guideId) return 0;
+    return this.data.bookings()
+      .filter((x) => x.id !== b.id && x.guideId === b.guideId && x.date === b.date
+        && (x.status === 'confirmed' || x.status === 'completed'))
+      .reduce((n, x) => n + guestCount(x.groupHikers), 0);
+  }
+
+  /**
+   * Why this booking's guide cannot take it — they set themselves Unavailable,
+   * or confirming it would put more hikers on that date than their limit.
+   * Null when there is no problem, or no guide was chosen.
+   */
+  guideIssue(b: AdminBooking): string | null {
+    if (!b.guideId) return null;
+    const name = b.guideName || 'This guide';
+    // Not assigned to this mountain (Admin → Packages → Guides) comes first:
+    // it is the one an admin can fix right here by assigning them.
+    const trailProblem = guideTrailReason(name, this.data.guideTrailsFor(b.guideId), b.trailId, b.trailName);
+    if (trailProblem) return `${trailProblem} Assign them under Packages → Guides, or cancel the booking.`;
+    return guideBlockReason(
+      name,
+      this.data.guideStatusFor(b.guideId),
+      guestCount(b.groupHikers),
+      this.guideDayLoad(b),
+    );
+  }
+
+  /** One line under the guide's name in the drawer. */
+  guideAvailability(b: AdminBooking): string {
+    const st = this.data.guideStatusFor(b.guideId);
+    const day = this.guideDayLoad(b);
+    const assigned = this.data.guideTrailsFor(b.guideId);
+    const parts = [
+      assigned === null ? 'Any mountain' : assigned.includes(b.trailId) ? 'Assigned to this mountain' : 'Not assigned to this mountain',
+      st.available ? 'Available' : 'Unavailable',
+    ];
+    parts.push(st.maxGuests ? `up to ${st.maxGuests} guests per date` : 'no guest limit');
+    if (day) parts.push(`${day} other ${day === 1 ? 'hiker' : 'hikers'} confirmed that day`);
+    return parts.join(' · ');
+  }
+
+  // ── attendance ───────────────────────────────────────────────────────────
+
+  /** Every participant on the booking, with what the guide marked (null = not marked). */
+  attendanceRows(b: AdminBooking): { key: string; name: string; status: AttendanceMark | null }[] {
+    const rec = this.data.attendance()[b.id];
+    return participantsOf(b).map((p) => ({
+      key: p.key,
+      name: rec?.entries[p.key]?.name || p.name,
+      status: rec?.entries[p.key]?.status ?? null,
+    }));
+  }
+
+  attendanceSummary(b: AdminBooking) {
+    return summarize(this.data.attendance()[b.id]);
+  }
+
+  /**
+   * How the checklist lines up with the booking's status. The no-show refund
+   * wording comes from refundFor() in booking-workflow.ts, the existing
+   * policy — nothing is decided here.
+   */
+  attendanceNote(b: AdminBooking): string | null {
+    const s = this.attendanceSummary(b);
+    if (!s.total) return null;
+    if (b.status === 'no_show') {
+      if (s.present > 0) {
+        return `The guide marked ${s.present} of ${s.total} present. Check this before treating the booking as a no-show.`;
+      }
+      const policy = refundFor({ reason: 'no_show', grossPaid: 0, transactionFee: 0, permitFeeLodged: 0, daysBeforeHike: 0 });
+      return `Everyone was marked absent, which supports the no-show. Refund policy for no-shows: ${policy.explain}`;
+    }
+    if (s.present === 0) {
+      return b.status === 'completed'
+        ? 'Everyone was marked absent, but the booking is marked completed. Check with the guide.'
+        : 'Everyone was marked absent. The guide has not closed the booking yet.';
+    }
+    if (s.absent > 0) return `${s.absent} of ${s.total} did not turn up.`;
+    return null;
+  }
+
+  /** Why there is no checklist yet. */
+  noAttendanceText(b: AdminBooking): string {
+    if (!b.guideId) return 'No guide is linked to this booking, so there is no attendance checklist.';
+    if (b.status === 'pending') return 'The guide takes attendance once this booking is confirmed.';
+    if (b.status === 'cancelled') return 'Cancelled — no attendance to take.';
+    if (b.status === 'confirmed' && b.date > dayKey(new Date())) return 'The guide takes attendance on the hike day.';
+    return 'The guide has not recorded attendance for this booking yet.';
   }
 
   // ── permit workflow ──────────────────────────────────────────────────────
@@ -604,6 +734,11 @@ export class AdminBookingsPage {
   /** Performs the confirm booking operation for this feature and returns its result to the caller. */
   async confirmBooking(b: AdminBooking): Promise<void> {
     if (!this.canConfirm(b)) return;
+    const guideProblem = this.guideIssue(b);
+    if (guideProblem) {
+      this.ui.toast(guideProblem, 'error');
+      return;
+    }
     const paymentNote = b.demoBalancePaid
       ? 'The balance was submitted as a test transaction; no funds were collected.'
       : 'Their permit and payment are both on record.';
@@ -620,6 +755,15 @@ export class AdminBookingsPage {
 
   /** Updates the selected record status through the owning service. */
   async setStatus(b: AdminBooking, status: BookingStatus): Promise<void> {
+    // Restoring a cancelled or no-show booking puts the hiker back on the
+    // guide's day, so it is held to the same availability and limit.
+    if (status === 'confirmed' && (b.status === 'cancelled' || b.status === 'no_show')) {
+      const guideProblem = this.guideIssue(b);
+      if (guideProblem) {
+        this.ui.toast(guideProblem, 'error');
+        return;
+      }
+    }
     const said =
       status === 'completed' ? 'Marked as completed'
       : status === 'no_show' ? 'Marked as a no-show'

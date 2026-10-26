@@ -31,12 +31,16 @@ import { signOut } from 'firebase/auth';
 import { adminAuth } from './admin-firebase';
 import { AdminThemeService } from './admin-theme.service';
 import { AdminUiService } from './admin-ui.service';
+import { StaffBellComponent } from './staff-bell.component';
+import { GuideNotificationsService } from './guide/guide-notifications.service';
+import { OfficeNotificationsService } from './office/office-notifications.service';
+import type { AppNotification } from '../../models/notification.model';
 
 @Component({
   selector: 'app-staff-shell',
   standalone: true,
   encapsulation: ViewEncapsulation.None,
-  imports: [FormsModule, IonIcon, RouterOutlet],
+  imports: [FormsModule, IonIcon, RouterOutlet, StaffBellComponent],
   styleUrls: ['./admin-ui.css', './admin-dark.css'],
   template: `
     <div class="tba staff" [attr.data-tba-theme]="theme.mode()">
@@ -49,6 +53,15 @@ import { AdminUiService } from './admin-ui.service';
           </div>
         </div>
         <span class="staff-who">{{ email() }}</span>
+        <!-- Guides: their hikes. Office: applications TrailBound sent. -->
+        <app-staff-bell
+          [items]="notes.notifications()"
+          [unread]="notes.unreadCount()"
+          heading="Notifications"
+          [empty]="feed === 'office' ? 'No applications from TrailBound yet.' : 'No hikes booked with you yet.'"
+          (pickNote)="openNote($event)"
+          (markAll)="notes.markAllRead()"
+        ></app-staff-bell>
         <button type="button" class="tba-icon-btn" (click)="theme.toggle()"
                 [attr.aria-label]="theme.isDark() ? 'Switch to light mode' : 'Switch to dark mode'">
           <ion-icon [name]="theme.isDark() ? 'sunny-outline' : 'moon-outline'"></ion-icon>
@@ -98,8 +111,10 @@ import { AdminUiService } from './admin-ui.service';
        needs the extra class to win on specificity and become a column. */
     .tba.staff { display: block; overflow-y: auto; background: var(--tba-soft); }
 
+    /* --tba-surface rather than #fff, so the bar goes dark with the rest of
+       the page (it was staying white in dark mode, hiding its own text). */
     .staff-bar { position: sticky; top: 0; z-index: 20; display: flex; align-items: center; gap: 14px;
-      padding: 14px 24px; background: #fff; border-bottom: 1px solid var(--tba-line); }
+      padding: 14px 24px; background: var(--tba-surface); border-bottom: 1px solid var(--tba-line); }
     .staff-mark { display: flex; align-items: center; gap: 11px; margin-right: auto; }
     .staff-mark > ion-icon { font-size: 26px; color: var(--tba-sand); }
     .staff-mark b { display: block; font-size: 16px; font-weight: 700; letter-spacing: -.01em; }
@@ -110,7 +125,8 @@ import { AdminUiService } from './admin-ui.service';
 
     @media (max-width: 599px) {
       .staff-who { display: none; }
-      .staff-bar { padding: 12px 16px; }
+      .staff-bar { padding: 12px 16px; gap: 8px; }
+      .staff-bar .tba-bell-pop { right: -96px; width: min(340px, calc(100vw - 24px)); }
       .staff-page { padding: 18px 16px 40px; }
     }
   `],
@@ -120,6 +136,12 @@ export class StaffShellComponent {
   readonly theme = inject(AdminThemeService);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
+
+  /** Which feed the bell shows, from the route's data: 'guide' or 'office'. */
+  readonly feed: 'guide' | 'office' =
+    this.route.snapshot.data['feed'] === 'office' ? 'office' : 'guide';
+  readonly notes: GuideNotificationsService | OfficeNotificationsService =
+    this.feed === 'office' ? inject(OfficeNotificationsService) : inject(GuideNotificationsService);
 
   constructor() {
     addIcons({
@@ -141,6 +163,12 @@ export class StaffShellComponent {
   /** Performs the email operation for this feature and returns its result to the caller. */
   email(): string {
     return adminAuth.currentUser?.email ?? '';
+  }
+
+  /** A notification was tapped: mark it read and open what it is about. */
+  openNote(n: AppNotification): void {
+    this.notes.markRead(n.id);
+    if (n.link) this.router.navigate([n.link.path], { queryParams: n.link.queryParams });
   }
 
   /** Performs the logout operation for this feature and returns its result to the caller. */

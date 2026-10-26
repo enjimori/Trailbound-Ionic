@@ -19,6 +19,7 @@ import { AdminAuthService } from '../admin-auth.service';
 import { AdminUiService } from '../admin-ui.service';
 import { fromDayKey, initials, matches, peso, tintFor, toDate } from '../admin-utils';
 import { CERTIFICATE_KINDS } from '../../../models/certificate.model';
+import { isWishlistEntry } from '../../../models/user.model';
 
 type Filter = 'all' | 'active' | 'suspended' | 'admin';
 
@@ -153,11 +154,11 @@ type Filter = 'all' | 'active' | 'suspended' | 'admin';
             } @empty { <p class="none">No bookings yet.</p> }
             </div>
 
-            <p class="tba-section-title">Saved trails</p>
+            <p class="tba-section-title">Wishlist</p>
             <div class="lines">
-            @for (s of u.upcoming; track s.id) {
-              <div class="line static"><span><b>{{ s.name }}</b><small>{{ s.date }}</small></span></div>
-            } @empty { <p class="none">Nothing saved.</p> }
+            @for (s of wishlistOf(u); track s.id) {
+              <div class="line static"><span><b>{{ s.name }}</b><small>Hearted trail</small></span></div>
+            } @empty { <p class="none">No hearted trails.</p> }
             </div>
           </div>
 
@@ -206,6 +207,11 @@ type Filter = 'all' | 'active' | 'suspended' | 'admin';
   `],
 })
 export class AdminHikersPage {
+  /** Hearted trails only — older booking copies in the same list are skipped. */
+  wishlistOf(u: AdminUser) {
+    return u.upcoming.filter(isWishlistEntry);
+  }
+
   readonly data = inject(AdminDataService);
   private readonly auth = inject(AdminAuthService);
   private readonly ui = inject(AdminUiService);

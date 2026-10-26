@@ -67,9 +67,9 @@
       class="map-fab"
       [class.active]="showSavedPanel()"
       (click)="toggleSavedPanel()"
-      aria-label="Saved trails"
+      aria-label="Wishlist"
     >
-      <ion-icon name="bookmark-outline"></ion-icon>
+      <ion-icon name="heart-outline"></ion-icon>
       <span class="map-fab__badge" *ngIf="savedTrails().length">
         {{ savedTrails().length }}
       </span>
@@ -84,16 +84,16 @@
     </button>
   </div>
 
-  <!-- Saved trails, opened from the bookmark FAB -->
+  <!-- Wishlist (hearted trails), opened from the heart FAB -->
   <div class="saved-panel" *ngIf="showSavedPanel()">
     <div class="saved-panel__head">
-      <strong>Saved trails</strong>
+      <strong>Wishlist</strong>
       <ion-icon name="close" (click)="toggleSavedPanel()"></ion-icon>
     </div>
 
     <div class="saved-panel__empty" *ngIf="savedTrails().length === 0">
-      <ion-icon name="bookmark-outline"></ion-icon>
-      <span>Nothing saved yet. Tap a trail, then the save icon.</span>
+      <ion-icon name="heart-outline"></ion-icon>
+      <span>No hearted trails yet. Tap a trail, then the heart.</span>
     </div>
 
     <button
@@ -122,9 +122,9 @@
         class="sheet-icon-btn"
         [class.saved]="isSaved(trail)"
         (click)="toggleBookmark(trail)"
-        [attr.aria-label]="isSaved(trail) ? 'Remove from saved' : 'Save this trail'"
+        [attr.aria-label]="isSaved(trail) ? 'Remove from wishlist' : 'Add to wishlist'"
       >
-        <ion-icon [name]="isSaved(trail) ? 'bookmark' : 'bookmark-outline'"></ion-icon>
+        <ion-icon [name]="isSaved(trail) ? 'heart' : 'heart-outline'"></ion-icon>
       </button>
       <button class="sheet-icon-btn" (click)="openTrail(trail)" aria-label="Trail details">
         <ion-icon name="information-circle-outline"></ion-icon>
@@ -136,7 +136,7 @@
 
     <div class="trail-sheet__top">
       <span class="trail-sheet__eyebrow">
-        {{ isSaved(trail) ? 'SAVED TRAIL' : 'SELECTED TRAIL' }}
+        {{ isSaved(trail) ? 'IN YOUR WISHLIST' : 'SELECTED TRAIL' }}
       </span>
       <span class="trail-sheet__rating" *ngIf="trail.rating > 0">
         <ion-icon name="star"></ion-icon>{{ trail.rating }}

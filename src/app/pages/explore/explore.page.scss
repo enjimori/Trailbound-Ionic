@@ -582,10 +582,11 @@
     font-size: 17px;
   }
 
+  /* A filled heart is red everywhere in the app (trail page, Home cards). */
   &.saved {
-    background: var(--app-accent-soft);
-    border-color: rgba(232, 217, 156, 0.4);
-    color: var(--app-accent);
+    background: rgba(240, 80, 90, 0.14);
+    border-color: rgba(240, 80, 90, 0.45);
+    color: var(--app-heart);
   }
 }
 

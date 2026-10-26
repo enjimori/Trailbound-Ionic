@@ -89,7 +89,7 @@ import { matches, timeAgo } from '../admin-utils';
     .dist-row { display: grid; grid-template-columns: 36px 1fr 30px; align-items: center; gap: 10px; border: 0; background: none; padding: 3px 6px; border-radius: 8px; font-size: 12.5px; color: var(--tba-muted); }
     .dist-row.on, .dist-row:hover { background: var(--tba-soft); }
     .dist-row i { height: 8px; border-radius: 99px; background: var(--tba-soft); overflow: hidden; }
-    .dist-row.on i { background: #fff; }
+    .dist-row.on i { background: var(--tba-surface); } /* #fff in light, card colour in dark */
     .dist-row b { display: block; height: 100%; background: var(--tba-sand); border-radius: 99px; }
     .dist-row em { font-style: normal; text-align: right; }
     .flush { padding: 8px 8px 4px; }

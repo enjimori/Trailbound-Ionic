@@ -16,12 +16,30 @@ ion-title { font-size: 21px; }
   text-transform: none;
 }
 
-/* List-row layout mirrors the notification card rendered by the template. */
+/* List-row layout mirrors the notification card rendered by the template.
+   Capped width so cards don't stretch edge to edge on a tablet or desktop. */
 .page-pad {
   padding: 8px 18px 0;
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+.subtitle {
+  max-width: 720px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.mark-btn[disabled] {
+  opacity: 0.45;
 }
 
 .notif-card {
+  /* A <button> so it is reachable by keyboard; these undo browser defaults. */
+  width: 100%;
+  text-align: left;
+  font: inherit;
+  color: inherit;
   display: flex;
   align-items: center;
   gap: 12px;
@@ -53,6 +71,18 @@ ion-title { font-size: 21px; }
   ion-icon {
     font-size: 19px;
   }
+
+  /* Tone colours, dark theme. Light theme overrides are further down. */
+  &[data-tone='accent']  { background: var(--app-accent-soft);       color: var(--app-accent); }
+  &[data-tone='success'] { background: rgba(127, 208, 154, 0.14);    color: #7fd09a; }
+  &[data-tone='warning'] { background: rgba(242, 193, 78, 0.15);     color: #f2c14e; }
+  &[data-tone='danger']  { background: rgba(240, 80, 90, 0.15);      color: #f08682; }
+  &[data-tone='info']    { background: rgba(143, 179, 217, 0.15);    color: #9fc2e6; }
+}
+
+.notif-card:focus-visible {
+  outline: 2px solid var(--app-accent);
+  outline-offset: 2px;
 }
 
 .notif-body {
@@ -130,6 +160,15 @@ ion-title { font-size: 21px; }
   background: #4f713c;
 }
 
+/* Tone colours, light theme: darker inks so icons hold contrast on white. */
+:host-context(html[data-theme='light']) .notif-icon {
+  &[data-tone='accent']  { background: rgba(83, 109, 66, 0.12);  color: #536d42; }
+  &[data-tone='success'] { background: rgba(57, 122, 77, 0.12);  color: #397a4d; }
+  &[data-tone='warning'] { background: rgba(154, 106, 31, 0.13); color: #8a5d16; }
+  &[data-tone='danger']  { background: rgba(200, 63, 72, 0.11);  color: #b0373f; }
+  &[data-tone='info']    { background: rgba(61, 106, 148, 0.12); color: #3d6a94; }
+}
+
 .bottom-spacer {
   height: 24px;
 }
@@ -140,4 +179,18 @@ ion-title { font-size: 21px; }
   font-size: 14px;
   line-height: 1.5;
   color: var(--app-text-dim);
+
+  ion-icon {
+    font-size: 34px;
+    color: var(--app-accent);
+    opacity: 0.85;
+  }
+
+  p { margin: 8px 0 0; color: var(--app-text); }
+
+  .empty-sub {
+    margin-top: 4px;
+    font-size: 13px;
+    color: var(--app-text-dim);
+  }
 }

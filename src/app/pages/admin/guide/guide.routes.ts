@@ -16,7 +16,7 @@ export const GUIDE_ROUTES: Routes = [
   {
     path: '',
     canActivate: [guideGuard],
-    data: { label: 'Guide', icon: 'map-outline' },
+    data: { label: 'Guide', icon: 'map-outline', feed: 'guide' },
     loadComponent: () =>
       import('../staff-shell.component').then((m) => m.StaffShellComponent),
     children: [

@@ -53,6 +53,7 @@
 
   /* ── Accent ── */
   --app-accent: #e8d99c;              /* links, active tab, active chip */
+  --app-accent-rgb: 232, 217, 156;    /* for rgba(var(--app-accent-rgb), a) */
   --app-accent-soft: rgba(232, 217, 156, 0.14);
   --app-green: #dfe3b6;               /* primary buttons (cream sage) */
   --app-green-dark: #c6cc9b;
@@ -114,6 +115,7 @@ html[data-theme='light'] {
   --app-text-soft: rgba(32, 42, 35, 0.82);
 
   --app-accent: #536d42;
+  --app-accent-rgb: 83, 109, 66;
   --app-accent-soft: rgba(83, 109, 66, 0.12);
   --app-green: #60794b;
   --app-green-dark: #4f673d;

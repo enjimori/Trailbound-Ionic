@@ -23,7 +23,7 @@ export const OFFICE_ROUTES: Routes = [
   {
     path: '',
     canActivate: [officeGuard],
-    data: { label: 'Permit office', icon: 'ribbon-outline' },
+    data: { label: 'Permit office', icon: 'ribbon-outline', feed: 'office' },
     loadComponent: () =>
       import('../staff-shell.component').then((m) => m.StaffShellComponent),
     children: [

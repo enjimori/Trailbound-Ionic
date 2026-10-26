@@ -63,6 +63,8 @@ export interface OfficeApplication {
   permitIssuedAt: Date | null;
   lodgedAt: Date | null;
   riskAckAt: Date | null;
+  /** The booking's own status — 'cancelled' means TrailBound withdrew it. */
+  status: string;
 }
 
 /** What the office is shown about a hiker's medical certificate. */
@@ -231,5 +233,6 @@ function toApplication(id: string, d: Record<string, any>): OfficeApplication {
     permitIssuedAt: toDate(d['permitIssuedAt']),
     lodgedAt: toDate(d['updatedAt']) ?? toDate(d['createdAt']),
     riskAckAt: toDate(d['riskAckAt']),
+    status: String(d['status'] ?? ''),
   };
 }

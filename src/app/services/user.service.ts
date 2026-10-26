@@ -13,7 +13,7 @@ import {
 import { doc, getDoc, serverTimestamp, setDoc } from 'firebase/firestore';
 import { auth, db } from './firebase.client';
 import { startSession, clearSession, isSessionExpired } from './session-expiry';
-import { UserProfile, UpcomingAdventure } from '../models/user.model';
+import { UserProfile, UpcomingAdventure, WISHLIST_DATE, isWishlistEntry } from '../models/user.model';
 
 /** Error with a Firebase code and a user-friendly message. */
 export class AuthError extends Error {
@@ -85,6 +85,16 @@ export class UserService {
 
   private readonly _upcoming = signal<UpcomingAdventure[]>([]);
   readonly upcoming = computed(() => this._upcoming());
+
+  /**
+   * Trails the hiker hearted, newest first. Every heart in the app (trail
+   * page, Home cards, Explore) reads and writes this one list, so they all
+   * stay in step, and the Profile tab's Wishlist shows the same thing.
+   */
+  readonly wishlist = computed(() => this._upcoming().filter(isWishlistEntry));
+
+  /** Trail ids in the wishlist, for quick lookups from templates. */
+  readonly wishlistIds = computed(() => new Set(this.wishlist().map((a) => a.trailId)));
 
   private readonly _isAuthenticated = signal<boolean>(false);
   readonly isAuthenticated = this._isAuthenticated.asReadonly();
@@ -223,6 +233,61 @@ export class UserService {
   /** Performs the remove upcoming operation for this feature and returns its result to the caller. */
   async removeUpcoming(id: string) {
     await this.saveUpcoming(this._upcoming().filter((a) => a.id !== id));
+  }
+
+  // ---------- Wishlist (hearts) ----------
+
+  /** Whether this trail is hearted. */
+  isInWishlist(trailId: string): boolean {
+    return this.wishlistIds().has(trailId);
+  }
+
+  /**
+   * Hearts or un-hearts a trail and returns the new state (true = hearted).
+   * Throws 'Not signed in.' for guests, so callers can send them to sign in.
+   *
+   * Un-hearting removes every heart entry for that trail, so an old duplicate
+   * cannot leave the heart stuck on.
+   */
+  async toggleWishlist(trail: { id: string; name: string; image: string; duration: string }): Promise<boolean> {
+    if (!auth.currentUser) throw new Error('Not signed in.');
+    if (this.isInWishlist(trail.id)) {
+      await this.saveUpcomingNow(
+        this._upcoming().filter((a) => !(a.trailId === trail.id && isWishlistEntry(a))),
+      );
+      return false;
+    }
+    await this.saveUpcomingNow([
+      {
+        id: 'u' + Date.now(),
+        trailId: trail.id,
+        name: trail.name,
+        image: trail.image,
+        date: WISHLIST_DATE,
+        duration: trail.duration,
+        kind: 'wishlist',
+      },
+      ...this._upcoming(),
+    ]);
+    return true;
+  }
+
+  /**
+   * Like saveUpcoming, but the screen changes first and the write follows, so
+   * a heart fills the moment it is tapped. If Firestore refuses, the list
+   * goes back to what it was and the error is passed on.
+   */
+  private async saveUpcomingNow(list: UpcomingAdventure[]) {
+    const uid = auth.currentUser?.uid;
+    if (!uid) throw new Error('Not signed in.');
+    const before = this._upcoming();
+    this._upcoming.set(list);
+    try {
+      await setDoc(doc(db, 'users', uid), { upcoming: list }, { merge: true });
+    } catch (e) {
+      this._upcoming.set(before);
+      throw e;
+    }
   }
 
   // ---------- Internals ----------

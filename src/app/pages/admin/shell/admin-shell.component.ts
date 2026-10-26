@@ -1,5 +1,5 @@
 /**
- * Admin shell — sidebar, top bar (search, activity, account) and the shared
+ * Admin shell — sidebar, top bar (search, notifications, account) and the shared
  * look every admin page builds on.
  *
  * The styles are global to the admin area on purpose (ViewEncapsulation.None),
@@ -29,22 +29,21 @@ import { AdminThemeService } from '../admin-theme.service';
 import { AdminAuthService } from '../admin-auth.service';
 import { AdminDataService } from '../admin-data.service';
 import { AdminUiService } from '../admin-ui.service';
+import { AdminNotificationsService } from '../admin-notifications.service';
+import { StaffBellComponent } from '../staff-bell.component';
 import { initials, matches, timeAgo, tintFor } from '../admin-utils';
 import { allTrails } from '../../explore/trail-lookup';
+import type { AppNotification } from '../../../models/notification.model';
 
 interface NavItem { path: string; label: string; icon: string; exact?: boolean; badge?: () => number }
 
 interface SearchHit { kind: string; label: string; sub: string; path: string; open: string }
 
-interface ActivityItem { at: Date; icon: string; text: string; path: string; open: string }
-
-const SEEN_KEY = 'tba.activitySeen';
-
 @Component({
   selector: 'app-admin-shell',
   standalone: true,
   encapsulation: ViewEncapsulation.None,
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, FormsModule, IonIcon],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, FormsModule, IonIcon, StaffBellComponent],
   styleUrls: ['../admin-ui.css', '../admin-dark.css'],
   template: `
     <div class="tba" [attr.data-tba-theme]="adminTheme.mode()" [class.rail-mode]="railMode()" [class.nav-open]="navOpen()">
@@ -115,25 +114,15 @@ const SEEN_KEY = 'tba.activitySeen';
           </div>
 
           <div class="tba-top-right">
-            <div class="tba-bell-wrap" (focusout)="onBellBlur($event)">
-              <button type="button" class="tba-icon-btn" aria-label="Recent activity" (click)="toggleBell()">
-                <ion-icon name="notifications-outline"></ion-icon>
-                @if (unseen()) { <i class="tba-dot"></i> }
-              </button>
-              @if (bellOpen()) {
-                <div class="tba-pop tba-bell-pop">
-                  <h4>Recent activity</h4>
-                  @for (a of activity(); track a.at.getTime() + a.text) {
-                    <button type="button" class="tba-act" (mousedown)="openActivity(a)">
-                      <ion-icon [name]="a.icon"></ion-icon>
-                      <span>{{ a.text }}<small>{{ ago(a.at) }}</small></span>
-                    </button>
-                  } @empty {
-                    <p class="tba-pop-empty">No activity yet.</p>
-                  }
-                </div>
-              }
-            </div>
+            <!-- Hikers, the permit office and guides, live. See AdminNotificationsService. -->
+            <app-staff-bell
+              [items]="notes.notifications()"
+              [unread]="notes.unreadCount()"
+              heading="Notifications"
+              empty="Nothing new from hikers, the office or guides yet."
+              (pickNote)="openNote($event)"
+              (markAll)="notes.markAllRead()"
+            ></app-staff-bell>
             <a class="tba-me" routerLink="/admin/settings" [title]="admin()?.email ?? ''">
               <span class="tba-avatar" [style.background]="tint(admin()?.name ?? 'A')">{{ initialsOf(admin()?.name) }}</span>
             </a>
@@ -194,6 +183,7 @@ export class AdminShellComponent implements OnInit, OnDestroy {
   readonly data = inject(AdminDataService);
   readonly ui = inject(AdminUiService);
   readonly adminTheme = inject(AdminThemeService);
+  readonly notes = inject(AdminNotificationsService);
 
   readonly admin = this.auth.admin;
   readonly navOpen = signal(false);
@@ -201,8 +191,6 @@ export class AdminShellComponent implements OnInit, OnDestroy {
 
   readonly term = signal('');
   readonly searchOpen = signal(false);
-  readonly bellOpen = signal(false);
-  private readonly seenAt = signal(readSeen());
 
   readonly nav: NavItem[] = [
     { path: '/admin', label: 'Dashboard', icon: 'grid-outline', exact: true },
@@ -250,43 +238,6 @@ export class AdminShellComponent implements OnInit, OnDestroy {
     return out.slice(0, 12);
   });
 
-  readonly activity = computed<ActivityItem[]>(() => {
-    const items: ActivityItem[] = [];
-    for (const b of this.data.bookings().slice(0, 15)) {
-      if (!b.createdAt) continue;
-      const who = b.userName || 'A hiker';
-      items.push({
-        at: b.createdAt, icon: 'receipt-outline', path: '/admin/bookings', open: b.id,
-        text: b.status === 'cancelled' ? `Booking #${b.reference} was cancelled` : `${who} booked ${b.trailName}`,
-      });
-    }
-    for (const p of this.data.posts().slice(0, 15)) {
-      if (!p.createdAt) continue;
-      items.push({
-        at: p.createdAt, icon: 'chatbubbles-outline', path: '/admin/community', open: p.id,
-        text: p.repostOf ? `${p.authorName} reposted a post` : `${p.authorName} posted in Community`,
-      });
-    }
-    for (const r of this.data.reviews().slice(0, 15)) {
-      if (!r.createdAt) continue;
-      items.push({
-        at: r.createdAt, icon: 'star-outline', path: '/admin/reviews', open: r.id,
-        text: `${r.author} rated ${r.trailName} ${r.rating}★`,
-      });
-    }
-    for (const c of this.data.certificates().slice(0, 15)) {
-      if (!c.uploadedAt) continue;
-      const who = this.data.userById(c.uid)?.name || c.userName || 'A hiker';
-      items.push({
-        at: c.uploadedAt, icon: 'document-attach-outline', path: '/admin/certificates', open: c.id,
-        text: `${who} uploaded a medical certificate`,
-      });
-    }
-    return items.sort((a, b) => b.at.getTime() - a.at.getTime()).slice(0, 10);
-  });
-
-  readonly unseen = computed(() => this.activity().some((a) => a.at.getTime() > this.seenAt()));
-
   constructor() {
     addIcons({
       chatbubblesOutline, closeOutline, gridOutline, logOutOutline, menuOutline, notificationsOutline,
@@ -305,7 +256,6 @@ export class AdminShellComponent implements OnInit, OnDestroy {
       .subscribe((e) => {
         this.railMode.set(isDashboard(e.urlAfterRedirects));
         this.searchOpen.set(false);
-        this.bellOpen.set(false);
       });
   }
 
@@ -332,27 +282,10 @@ export class AdminShellComponent implements OnInit, OnDestroy {
     if (!next || !(e.currentTarget as HTMLElement).contains(next)) this.searchOpen.set(false);
   }
 
-  /** Performs the toggle bell operation for this feature and returns its result to the caller. */
-  toggleBell(): void {
-    const open = !this.bellOpen();
-    this.bellOpen.set(open);
-    if (open) {
-      const now = Date.now();
-      this.seenAt.set(now);
-      try { localStorage.setItem(SEEN_KEY, String(now)); } catch { /* private mode */ }
-    }
-  }
-
-  /** Closes the notification panel when focus moves outside it. */
-  onBellBlur(e: FocusEvent): void {
-    const next = e.relatedTarget as Node | null;
-    if (!next || !(e.currentTarget as HTMLElement).contains(next)) this.bellOpen.set(false);
-  }
-
-  /** Opens the open activity interface for the user. */
-  openActivity(a: ActivityItem): void {
-    this.bellOpen.set(false);
-    this.router.navigate([a.path], { queryParams: { open: a.open } });
+  /** A notification was tapped: mark it read and open what it is about. */
+  openNote(n: AppNotification): void {
+    this.notes.markRead(n.id);
+    if (n.link) this.router.navigate([n.link.path], { queryParams: n.link.queryParams });
   }
 
   /** Ends the current session and clears or redirects the related account state. */
@@ -376,12 +309,4 @@ export class AdminShellComponent implements OnInit, OnDestroy {
 function isDashboard(url: string): boolean {
   const path = url.split(/[?#]/)[0].replace(/\/+$/, '');
   return path === '/admin';
-}
-
-function readSeen(): number {
-  try {
-    return Number(localStorage.getItem(SEEN_KEY)) || 0;
-  } catch {
-    return 0;
-  }
 }

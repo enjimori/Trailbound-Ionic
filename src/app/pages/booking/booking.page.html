@@ -179,9 +179,11 @@
       <button
         type="button"
         class="bk-guide"
-        *ngFor="let g of guides"
+        *ngFor="let g of visibleGuides()"
         [class.active]="g.id === guideId()"
+        [class.is-unavailable]="!!guideBlocked(g)"
         [attr.aria-pressed]="g.id === guideId()"
+        [attr.aria-disabled]="!!guideBlocked(g)"
         (click)="selectGuide(g.id)"
       >
         <span class="bk-guide-top">
@@ -206,6 +208,8 @@
               <span><strong>{{ g.years }}</strong> yrs exp.</span>
               <span><strong>{{ g.summits }}+</strong> summits</span>
             </span>
+            <!-- Set by the guide on /guide: Unavailable, or fewer places than this group needs. -->
+            <span class="bk-guide-note" *ngIf="guideBlocked(g) as why">{{ why }}</span>
           </span>
 
           <span class="bk-radio" [class.on]="g.id === guideId()"></span>
@@ -223,6 +227,11 @@
         </ng-container>
       </button>
     </div>
+
+    <!-- Only guides assigned to this mountain are offered (Admin → Packages → Guides). -->
+    <p class="bk-hint bk-no-guides" *ngIf="trail() && !visibleGuides().length">
+      No guide is assigned to this mountain yet, so it cannot be booked right now. Please check back soon.
+    </p>
 
     <!-- ── Merchandise ─────────────────────────────────────────────────── -->
     <!-- Quantity changes update the draft, which in turn recalculates the quote. -->

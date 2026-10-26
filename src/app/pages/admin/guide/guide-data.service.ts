@@ -26,12 +26,18 @@ import {
   onSnapshot,
   query,
   serverTimestamp,
+  setDoc,
   updateDoc,
   where,
 } from 'firebase/firestore';
 import { adminDb, adminAuth } from '../admin-firebase';
 import { dayKey, toDate } from '../admin-utils';
 import { GUIDES } from '../../booking/booking-catalog';
+import type { GroupHiker } from '../../../models/booking.model';
+import {
+  type AttendanceMark, type AttendanceRecord, type GuideStatus, type GuideTrails, DEFAULT_GUIDE_STATUS,
+  MAX_GUIDE_GUESTS, participantsOf, toAttendance, toGuideStatus, toGuideTrails,
+} from '../../../models/guide-ops.model';
 
 /** One assigned hike, with only what a guide needs at the trailhead. */
 export interface GuideHike {
@@ -50,6 +56,12 @@ export interface GuideHike {
   /** True once TrailBound has confirmed — before that the hike may not happen. */
   confirmed: boolean;
   createdAt: Date | null;
+  /** Last change by TrailBound (confirmed, cancelled…), for notifications. */
+  updatedAt: Date | null;
+  /** The hiker's account, which attendance is filed against. */
+  uid: string;
+  /** Everyone on a group booking (includes the person who booked). Empty for one hiker. */
+  groupHikers: GroupHiker[];
 }
 
 @Injectable({ providedIn: 'root' })
@@ -58,8 +70,19 @@ export class GuideDataService {
   private readonly _rosterId = signal('');
   private readonly _loaded = signal(false);
   private readonly _error = signal('');
+  private readonly _status = signal<GuideStatus>({ ...DEFAULT_GUIDE_STATUS });
+  private readonly _attendance = signal<Record<string, AttendanceRecord>>({});
+  private readonly _trails = signal<GuideTrails>(null);
 
   readonly hikes = this._hikes.asReadonly();
+  /** This guide's availability and capacity (guide_status/{rosterId}). */
+  readonly status = this._status.asReadonly();
+  /** Attendance this guide has recorded, by booking id. */
+  readonly attendance = this._attendance.asReadonly();
+  /** Mountains TrailBound assigned this guide to (null = not restricted). Read-only here. */
+  readonly trails = this._trails.asReadonly();
+  /** Which roster entry this account is ('' until linked). */
+  readonly rosterId = computed(() => this._rosterId());
   readonly loaded = this._loaded.asReadonly();
   readonly error = this._error.asReadonly();
 
@@ -91,6 +114,8 @@ export class GuideDataService {
   });
 
   private unsub: Unsubscribe | null = null;
+  /** The availability and attendance listeners, opened alongside the hikes one. */
+  private extraUnsubs: Unsubscribe[] = [];
 
   /**
    * Resolves which guide this account is, then listens for their hikes.
@@ -142,12 +167,43 @@ export class GuideDataService {
         );
       },
     );
+
+    // Availability and capacity. No document yet = available, no limit.
+    this.extraUnsubs.push(onSnapshot(
+      doc(adminDb, 'guide_status', rosterId),
+      (snap) => this._status.set(toGuideStatus(snap.exists() ? snap.data({ serverTimestamps: 'estimate' }) : undefined, toDate)),
+      (err) => console.warn('[guide] availability:', err),
+    ));
+
+    // Mountains an admin assigned (guide_trails is public read, admin write).
+    this.extraUnsubs.push(onSnapshot(
+      doc(adminDb, 'guide_trails', rosterId),
+      (snap) => this._trails.set(snap.exists() ? toGuideTrails(snap.data()) : null),
+      (err) => console.warn('[guide] mountains:', err),
+    ));
+
+    // Attendance this guide has recorded. The query matches the read rule
+    // (guideId == my roster id), so Firestore can allow it.
+    this.extraUnsubs.push(onSnapshot(
+      query(collection(adminDb, 'attendance'), where('guideId', '==', rosterId)),
+      (snap) => {
+        const map: Record<string, AttendanceRecord> = {};
+        for (const d of snap.docs) map[d.id] = toAttendance(d.id, d.data({ serverTimestamps: 'estimate' }), toDate);
+        this._attendance.set(map);
+      },
+      (err) => console.warn('[guide] attendance:', err),
+    ));
   }
 
   /** Performs the stop operation for this feature and returns its result to the caller. */
   stop(): void {
     this.unsub?.();
     this.unsub = null;
+    this.extraUnsubs.forEach((u) => u());
+    this.extraUnsubs = [];
+    this._status.set({ ...DEFAULT_GUIDE_STATUS });
+    this._attendance.set({});
+    this._trails.set(null);
     this._hikes.set([]);
     this._rosterId.set('');
     this._loaded.set(false);
@@ -172,6 +228,65 @@ export class GuideDataService {
       updatedAt: serverTimestamp(),
     });
   }
+
+  // ── availability & capacity ──────────────────────────────────────────────
+
+  /**
+   * Saves whether this guide is taking hikes and how many hikers per date.
+   * firestore.rules only accepts this from the guide whose roster id it is.
+   */
+  saveStatus(available: boolean, maxGuests: number | null): Promise<void> {
+    const rosterId = this._rosterId();
+    const uid = adminAuth.currentUser?.uid;
+    if (!rosterId || !uid) return Promise.reject(new Error('Your account is not linked to a guide on the roster yet.'));
+    // null = no limit, which is how every guide started.
+    const max = maxGuests === null ? null : Math.round(maxGuests);
+    if (max !== null && (!Number.isInteger(max) || max < 1 || max > MAX_GUIDE_GUESTS)) {
+      return Promise.reject(new Error(`Maximum guests must be a whole number from 1 to ${MAX_GUIDE_GUESTS}, or left empty for no limit.`));
+    }
+    return setDoc(doc(adminDb, 'guide_status', rosterId), {
+      available,
+      maxGuests: max,
+      updatedAt: serverTimestamp(),
+      updatedBy: uid,
+    });
+  }
+
+  // ── attendance ───────────────────────────────────────────────────────────
+
+  /**
+   * Records who turned up. Every participant must be marked; the whole sheet
+   * is written at once so it can never be half-saved. firestore.rules only
+   * accepts it from the guide this booking is assigned to, and only once the
+   * booking has been confirmed.
+   */
+  saveAttendance(h: GuideHike, marks: Record<string, AttendanceMark>): Promise<void> {
+    const rosterId = this._rosterId();
+    const email = adminAuth.currentUser?.email ?? '';
+    if (!rosterId) return Promise.reject(new Error('Your account is not linked to a guide on the roster yet.'));
+
+    const people = participantsOf({ userName: h.hikerName, groupHikers: h.groupHikers });
+    const entries: Record<string, { name: string; status: AttendanceMark }> = {};
+    for (const p of people) {
+      const mark = marks[p.key];
+      if (mark !== 'present' && mark !== 'absent') {
+        return Promise.reject(new Error('Mark every hiker present or absent before saving.'));
+      }
+      entries[p.key] = { name: p.name, status: mark };
+    }
+
+    return setDoc(doc(adminDb, 'attendance', h.id), {
+      bookingId: h.id,
+      uid: h.uid,
+      guideId: rosterId,
+      reference: h.reference,
+      trailName: h.trailName,
+      date: h.date,
+      entries,
+      recordedBy: email,
+      updatedAt: serverTimestamp(),
+    });
+  }
 }
 
 function toHike(id: string, d: Record<string, any>): GuideHike {
@@ -193,5 +308,15 @@ function toHike(id: string, d: Record<string, any>): GuideHike {
     status,
     confirmed: status === 'confirmed',
     createdAt: toDate(d['createdAt']),
+    updatedAt: toDate(d['updatedAt']),
+    uid: String(d['uid'] ?? ''),
+    groupHikers: Array.isArray(d['groupHikers'])
+      ? d['groupHikers'].map((g: Record<string, unknown>) => ({
+          name: String(g['name'] ?? ''),
+          address: String(g['address'] ?? ''),
+          emergencyContactName: String(g['emergencyContactName'] ?? ''),
+          emergencyContactPhone: String(g['emergencyContactPhone'] ?? ''),
+        }))
+      : [],
   };
 }

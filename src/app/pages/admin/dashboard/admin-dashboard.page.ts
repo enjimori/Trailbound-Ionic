@@ -15,6 +15,8 @@ import {
 
 import { AdminDataService, AdminBooking, countsAsRevenue, effectiveStatus } from '../admin-data.service';
 import { initials, pctChange, peso, pesoShort, tintFor } from '../admin-utils';
+import { summarize } from '../../../models/guide-ops.model';
+import { GUIDES } from '../../booking/booking-catalog';
 import { TRAILS_30 } from '../../explore/explore-trails.data';
 
 type Period = 'week' | 'month' | 'year';
@@ -130,6 +132,45 @@ const MONTHS = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', '
               <ion-icon name="receipt-outline"></ion-icon>
               <h3>No bookings yet</h3>
               <p>Bookings made in the app show up here the moment they are paid.</p>
+            </div>
+          }
+        </section>
+
+        <!-- Guides' attendance checklists, live from attendance/{bookingId}. -->
+        <section class="recent attendance">
+          <div class="block-head">
+            <h2>Attendance</h2>
+            <span class="att-total">
+              Last 30 days: {{ attendanceTotals().present }} present, {{ attendanceTotals().absent }} absent
+            </span>
+          </div>
+          @if (attendanceRecent().length) {
+            <div class="tba-table-wrap">
+              <table class="tba-table">
+                <tbody>
+                  @for (a of attendanceRecent(); track a.id) {
+                    <tr class="click" (click)="openBookingId(a.id)">
+                      <td>
+                        <div class="tba-who">
+                          <img class="tba-thumb" [src]="a.image" alt="" (error)="hideImg($event)" />
+                          <div><b>{{ a.trail }}</b><small>#{{ a.reference }} · {{ a.hiker }}</small></div>
+                        </div>
+                      </td>
+                      <td class="muted hide-sm">{{ a.when | date: 'MMM d, y' }}</td>
+                      <td class="muted hide-sm">{{ a.guide }}</td>
+                      <td class="num">
+                        <span class="tba-badge" [attr.data-tone]="a.tone">{{ a.present }} of {{ a.total }} present</span>
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          } @else {
+            <div class="tba-empty">
+              <ion-icon name="people-outline"></ion-icon>
+              <h3>No attendance yet</h3>
+              <p>When a guide takes attendance on the hike day, who showed up and who was absent appears here.</p>
             </div>
           }
         </section>
@@ -254,6 +295,8 @@ const MONTHS = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', '
     .chart-empty { position: absolute; inset: 0 0 26px; display: grid; place-items: center; margin: 0; color: var(--tba-muted); font-size: 13px; }
 
     .recent { padding-top: 24px; }
+    .recent.attendance { padding-top: 28px; }
+    .att-total { color: var(--tba-muted); font-size: 12.5px; }
     .recent .tba-table td:first-child { padding-left: 0; }
     .recent .tba-table td:last-child { padding-right: 0; }
     .recent .tba-table tr:first-child td { border-top: 0; }
@@ -504,6 +547,51 @@ export class AdminDashboardPage {
   openBooking(b: AdminBooking): void {
     this.router.navigate(['/admin/bookings'], { queryParams: { open: b.id } });
   }
+
+  /** Opens a booking by id (the attendance list), where its checklist is shown. */
+  openBookingId(id: string): void {
+    this.router.navigate(['/admin/bookings'], { queryParams: { open: id } });
+  }
+
+  // ── attendance ───────────────────────────────────────────────────────────
+
+  /** The newest checklists guides have saved, joined to their bookings. */
+  readonly attendanceRecent = computed(() => {
+    const byId = new Map(this.data.bookings().map((b) => [b.id, b]));
+    return Object.values(this.data.attendance())
+      .sort((a, b) => (b.updatedAt?.getTime() ?? 0) - (a.updatedAt?.getTime() ?? 0))
+      .slice(0, 6)
+      .map((rec) => {
+        const b = byId.get(rec.bookingId);
+        const s = summarize(rec);
+        return {
+          id: rec.bookingId,
+          trail: b?.trailName || rec.trailName,
+          reference: b?.reference || rec.reference,
+          image: b?.trailImage ?? '',
+          hiker: b?.userName || b?.userEmail || 'Hiker',
+          when: rec.date ? new Date(rec.date + 'T00:00:00') : null,
+          guide: b?.guideName || GUIDES.find((g) => g.id === rec.guideId)?.name || 'Guide',
+          present: s.present,
+          total: s.total,
+          tone: s.present === s.total ? 'green' : s.present === 0 ? 'red' : 'amber',
+        };
+      });
+  });
+
+  /** Present and absent hikers across checklists saved in the last 30 days. */
+  readonly attendanceTotals = computed(() => {
+    const since = Date.now() - 30 * DAY;
+    let present = 0;
+    let absent = 0;
+    for (const rec of Object.values(this.data.attendance())) {
+      if ((rec.updatedAt?.getTime() ?? 0) < since) continue;
+      const s = summarize(rec);
+      present += s.present;
+      absent += s.absent;
+    }
+    return { present, absent };
+  });
 
   /** Opens the hiker detail view for the selected record. */
   openHiker(uid: string): void {
