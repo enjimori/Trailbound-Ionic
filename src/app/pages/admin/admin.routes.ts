@@ -74,6 +74,11 @@ export const ADMIN_ROUTES: Routes = [
           import('./certificates/admin-certificates.page').then((m) => m.AdminCertificatesPage),
       },
       {
+        path: 'subscription',
+        loadComponent: () =>
+          import('./subscription/admin-subscription.page').then((m) => m.AdminSubscriptionPage),
+      },
+      {
         path: 'packages',
         loadComponent: () =>
           import('./packages/admin-packages.page').then((m) => m.AdminPackagesPage),

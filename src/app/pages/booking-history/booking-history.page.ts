@@ -25,10 +25,12 @@ import {
   checkmarkCircleOutline,
   closeOutline,
   compassOutline,
+  flashOutline,
   imageOutline,
   lockClosedOutline,
   locationOutline,
   personOutline,
+  pricetagOutline,
   printOutline,
   receiptOutline,
   shieldCheckmarkOutline,
@@ -44,6 +46,9 @@ import { TrailService } from '../../services/trail.service';
 import { BookingProgressComponent } from '../booking/booking-progress.component';
 import { permitFeeFor, permitFor } from '../explore/trail-permits';
 import { isGeneratedRef } from '../admin/office/permit-ref';
+import { HikeDateForecastComponent } from '../../premium/hike-date-forecast.component';
+import { ItineraryService } from '../../services/itinerary.service';
+import { PremiumGate, newId } from '../../premium/premium';
 import {
   type BookingStatus,
   type ProgressStep,
@@ -122,6 +127,7 @@ interface BookingRow {
     IonIcon,
     IonModal,
     BookingProgressComponent,
+    HikeDateForecastComponent,
   ],
 })
 export class BookingHistoryPage {
@@ -129,6 +135,8 @@ export class BookingHistoryPage {
   private readonly trailService = inject(TrailService);
   private readonly router = inject(Router);
   private readonly toastCtrl = inject(ToastController);
+  private readonly itineraries = inject(ItineraryService);
+  private readonly gate = inject(PremiumGate);
 
   readonly tab = signal<HistoryTab>('upcoming');
 
@@ -188,10 +196,12 @@ export class BookingHistoryPage {
       checkmarkCircleOutline,
       closeOutline,
       compassOutline,
+      flashOutline,
       imageOutline,
       lockClosedOutline,
       locationOutline,
       personOutline,
+      pricetagOutline,
       printOutline,
       receiptOutline,
       shieldCheckmarkOutline,
@@ -433,6 +443,42 @@ export class BookingHistoryPage {
 
   findTrail(): void {
     this.router.navigate(['/tabs/explore']);
+  }
+
+  /** TrailBound Basic: saves "Your hike at a glance" to My Itineraries. */
+  async saveItinerary(r: BookingRow): Promise<void> {
+    if (!(await this.gate.require('saveItineraries', 'Save itineraries'))) return;
+    await this.itineraries.ready;
+    this.detailsOpen.set(false);
+    if (!this.itineraries.canCreate()) {
+      await this.toastMsg(`You've saved ${this.itineraries.count()} of ${this.itineraries.limit()} itineraries. Delete one or upgrade to Pro for unlimited.`);
+      this.router.navigate(['/itineraries']);
+      return;
+    }
+    const b = r.b;
+    const hike = b.activityNames.length ? `Guided hike (includes ${b.activityNames.join(', ')})` : 'Guided hike';
+    const stops: [string, string][] = [
+      ['05:00', 'Meet your guide at the jump-off; check in with your group'],
+      ['06:00', 'Registration and safety briefing'],
+      ['06:30', hike],
+      ['09:30', 'Viewpoint and rest stops'],
+      ['11:00', 'Descent and return; check out at the trailhead'],
+    ];
+    const it = await this.itineraries.create({
+      title: `${b.trailName} · #${b.reference}`,
+      trailId: b.trailId,
+      trailName: b.trailName,
+      date: b.date,
+      bookingRef: b.reference,
+      notes: b.guideName ? `Guide: ${b.guideName}` : '',
+      days: [{ id: newId('d'), stops: stops.map(([time, title]) => ({ id: newId('s'), time, title, note: '' })) }],
+    });
+    this.router.navigate(['/itineraries', it.id]);
+  }
+
+  private async toastMsg(message: string): Promise<void> {
+    const t = await this.toastCtrl.create({ message, duration: 2800, position: 'top', color: 'dark' });
+    await t.present();
   }
 
   /** From a blocked step straight to the page that unblocks it. */

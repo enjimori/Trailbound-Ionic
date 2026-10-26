@@ -20,6 +20,7 @@ import {
 import { AdminCertificate, AdminDataService } from '../admin-data.service';
 import { AdminAuthService } from '../admin-auth.service';
 import { AdminUiService } from '../admin-ui.service';
+import { AdminSubscriptionService } from '../admin-subscription.service';
 import { dayKey, fromDayKey, initials, matches, tintFor } from '../admin-utils';
 import {
   CERTIFICATE_KINDS, CertificateStatus, CertificateType, certificateKind,
@@ -32,6 +33,7 @@ type Filter = 'pending' | 'approved' | 'rejected' | 'all';
   standalone: true,
   imports: [DatePipe, FormsModule, IonIcon],
   template: `
+    @if (facilitatorSubscription.active()) {
     <div class="tba-head">
       <div>
         <h1>Certificates</h1>
@@ -170,6 +172,19 @@ type Filter = 'pending' | 'approved' | 'rejected' | 'all';
         </aside>
       </div>
     }
+    } @else {
+      <section class="tba-card" style="max-width: 720px">
+        <h1>Digital certification and document tracking</h1>
+        @if (subscriptionError()) {
+          <p class="error" role="alert">{{ subscriptionError() }}</p>
+        } @else if (!facilitatorSubscription.loaded()) {
+          <p class="muted">Checking the Facilitator subscription…</p>
+        } @else {
+          <p>This feature requires an active Admin Subscription.</p>
+          <button type="button" class="tba-btn primary" (click)="goToSubscription()">View Admin Subscription</button>
+        }
+      </section>
+    }
   `,
   styles: [`
     .flush { padding: 8px 8px 4px; }
@@ -179,10 +194,24 @@ type Filter = 'pending' | 'approved' | 'rejected' | 'all';
     .missing { margin-top: 16px; }
     .missing h2 { font-size: 15px; font-weight: 700; }
     .missing .sub { margin: 4px 0 12px; font-size: 12.5px; color: var(--tba-muted); }
-    .missing ul { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 8px; }
-    .missing button { width: 100%; text-align: left; border: 1px solid var(--tba-line); background: #fff; border-radius: 12px; padding: 10px 12px; }
+    .missing ul { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); gap: 8px; }
+    .missing li { min-width: 0; }
+    .missing button {
+      box-sizing: border-box;
+      display: block;
+      width: 100%;
+      min-height: 64px;
+      text-align: left;
+      color: var(--tba-text);
+      border: 1px solid var(--tba-line);
+      background: var(--tba-surface);
+      border-radius: 12px;
+      padding: 10px 14px;
+      cursor: pointer;
+    }
     .missing button:hover { background: var(--tba-soft); }
-    .missing b { display: block; font-size: 13.5px; }
+    .missing button:focus-visible { outline: 2px solid var(--tba-ink); outline-offset: 2px; }
+    .missing b { display: block; font-size: 13.5px; color: var(--tba-text); }
     .missing small { display: block; font-size: 12px; color: var(--tba-muted); margin-top: 2px; }
     .wide { width: min(560px, 100%) !important; }
     .kind-icon { width: 48px; height: 48px; flex: none; border-radius: 14px; display: grid; place-items: center; background: var(--tba-sand-soft); font-size: 22px; }
@@ -195,6 +224,7 @@ type Filter = 'pending' | 'approved' | 'rejected' | 'all';
     .note p { margin: 4px 0 0; }
     .links { display: flex; gap: 8px; flex-wrap: wrap; }
     .icon-only { margin-left: auto; width: 38px; padding: 0; }
+    .error { color: var(--tba-danger, #a33); }
   `],
 })
 export class AdminCertificatesPage implements OnDestroy {
@@ -204,6 +234,8 @@ export class AdminCertificatesPage implements OnDestroy {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly sanitizer = inject(DomSanitizer);
+  readonly facilitatorSubscription = inject(AdminSubscriptionService);
+  readonly subscriptionError = signal('');
 
   readonly kinds = CERTIFICATE_KINDS;
   readonly filters: { id: Filter; label: string }[] = [
@@ -288,6 +320,12 @@ export class AdminCertificatesPage implements OnDestroy {
       checkmarkCircleOutline, closeCircleOutline, closeOutline, documentAttachOutline, documentTextOutline,
       downloadOutline, medkitOutline, personOutline, searchOutline, trashOutline,
     });
+    void this.facilitatorSubscription.refresh().catch((e: unknown) => {
+      const code = (e as { code?: string } | null)?.code;
+      this.subscriptionError.set(code === 'permission-denied'
+        ? 'Firestore denied access to the subscription record. Publish the updated firestore.rules from this project, then reload this page.'
+        : e instanceof Error ? e.message : 'Could not check the subscription.');
+    });
     effect(() => {
       const p = this.params();
       if (!p) return;
@@ -307,6 +345,10 @@ export class AdminCertificatesPage implements OnDestroy {
       const c = this.selected();
       if (c && this.loadedFor !== c.id) untracked(() => void this.loadFile(c));
     }, { allowSignalWrites: true });
+  }
+
+  goToSubscription(): void {
+    void this.router.navigate(['/admin/subscription']);
   }
 
   /** Runs when the component is removed; releases resources owned by this component. */

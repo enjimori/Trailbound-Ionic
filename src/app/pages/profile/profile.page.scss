@@ -318,6 +318,88 @@ ion-title {
   }
 }
 
+/* ── TrailBound Plans preview cards (under the "TrailBound Plans" row) ──
+   One row that swipes sideways on phones; on wide screens the cards
+   stretch to fill it. */
+.plan-previews {
+  display: flex;
+  gap: 10px;
+  padding: 12px 14px 14px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scroll-padding-inline: 14px;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  border-bottom: 1px solid var(--app-border);
+
+  &::-webkit-scrollbar { display: none; }
+}
+
+.plan-preview {
+  position: relative;
+  flex: 1 0 140px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 12px;
+  scroll-snap-align: start;
+  border-radius: 14px;
+  border: 1px solid var(--app-border);
+  background: var(--app-bg-raised);
+  color: var(--app-text);
+  text-align: left;
+  cursor: pointer;
+
+  &.current { border-color: rgba(var(--app-accent-rgb), 0.6); }
+  &:active { transform: scale(0.98); }
+
+  .n {
+    font-family: var(--app-font-serif);
+    font-size: 15px;
+    font-weight: 500;
+  }
+
+  .p {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--app-accent);
+
+    small {
+      margin-left: 1px;
+      font-weight: 400;
+      color: var(--app-text-dim);
+    }
+  }
+
+  .mlp {
+    display: flex;
+    gap: 5px;
+    margin-top: 6px;
+    font-size: 11.5px;
+    line-height: 1.4;
+    color: var(--app-text-dim);
+
+    ion-icon {
+      flex-shrink: 0;
+      margin-top: 2px;
+      font-size: 11px;
+      color: var(--app-accent);
+    }
+  }
+
+  .badge {
+    position: absolute;
+    top: 9px;
+    right: 9px;
+    padding: 2px 7px;
+    border-radius: 999px;
+    background: var(--app-accent-soft);
+    color: var(--app-accent);
+    font-size: 10px;
+    font-weight: 700;
+  }
+}
+
 .theme-item {
   cursor: default;
 

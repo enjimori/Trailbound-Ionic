@@ -176,6 +176,9 @@ ion-title {
     letter-spacing: 0.06em;
     text-transform: uppercase;
     color: var(--co-dim);
+
+    /* Maya is the one method that really connects (to Maya's sandbox). */
+    &.sandbox { color: var(--co-green); }
   }
 }
 
@@ -386,6 +389,59 @@ ion-title {
     font-size: 18px;
     color: var(--co-text);
   }
+}
+
+/* ── Subscription checkout + Maya Sandbox ───────────────────────────────── */
+
+.co-plan-icon {
+  width: 64px;
+  height: 64px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 14px;
+  border: 1px solid rgba(var(--app-accent-rgb), 0.35);
+  background: var(--app-accent-soft, rgba(var(--app-accent-rgb), 0.14));
+
+  ion-icon { font-size: 28px; color: var(--co-green); }
+}
+
+.co-tag {
+  display: inline-block;
+  margin-left: 4px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  border: 1px solid rgba(var(--app-accent-rgb), 0.45);
+  font-family: var(--app-font-sans, inherit);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  vertical-align: middle;
+  color: var(--co-green);
+}
+
+.co-test {
+  margin-bottom: 14px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px dashed var(--co-border-strong);
+  background: var(--co-inner);
+
+  .co-row { padding: 4px 0; font-size: 12.5px; }
+  .co-row span:last-child { font-variant-numeric: tabular-nums; }
+}
+
+.co-test-title {
+  margin: 4px 0 2px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--co-dim);
+
+  & + .co-row { margin-top: 2px; }
+  &:not(:first-child) { margin-top: 10px; }
 }
 
 /* ── Demo notice ────────────────────────────────────────────────────────── */

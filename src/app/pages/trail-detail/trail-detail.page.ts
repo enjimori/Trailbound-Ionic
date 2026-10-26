@@ -23,6 +23,10 @@ import { Trail } from '../../models/trail.model';
 import { trailById } from '../explore/trail-lookup';
 import { storyFor } from '../explore/trail-stories';
 import { TrailWeatherComponent } from '../explore/trail-weather.component';
+import { PrepareHikeComponent } from './prepare-hike.component';
+import { WeatherMonitorComponent } from '../../premium/weather-monitor.component';
+import { PremiumGate } from '../../premium/premium';
+import { SubscriptionService } from '../../services/subscription.service';
 
 // Registered here rather than relying on Explore having been opened first —
 // module-level addIcons only runs once that page's chunk has loaded, and a
@@ -36,13 +40,18 @@ addIcons({ mapOutline, lockClosedOutline });
   styleUrls: ['./trail-detail.page.scss'],
   imports: [
     CommonModule, FormsModule, IonContent, IonButton, IonIcon,
-    IonTextarea, IonInput, TrailWeatherComponent,
+    IonTextarea, IonInput, TrailWeatherComponent, PrepareHikeComponent, WeatherMonitorComponent,
   ],
 })
 export class TrailDetailPage implements OnInit {
   private readonly catalog = inject(CatalogService);
   private readonly wishlist = inject(WishlistService);
+  private readonly gate = inject(PremiumGate);
+  private readonly subscriptions = inject(SubscriptionService);
   trail = signal<Trail | undefined>(undefined);
+
+  /** Start Hike opens Trail navigation, part of every TrailBound plan. */
+  readonly navigationUnlocked = computed(() => this.subscriptions.has('trailNavigation'));
 
   /**
    * Whether the heart is filled. Read live from the wishlist, so it stays
@@ -196,9 +205,12 @@ export class TrailDetailPage implements OnInit {
     void this.wishlist.toggle(t);
   }
 
-  /** Starts the hike-related action for the selected trail. */
+  /** Opens Trail navigation (TrailBound Basic) for this trail. */
   async startHike() {
-    this.toast('Hike started! Stay safe on the trails. 🥾', 'success');
+    const t = this.trail();
+    if (!t) return;
+    if (!(await this.gate.require('trailNavigation', 'Trail navigation'))) return;
+    this.router.navigate(['/navigate', t.id]);
   }
 
   /** Starts the booking route for the trail currently being viewed. */

@@ -1,10 +1,36 @@
 <ion-header class="ion-no-border co-header">
   <ion-toolbar>
-    <ion-title>{{ balanceCheckoutRequested() ? 'Pay balance' : 'Checkout' }}</ion-title>
+    <ion-title>{{ plan() ? 'Subscribe' : balanceCheckoutRequested() ? 'Pay balance' : 'Checkout' }}</ion-title>
   </ion-toolbar>
 </ion-header>
 
 <ion-content>
+  <!-- Subscription checkout, opened from the Subscription page (?plan=) -->
+  <div *ngIf="plan() as p; else nonPlanCheckout">
+    <div class="co-body">
+      <p class="co-title">Your plan</p>
+      <div class="co-card">
+        <div class="co-trail">
+          <div class="co-plan-icon"><ion-icon name="diamond-outline"></ion-icon></div>
+          <div class="co-trail-meta">
+            <span class="n">{{ p.name }}</span>
+            <span class="s">{{ p.audience }}</span>
+            <span class="s">Includes Prepare for Your Hike</span>
+          </div>
+        </div>
+        <div class="co-divider"></div>
+        <div class="co-row"><span>Billing</span><span>Monthly · doesn't auto-renew</span></div>
+        <div class="co-row total">
+          <span>Pay now</span>
+          <span>₱{{ p.pricePerMonth | number }}</span>
+        </div>
+      </div>
+
+      <ng-container *ngTemplateOutlet="paymentOptions"></ng-container>
+    </div>
+  </div>
+
+  <ng-template #nonPlanCheckout>
   <div *ngIf="balanceCheckoutRequested(); else bookingCheckout">
     <div class="co-body" *ngIf="balanceBooking() as b; else loadingBalance">
       <p class="co-title">Balance payment</p>
@@ -29,6 +55,7 @@
       <ng-container *ngTemplateOutlet="paymentOptions"></ng-container>
     </div>
   </div>
+  </ng-template>
 
   <ng-template #bookingCheckout>
     <div class="co-body" *ngIf="draft() as d">
@@ -61,6 +88,9 @@
           </div>
           <div class="co-row" *ngFor="let l of q.merchLines">
             <span>{{ l.name }} × {{ l.qty }}</span><span>₱{{ l.lineTotal | number }}</span>
+          </div>
+          <div class="co-row" *ngIf="q.merchDiscount">
+            <span>Pro merchandise discount</span><span>−₱{{ q.merchDiscount | number }}</span>
           </div>
           <div class="co-row" *ngIf="q.groupSurcharge > 0">
             <span>Additional group hikers · {{ d.groupHikers?.length }} total</span><span>₱{{ q.groupSurcharge | number }}</span>
@@ -106,6 +136,7 @@
         <ion-icon [name]="m.icon"></ion-icon>
         <span>{{ m.label }}</span>
         <span class="soon" *ngIf="!m.available">Soon</span>
+        <span class="soon" [class.sandbox]="m.badge === 'Sandbox'" *ngIf="m.available && m.badge">{{ m.badge }}</span>
       </button>
     </div>
 
@@ -157,7 +188,7 @@
             <path [attr.d]="qrPath" />
           </svg>
         </div>
-        <p class="co-alt-title">Scan to pay ₱{{ balanceCheckoutRequested() ? (balanceDue() | number) : (quote()?.deposit | number) }}</p>
+        <p class="co-alt-title">Scan to pay ₱{{ amountDue() | number }}</p>
         <p class="co-alt-text">
           This sample QR code is not scannable. For this demo, upload an image and tap
           the button below; no payment will be sent or verified.
@@ -191,29 +222,40 @@
       </div>
     </ng-container>
 
+    <!-- Maya Sandbox: real Maya checkout in Maya's test environment -->
     <ng-container *ngIf="method() === 'maya'">
       <div class="co-alt">
         <ion-icon class="co-alt-icon" name="wallet-outline"></ion-icon>
-        <p class="co-alt-title">Maya demo</p>
-        <p class="co-alt-text">No Maya transaction will be made. Enter a sample number to continue.</p>
+        <p class="co-alt-title">Pay with Maya <span class="co-tag">Sandbox</span></p>
+        <p class="co-alt-text">
+          Tap Pay to open Maya's checkout page. It's Maya's test environment, so no real
+          money moves. Sign in with the test account or use the test card below.
+        </p>
       </div>
-      <label class="co-label">Maya mobile number<span class="req" aria-hidden="true">*</span></label>
-      <ion-input
-        class="co-input"
-        type="tel"
-        inputmode="numeric"
-        placeholder="0917 123 4567"
-        maxlength="13"
-        [value]="mayaNumber"
-        (ionInput)="onMayaNumber($event)"
-      ></ion-input>
+
+      <div class="co-test">
+        <p class="co-test-title">Maya test account</p>
+        <div class="co-row"><span class="muted">Mobile number</span><span>+639900100900</span></div>
+        <div class="co-row"><span class="muted">Password</span><span>Password&#64;1</span></div>
+        <div class="co-row"><span class="muted">OTP</span><span>123456</span></div>
+        <p class="co-test-title">Or test card</p>
+        <div class="co-row"><span class="muted">Number</span><span>5123 4567 8901 2346</span></div>
+        <div class="co-row"><span class="muted">Expiry · CVV</span><span>12/30 · 111</span></div>
+      </div>
     </ng-container>
 
-    <div class="co-demo">
+    <div class="co-demo" *ngIf="method() !== 'maya'">
       <ion-icon name="warning-outline"></ion-icon>
       <span>
         <strong>Test transaction.</strong> Payment processing is not yet connected.
         No funds will be collected. Do not enter real payment details.
+      </span>
+    </div>
+    <div class="co-demo" *ngIf="method() === 'maya'">
+      <ion-icon name="warning-outline"></ion-icon>
+      <span>
+        <strong>Maya Sandbox.</strong> Payments go through Maya's test environment —
+        no real money is collected. Do not use a real Maya account or card.
       </span>
     </div>
     <div class="co-spacer"></div>
@@ -225,11 +267,11 @@
     </button>
     <button class="co-pay" [disabled]="processing()" (click)="pay()">
       <ng-container *ngIf="!processing(); else working">
-        {{ balanceCheckoutRequested() ? 'Pay Balance' : 'Pay deposit' }}
-        · ₱{{ balanceCheckoutRequested() ? (balanceDue() | number) : (payNow() | number) }}
+        {{ plan() ? 'Subscribe' : balanceCheckoutRequested() ? 'Pay Balance' : 'Pay deposit' }}
+        · ₱{{ amountDue() | number }}
         <ion-icon name="arrow-forward"></ion-icon>
       </ng-container>
-      <ng-template #working>Processing demo…</ng-template>
+      <ng-template #working>{{ method() === 'maya' ? 'Opening Maya…' : 'Processing demo…' }}</ng-template>
     </button>
   </div>
 </ion-content>

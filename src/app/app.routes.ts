@@ -69,6 +69,40 @@ export const routes: Routes = [
       import('./pages/booking-confirmed/booking-confirmed.page').then((m) => m.BookingConfirmedPage),
   },
 
+  // Public: TrailBound Plans. Guests can see the plans; subscribing goes
+  // through checkout (?plan=...), which needs a signed-in user.
+  {
+    path: 'subscription',
+    loadComponent: () =>
+      import('./pages/subscription/subscription.page').then((m) => m.SubscriptionPage),
+  },
+
+  // Protected: where Maya Sandbox sends the hiker back after paying.
+  {
+    path: 'payment-result',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./pages/payment-result/payment-result.page').then((m) => m.PaymentResultPage),
+  },
+
+  // ── Subscription features (each page shows a lock without the plan) ───
+  // TrailBound Basic: Trail navigation, opened from "Start Hike".
+  {
+    path: 'navigate/:id',
+    loadComponent: () =>
+      import('./premium/trail-navigation.page').then((m) => m.TrailNavigationPage),
+  },
+  // TrailBound Basic / Pro: saved itineraries and trip tools.
+  {
+    path: 'itineraries',
+    canActivate: [authGuard],
+    loadComponent: () => import('./premium/itineraries.page').then((m) => m.ItinerariesPage),
+  },
+  {
+    path: 'itineraries/:id',
+    canActivate: [authGuard],
+    loadComponent: () => import('./premium/itineraries.page').then((m) => m.ItineraryEditorPage),
+  },
   // ── Admin ───────────────────────────────────────────────────────────────
   // Staff area, guarded by its own adminGuard (not authGuard — a signed-in
   // hiker is not an admin). Lazy-loaded, so none of this code ships to a

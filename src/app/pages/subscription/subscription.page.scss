@@ -1,0 +1,233 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   SUBSCRIPTION PAGE — all classes prefixed `sp-`
+   ═════════════════════════════════════════════════════════════════════════ */
+
+:host {
+  --sp-accent: var(--app-accent, #e8d99c);
+  --sp-text: var(--app-text, #eef0e7);
+  --sp-dim: var(--app-text-dim, #97a299);
+  --sp-card: var(--app-card-bg, #131d19);
+  --sp-inner: var(--app-bg-raised, #0f1815);
+  --sp-border: var(--app-border, rgba(222, 232, 206, 0.09));
+  --sp-border-strong: var(--app-border-strong, rgba(222, 232, 206, 0.16));
+}
+
+.sp-topbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: calc(12px + env(safe-area-inset-top)) 16px 6px;
+}
+
+.sp-back {
+  flex-shrink: 0;
+  width: 42px;
+  height: 42px;
+  border: none;
+  border-radius: 14px;
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  ion-icon { font-size: 22px; color: var(--sp-text); }
+}
+
+.sp-page-title {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 500;
+  color: var(--sp-text);
+}
+
+.sp-body {
+  padding: 4px 18px 40px;
+}
+
+.sp-intro {
+  margin: 4px 0 18px;
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: var(--sp-dim);
+
+  strong { color: var(--sp-accent); font-weight: 600; }
+}
+
+/* ── Current plan ───────────────────────────────────────────────────────── */
+
+.sp-current {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+  padding: 14px;
+  border-radius: var(--app-radius, 18px);
+  border: 1px solid rgba(var(--app-accent-rgb, 232, 217, 156), 0.45);
+  background:
+    linear-gradient(0deg, rgba(var(--app-accent-rgb, 232, 217, 156), 0.07), rgba(var(--app-accent-rgb, 232, 217, 156), 0.07)),
+    var(--sp-card);
+
+  > ion-icon {
+    flex-shrink: 0;
+    font-size: 24px;
+    color: var(--sp-accent);
+  }
+}
+
+.sp-current-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+
+  .l { font-size: 11px; color: var(--sp-dim); text-transform: uppercase; letter-spacing: 0.06em; }
+  .n { font-family: var(--app-font-serif); font-size: 17px; color: var(--sp-text); }
+  .s { font-size: 12px; color: var(--sp-dim); }
+  .s.warn { color: #e0b15c; }
+}
+
+.sp-cancel {
+  flex-shrink: 0;
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--sp-border-strong);
+  background: transparent;
+  color: var(--sp-text);
+  font-size: 12.5px;
+  font-weight: 500;
+}
+
+/* ── Plan cards ─────────────────────────────────────────────────────────── */
+
+.sp-plan {
+  margin-bottom: 14px;
+  padding: 18px 16px 16px;
+  border-radius: var(--app-radius-lg, 22px);
+  border: 1px solid var(--sp-border);
+  background: var(--sp-card);
+
+  &.current { border-color: rgba(var(--app-accent-rgb, 232, 217, 156), 0.6); }
+}
+
+.sp-plan-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+
+  h2 {
+    margin: 0;
+    font-family: var(--app-font-serif);
+    font-size: 19px;
+    font-weight: 500;
+    color: var(--sp-text);
+  }
+}
+
+.sp-audience {
+  display: block;
+  margin-top: 3px;
+  font-size: 12px;
+  color: var(--sp-dim);
+}
+
+.sp-price {
+  flex-shrink: 0;
+  text-align: right;
+
+  .v {
+    font-family: var(--app-font-serif);
+    font-size: 24px;
+    color: var(--sp-accent);
+  }
+
+  .u {
+    display: block;
+    font-size: 11px;
+    color: var(--sp-dim);
+  }
+}
+
+.sp-perks {
+  list-style: none;
+  margin: 0 0 16px;
+  padding: 0;
+
+  li {
+    display: flex;
+    gap: 10px;
+    padding: 6px 0;
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--sp-text);
+
+    > ion-icon {
+      flex-shrink: 0;
+      margin-top: 3px;
+      font-size: 14px;
+      color: var(--sp-dim);
+    }
+
+    /* The MLP perk stands out on every plan. */
+    &.mlp {
+      margin: 2px 0 6px;
+      padding: 10px 12px;
+      border-radius: 12px;
+      border: 1px solid rgba(var(--app-accent-rgb, 232, 217, 156), 0.3);
+      background: rgba(var(--app-accent-rgb, 232, 217, 156), 0.08);
+
+      > ion-icon { color: var(--sp-accent); }
+    }
+  }
+}
+
+.sp-where {
+  display: block;
+  margin-top: 1px;
+  font-size: 11px;
+  color: var(--sp-dim);
+}
+
+.mlp-tag {
+  display: block;
+  margin-bottom: 2px;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--sp-accent);
+}
+
+.sp-choose {
+  width: 100%;
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: none;
+  border-radius: 999px;
+  background: var(--app-cta, #e3e6bf);
+  box-shadow: var(--app-cta-shadow, none);
+  color: var(--app-on-accent, #161d18);
+  font-size: 14px;
+  font-weight: 600;
+
+  &.is-current {
+    background: transparent;
+    box-shadow: none;
+    border: 1px solid rgba(var(--app-accent-rgb, 232, 217, 156), 0.5);
+    color: var(--sp-accent);
+  }
+
+  ion-icon { font-size: 17px; }
+}
+
+.sp-fine {
+  margin: 6px 4px 0;
+  font-size: 11.5px;
+  line-height: 1.55;
+  color: var(--sp-dim);
+}

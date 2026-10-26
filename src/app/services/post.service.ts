@@ -927,12 +927,14 @@ export class PostService {
     if (key === this.publishedKey) return;
     try {
       const avatar = me.avatar ? await makeAvatarThumb(me.avatar).catch(() => '') : '';
+      // merge: keeps other fields on the profile, such as the checklist
+      // progress a Facilitator's client shares (facilitatorChecklists).
       await setDoc(doc(db, 'profiles', uid), {
         name: this.publicName(),
         avatar,
         bio: me.bio,
         updatedAt: serverTimestamp(),
-      });
+      }, { merge: true });
       this.publishedKey = key;
       this.checkedUid = uid;
     } catch (e) {

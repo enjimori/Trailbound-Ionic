@@ -119,6 +119,8 @@ export interface BookingQuote {
   merchLines: MerchLine[];
   activitiesTotal: number;
   merchTotal: number;
+  /** TrailBound Pro / Facilitator discount on merchandise. 0 without it. */
+  merchDiscount?: number;
   groupSurcharge: number;
   subtotal: number;
   transactionFee: number;
@@ -220,4 +222,9 @@ export interface Booking {
   userEmail?: string;
   /** Internal: this booking has reached Firestore at least once. */
   synced?: boolean;
+
+  /** TrailBound Pro merchandise discount taken off the total (pesos). */
+  merchDiscount?: number;
+  /** TrailBound Pro on a high-demand trail: reviewed ahead of other bookings. */
+  priority?: boolean;
 }

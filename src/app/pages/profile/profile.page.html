@@ -121,6 +121,35 @@
         <span class="pill">{{ adminLevel() }}</span>
         <ion-icon name="chevron-forward-outline" class="chevron"></ion-icon>
       </div>
+      <!-- TrailBound Plans: the hiker's subscription (pill shows the plan) -->
+      <div class="account-item" (click)="goSubscription()">
+        <span class="ai-icon"><ion-icon name="diamond-outline"></ion-icon></span>
+        <span>TrailBound Plans</span>
+        <span class="pill">{{ subscriptions.activePlan()?.shortName ?? 'Upgrade' }}</span>
+        <ion-icon name="chevron-forward-outline" class="chevron"></ion-icon>
+      </div>
+      <!-- Plan previews: swipe on phones; tap one to open the plans page -->
+      <div class="plan-previews" aria-label="TrailBound plans">
+        <button
+          type="button"
+          class="plan-preview"
+          *ngFor="let p of planPreviews"
+          [class.current]="subscriptions.activePlanId() === p.id"
+          (click)="goSubscription()"
+        >
+          <span class="badge" *ngIf="subscriptions.activePlanId() === p.id">Current</span>
+          <span class="n">{{ p.name }}</span>
+          <span class="p">₱{{ p.price | number }}<small>/month</small></span>
+          <span class="mlp"><ion-icon name="star"></ion-icon>{{ p.highlight }}</span>
+        </button>
+      </div>
+      <!-- Subscription features with their own page (locked without the plan) -->
+      <div class="account-item" (click)="goItineraries()">
+        <span class="ai-icon"><ion-icon name="map-outline"></ion-icon></span>
+        <span>My Itineraries</span>
+        <span class="pill" *ngIf="!subscriptions.has('saveItineraries')"><ion-icon name="lock-closed-outline"></ion-icon> Basic</span>
+        <ion-icon name="chevron-forward-outline" class="chevron"></ion-icon>
+      </div>
       <div class="account-item" (click)="goPersonalInfo()">
         <span class="ai-icon"><ion-icon name="person-outline"></ion-icon></span>
         <span>Personal Information</span>

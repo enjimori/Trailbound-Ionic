@@ -27,6 +27,7 @@ import { fuzzyFilter } from '../../services/fuzzy.util';
 // page use. One cache behind all three.
 import { TrailWeatherComponent } from '../explore/trail-weather.component';
 import { TRAILS_30 } from '../explore/explore-trails.data';
+import { SkillSuggestionsComponent } from '../../premium/skill-suggestions.component';
 
 type Difficulty = 'All' | 'Easy' | 'Moderate' | 'Hard';
 type SortKey = 'default' | 'name' | 'elevation' | 'distance';
@@ -50,7 +51,7 @@ addIcons({
   imports: [
     CommonModule, IonContent, IonHeader, IonToolbar, IonSearchbar, IonIcon,
     IonButton, IonBadge, IonChip, IonLabel, TrailCardComponent,
-    PostCardComponent, AppLogoComponent, TrailWeatherComponent,
+    PostCardComponent, AppLogoComponent, TrailWeatherComponent, SkillSuggestionsComponent,
   ],
 })
 export class HomePage {

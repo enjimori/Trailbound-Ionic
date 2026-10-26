@@ -1,4 +1,4 @@
-import { Component, OnDestroy, OnInit, computed, signal } from '@angular/core';
+import { Component, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule, Location } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -10,7 +10,7 @@ import { addIcons } from 'ionicons';
 import {
   arrowBackOutline, arrowForward, cardOutline, qrCodeOutline, walletOutline,
   logoApple, lockClosedOutline, warningOutline, personCircleOutline,
-  cloudUploadOutline, closeOutline, checkmarkCircle,
+  cloudUploadOutline, closeOutline, checkmarkCircle, diamondOutline,
 } from 'ionicons/icons';
 
 import { BookingService } from '../../services/booking.service';
@@ -19,11 +19,15 @@ import { guideById } from '../booking/booking-catalog';
 import { balanceFor, depositFor } from '../../models/booking-workflow';
 import { permitFeeFor } from '../explore/trail-permits';
 import { RefundPolicyComponent } from './refund-policy.component';
+import { Capacitor } from '@capacitor/core';
+import { MayaService } from '../../services/maya.service';
+import { SubscriptionService } from '../../services/subscription.service';
+import { PlanId, isCustomerPlan, planById } from '../../models/subscription.model';
 
 addIcons({
   arrowBackOutline, arrowForward, cardOutline, qrCodeOutline, walletOutline,
   logoApple, lockClosedOutline, warningOutline, personCircleOutline,
-  cloudUploadOutline, closeOutline, checkmarkCircle,
+  cloudUploadOutline, closeOutline, checkmarkCircle, diamondOutline,
 });
 
 /** Largest proof-of-payment image accepted for QRPh. */
@@ -66,6 +70,8 @@ interface PayMethod {
   label: string;
   icon: string;
   available: boolean;
+  /** Small tag on the method tile: "Demo" or "Sandbox". */
+  badge?: string;
 }
 
 @Component({
@@ -80,16 +86,16 @@ interface PayMethod {
 })
 export class CheckoutPage implements OnInit, OnDestroy {
   /**
-   * All four methods are selectable. None of them is connected to a real
-   * payment gateway. Balance checkout writes a demo-only marker to Firestore;
-   * new-booking checkout remains a simulation. Set `available: false` to
-   * switch one back to "Soon".
+   * All four methods are selectable. Maya goes through Maya's SANDBOX (test
+   * environment, see services/maya.service.ts); Card, QRPh and Apple Pay are
+   * demos with no gateway behind them. Balance checkout writes a demo-only
+   * marker to Firestore. Set `available: false` to switch one back to "Soon".
    */
   readonly methods: PayMethod[] = [
-    { id: 'card', label: 'Card', icon: 'card-outline', available: true },
-    { id: 'qrph', label: 'QRPh', icon: 'qr-code-outline', available: true },
-    { id: 'apple', label: 'Apple Pay', icon: 'logo-apple', available: true },
-    { id: 'maya', label: 'Maya', icon: 'wallet-outline', available: true },
+    { id: 'card', label: 'Card', icon: 'card-outline', available: true, badge: 'Demo' },
+    { id: 'qrph', label: 'QRPh', icon: 'qr-code-outline', available: true, badge: 'Demo' },
+    { id: 'apple', label: 'Apple Pay', icon: 'logo-apple', available: true, badge: 'Demo' },
+    { id: 'maya', label: 'Maya', icon: 'wallet-outline', available: true, badge: 'Sandbox' },
   ];
 
   /** Pattern for the demo QR code (not scannable). */
@@ -102,7 +108,6 @@ export class CheckoutPage implements OnInit, OnDestroy {
   expiry = '';
   cvv = '';
   cardName = '';
-  mayaNumber = '';
 
   /**
    * QRPh proof of payment. Kept in memory for this screen only, like the card
@@ -111,6 +116,13 @@ export class CheckoutPage implements OnInit, OnDestroy {
   proof = signal<{ name: string; url: string; size: string } | null>(null);
 
   draft = computed(() => this.bookingService.draft());
+
+  private readonly maya = inject(MayaService);
+  private readonly subscriptions = inject(SubscriptionService);
+
+  /** Set when opened from the Subscription page (/checkout?plan=basic). */
+  private readonly planId = signal<PlanId | null>(null);
+  readonly plan = computed(() => planById(this.planId()) ?? null);
 
   private readonly balanceBookingId = signal<string | null>(null);
   readonly balanceCheckoutRequested = computed(() => !!this.balanceBookingId());
@@ -133,7 +145,8 @@ export class CheckoutPage implements OnInit, OnDestroy {
       && !this.bookingService.hasDemoBalancePayment(booking.id);
   });
   readonly checkoutReady = computed(() =>
-    this.balanceCheckoutRequested()
+    this.plan() ? true
+    : this.balanceCheckoutRequested()
       ? !!this.balanceBooking() && this.balancePaymentEligible()
       : !!this.draft() && !!this.quote(),
   );
@@ -155,6 +168,13 @@ export class CheckoutPage implements OnInit, OnDestroy {
    * disputes — ₱190 is not.
    */
   payNow = computed(() => this.quote()?.deposit ?? 0);
+
+  /** What the Pay button charges: the plan price, the balance, or the deposit. */
+  amountDue = computed(() => {
+    const plan = this.plan();
+    if (plan) return plan.pricePerMonth;
+    return this.balanceCheckoutRequested() ? this.balanceDue() : this.payNow();
+  });
 
   /** What is left once the permit clears. */
   balance = computed(() => this.quote()?.balance ?? 0);
@@ -179,6 +199,19 @@ export class CheckoutPage implements OnInit, OnDestroy {
 
   ngOnInit() {
     this.cardName = this.userService.profile().name;
+
+    // Subscription checkout, opened from the Subscription page.
+    const planParam = this.route.snapshot.queryParamMap.get('plan');
+    if (planParam) {
+      const plan = planById(planParam);
+      if (plan && isCustomerPlan(plan.id)) {
+        this.planId.set(plan.id);
+      } else {
+        void this.router.navigate(['/subscription'], { replaceUrl: true });
+      }
+      return;
+    }
+
     const balanceId = this.route.snapshot.queryParamMap.get('balance');
     if (balanceId) {
       this.balanceBookingId.set(balanceId);
@@ -200,6 +233,10 @@ export class CheckoutPage implements OnInit, OnDestroy {
   }
 
   goBack() {
+    if (this.plan()) {
+      void this.router.navigate(['/subscription']);
+      return;
+    }
     if (this.balanceCheckoutRequested()) {
       void this.router.navigate(['/tabs/bookings']);
       return;
@@ -249,15 +286,6 @@ export class CheckoutPage implements OnInit, OnDestroy {
   onCvv(ev: any) {
     this.cvv = String(ev.detail.value ?? '').replace(/\D/g, '').slice(0, 3);
     ev.target.value = this.cvv;
-  }
-
-  /** Maya mobile number as 0917 123 4567. Digits only, 11 max. */
-  onMayaNumber(ev: any) {
-    const digits = String(ev.detail.value ?? '').replace(/\D/g, '').slice(0, 11);
-    this.mayaNumber = [digits.slice(0, 4), digits.slice(4, 7), digits.slice(7)]
-      .filter(Boolean)
-      .join(' ');
-    ev.target.value = this.mayaNumber;
   }
 
   // ── QRPh proof of payment ───────────────────────────────────────────────
@@ -331,8 +359,30 @@ export class CheckoutPage implements OnInit, OnDestroy {
       return;
     }
 
-    if (m.id === 'maya' && !/^09\d{9}$/.test(this.mayaNumber.replace(/\s/g, ''))) {
-      this.toast('Enter your 11-digit Maya number (09XX XXX XXXX)');
+    // Maya Sandbox: leaves the app for Maya's test checkout. The booking,
+    // balance or plan is finished on /payment-result when Maya sends the
+    // hiker back.
+    if (m.id === 'maya') {
+      await this.payWithMaya();
+      return;
+    }
+
+    // Subscription checkout (demo methods).
+    const plan = this.plan();
+    if (plan) {
+      this.processing.set(true);
+      await new Promise(resolve => setTimeout(resolve, 900));
+      try {
+        await this.subscriptions.activate(plan.id, m.label);
+      } catch (e) {
+        console.error('Could not start the subscription.', e);
+        this.processing.set(false);
+        await this.toast('Could not start your plan. Please try again.');
+        return;
+      }
+      this.processing.set(false);
+      await this.toast(`You're now on ${plan.name}.`);
+      await this.router.navigate(['/subscription'], { replaceUrl: true });
       return;
     }
 
@@ -400,6 +450,70 @@ export class CheckoutPage implements OnInit, OnDestroy {
 
     this.processing.set(false);
     this.router.navigate(['/booking-confirmed', booking.id], { replaceUrl: true });
+  }
+
+  /**
+   * Opens Maya Sandbox checkout for whatever this screen is paying for.
+   * Works in the browser (ionic serve / web build). In the installed phone
+   * app Maya would open outside the app, so it is turned off there for now.
+   */
+  private async payWithMaya() {
+    if (Capacitor.isNativePlatform()) {
+      await this.toast('Maya Sandbox works in the browser version for now. Please choose another method.');
+      return;
+    }
+
+    const amount = this.amountDue();
+    if (!(amount > 0)) {
+      await this.toast('There is nothing to pay.');
+      return;
+    }
+
+    const profile = this.userService.profile();
+    const buyer = { name: profile.name, email: profile.email };
+    const plan = this.plan();
+
+    this.processing.set(true);
+    try {
+      if (plan) {
+        await this.maya.startCheckout({
+          purpose: { kind: 'subscription', planId: plan.id },
+          amount,
+          description: `${plan.name} · 1 month`,
+          buyer,
+        });
+      } else if (this.balanceCheckoutRequested()) {
+        const booking = this.balanceBooking();
+        if (!booking || !this.balancePaymentEligible()) {
+          this.processing.set(false);
+          await this.toast('This booking has no balance payment due.');
+          return;
+        }
+        await this.maya.startCheckout({
+          purpose: { kind: 'balance', bookingId: booking.id },
+          amount,
+          description: `Balance · ${booking.trailName}`,
+          buyer,
+        });
+      } else {
+        const d = this.draft();
+        if (!d) {
+          this.processing.set(false);
+          return;
+        }
+        await this.maya.startCheckout({
+          purpose: { kind: 'booking', draft: d },
+          amount,
+          description: `Deposit · ${d.trailName}`,
+          buyer,
+        });
+      }
+      // startCheckout() has sent the browser to Maya; nothing more to do here.
+    } catch (e) {
+      console.error('Could not open Maya checkout.', e);
+      this.processing.set(false);
+      await this.toast('Could not open Maya checkout. Check your connection and try again.');
+    }
   }
 
   private async toast(message: string) {

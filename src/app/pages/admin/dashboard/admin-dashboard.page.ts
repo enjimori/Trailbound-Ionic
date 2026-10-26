@@ -18,6 +18,7 @@ import { initials, pctChange, peso, pesoShort, tintFor } from '../admin-utils';
 import { summarize } from '../../../models/guide-ops.model';
 import { GUIDES } from '../../booking/booking-catalog';
 import { TRAILS_30 } from '../../explore/explore-trails.data';
+import { AdminSubscriptionService } from '../admin-subscription.service';
 
 type Period = 'week' | 'month' | 'year';
 type CommunityPeriod = 'week' | 'month';
@@ -55,6 +56,7 @@ const MONTHS = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', '
           }
         </section>
 
+        @if (facilitatorSubscription.active()) {
         <section class="chart-block">
           <div class="block-head">
             <h2>Revenue</h2>
@@ -100,6 +102,19 @@ const MONTHS = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', '
             </div>
           </div>
         </section>
+        } @else {
+        <section class="analytics-lock">
+          <div class="analytics-lock-copy">
+          <h2>Analytics locked</h2>
+          @if (facilitatorSubscriptionError()) {
+            <p class="error" role="alert">{{ facilitatorSubscriptionError() }}</p>
+          } @else {
+            <p>Subscribe to Admin Subscription to unlock these analytics.</p>
+          }
+          </div>
+          <a routerLink="/admin/subscription" class="tba-btn primary">View Admin Subscription</a>
+        </section>
+        }
 
         <section class="recent">
           <div class="block-head">
@@ -216,6 +231,7 @@ const MONTHS = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', '
           </svg>
         </section>
 
+        @if (facilitatorSubscription.active()) {
         <section class="rail-analytics">
           <div class="block-head">
             <h2>Community</h2>
@@ -243,12 +259,26 @@ const MONTHS = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', '
             <span><i class="sw sand"></i>Reviews {{ community().reviews }}</span>
           </div>
         </section>
+        } @else {
+        <section class="rail-analytics">
+          <div class="analytics-lock-copy">
+            <h2>Analytics locked</h2>
+          @if (facilitatorSubscriptionError()) {
+            <p class="error" role="alert">{{ facilitatorSubscriptionError() }}</p>
+          } @else {
+            <p>Unlock admin analytics with your subscription.</p>
+          }
+          </div>
+          <a routerLink="/admin/subscription" class="tba-btn primary">View subscription</a>
+        </section>
+        }
       </aside>
     </div>
   `,
   styles: [`
     :host { display: block; }
     .dash { display: grid; grid-template-columns: minmax(0, 1fr) var(--tba-rail); min-height: 100%; }
+    .error { color: var(--tba-danger, #a33); }
     .dash-main { padding: 26px 32px 40px; min-width: 0; }
     h2 { font-size: 19px; font-weight: 700; }
     .block-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
@@ -268,6 +298,23 @@ const MONTHS = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', '
     .pct.down { color: var(--tba-down); }
 
     .chart-block { padding: 24px 0 26px; border-bottom: 1px solid var(--tba-line); }
+    .analytics-lock {
+      min-height: 150px;
+      margin: 20px 0;
+      padding: 24px;
+      border: 1px solid var(--tba-line);
+      border-radius: 18px;
+      background: var(--tba-cream);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 24px;
+    }
+    .analytics-lock-copy { min-width: 0; }
+    .analytics-lock h2 { margin: 0 0 8px; }
+    .analytics-lock p { margin: 0; color: var(--tba-muted); line-height: 1.5; }
+    .analytics-lock .error { color: var(--tba-danger, #a33); }
+    .analytics-lock .tba-btn { flex: none; }
     .tabs { display: flex; gap: 18px; }
     .tabs button { border: 0; background: none; padding: 4px 0; font-size: 13px; font-weight: 600; color: var(--tba-faint); border-bottom: 2px solid transparent; }
     .tabs button.on { color: var(--tba-text); border-color: var(--tba-text); }
@@ -323,6 +370,9 @@ const MONTHS = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', '
     .promo-art { position: absolute; right: 14px; bottom: 14px; width: 112px; color: rgba(255,255,255,.85); }
 
     .rail-analytics { flex: 1; background: var(--tba-sage); }
+    .rail-analytics > .analytics-lock-copy { margin-bottom: 18px; }
+    .rail-analytics h2 { margin: 0 0 8px; }
+    .rail-analytics p { margin: 0; color: var(--tba-muted); line-height: 1.5; }
     .rail-analytics select { border: 0; background: none; font-size: 13px; font-weight: 600; color: var(--tba-text); cursor: pointer; }
     .growth { display: flex; align-items: center; gap: 6px; margin: -6px 0 16px; font-size: 12.5px; font-weight: 600; color: var(--tba-up); flex-wrap: wrap; }
     .growth.down { color: var(--tba-down); }
@@ -353,11 +403,16 @@ const MONTHS = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', '
       .stat, .stat:first-child { border-left: 0; padding: 0; }
       .chart { height: 200px; }
     }
+    @media (max-width: 600px) {
+      .analytics-lock { align-items: flex-start; flex-direction: column; }
+    }
   `],
 })
 export class AdminDashboardPage {
   readonly data = inject(AdminDataService);
   private readonly router = inject(Router);
+  readonly facilitatorSubscription = inject(AdminSubscriptionService);
+  readonly facilitatorSubscriptionError = signal('');
 
   readonly periods: { id: Period; label: string }[] = [
     { id: 'week', label: 'Week' },
@@ -519,6 +574,13 @@ export class AdminDashboardPage {
 
   constructor() {
     addIcons({ arrowDown, arrowForward, arrowUp, cashOutline, peopleOutline, receiptOutline, send, trendingUp });
+    void this.facilitatorSubscription.refresh().catch((e: unknown) => {
+      this.facilitatorSubscriptionError.set(
+        (e as { code?: string } | null)?.code === 'permission-denied'
+          ? 'Firestore denied the Facilitator subscription check. Publish the updated firestore.rules, then reload.'
+          : e instanceof Error ? e.message : 'Could not load the admin Facilitator subscription.',
+      );
+    });
   }
 
   /** Performs the pct operation for this feature and returns its result to the caller. */

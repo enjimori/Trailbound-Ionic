@@ -204,6 +204,7 @@ export class AdminShellComponent implements OnInit, OnDestroy {
     { path: '/admin/community', label: 'Community', icon: 'chatbubbles-outline' },
     { path: '/admin/reviews', label: 'Reviews', icon: 'star-outline' },
     { path: '/admin/certificates', label: 'Certificates', icon: 'document-attach-outline', badge: () => this.data.pendingCertificates() },
+    { path: '/admin/subscription', label: 'Admin Subscription', icon: 'pricetags-outline' },
     { path: '/admin/packages', label: 'Packages', icon: 'pricetags-outline' },
     { path: '/admin/settings', label: 'Settings', icon: 'settings-outline' },
   ];

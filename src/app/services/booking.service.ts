@@ -18,6 +18,10 @@ import { UserService } from './user.service';
 import { CertificateService } from './certificate.service';
 import { RiskAckService } from './risk-ack.service';
 import { permitFeeFor, permitFor } from '../pages/explore/trail-permits';
+import { SubscriptionService } from './subscription.service';
+import { MERCH_DISCOUNT_RATE } from '../models/subscription.model';
+import { isHighDemandTrail } from '../premium/premium';
+import { TRAILS_30 } from '../pages/explore/explore-trails.data';
 import {
   TRANSACTION_FEE, activityById, guideById, merchById, packageById,
 } from '../pages/booking/booking-catalog';
@@ -60,6 +64,7 @@ export class BookingService {
   private readonly userService = inject(UserService);
   private readonly certs = inject(CertificateService);
   private readonly riskAck = inject(RiskAckService);
+  private readonly subscriptions = inject(SubscriptionService);
   private readonly _draft = signal<BookingDraft | null>(null);
   private readonly _bookings = signal<Booking[]>(this.load());
   private readonly _uid = signal<string | null>(null);
@@ -135,11 +140,15 @@ export class BookingService {
 
     const activitiesTotal = paid.reduce((sum, a) => sum + a.price, 0);
     const merchTotal = merchLines.reduce((sum, l) => sum + l.lineTotal, 0);
+    // TrailBound Pro / Facilitator: merchandise discount.
+    const merchDiscount = this.subscriptions.has('merchDiscount')
+      ? Math.round(merchTotal * MERCH_DISCOUNT_RATE)
+      : 0;
     const groupSize = pkg.id === 'group' ? (draft.groupHikers?.length ?? 0) : 0;
     const groupSurcharge = groupSize > 20
       ? (10 * 1200) + ((groupSize - 20) * 1500)
       : Math.max(0, groupSize - 10) * 1200;
-    const subtotal = pkg.price + activitiesTotal + merchTotal + groupSurcharge;
+    const subtotal = pkg.price + activitiesTotal + merchTotal - merchDiscount + groupSurcharge;
     const total = subtotal + TRANSACTION_FEE;
 
     // Carved out of the total, not added to it. The package already covers
@@ -155,6 +164,7 @@ export class BookingService {
       merchLines,
       activitiesTotal,
       merchTotal,
+      merchDiscount,
       groupSurcharge,
       subtotal,
       transactionFee: TRANSACTION_FEE,
@@ -238,6 +248,10 @@ export class BookingService {
       uid: user?.uid,
       userName: this.userService.profile().name || user?.displayName || '',
       userEmail: user?.email ?? '',
+
+      // TrailBound Pro perks, only written when they apply.
+      ...(q.merchDiscount ? { merchDiscount: q.merchDiscount } : {}),
+      ...(this.hasPriority(draft.trailId) ? { priority: true } : {}),
     };
 
     this._bookings.update(list => [booking, ...list]);
@@ -249,6 +263,14 @@ export class BookingService {
     void this.upload(booking);
 
     return booking;
+  }
+
+  /** TrailBound Pro on a high-demand trail: the booking is reviewed first. */
+  hasPriority(trailId: string): boolean {
+    if (!this.subscriptions.has('priorityBooking')) return false;
+    const trail = TRAILS_30.find((t) => t.id === trailId)
+      ?? this.catalog.addedTrails().find((t) => t.id === trailId);
+    return isHighDemandTrail(trail);
   }
 
   /** Looks up one booking by its local or Firestore document id. */

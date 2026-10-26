@@ -197,6 +197,12 @@
           ></app-trail-card>
         </div>
 
+        <!-- TrailBound Basic: mountain suggestions by skill level -->
+        <div class="section-header">
+          <span class="section-title">Suggested for Your Level</span>
+        </div>
+        <app-skill-suggestions></app-skill-suggestions>
+
         <ng-container *ngIf="filteredTrails().length > 5">
           <div class="section-header">
             <span class="section-title">Recommended for You</span>

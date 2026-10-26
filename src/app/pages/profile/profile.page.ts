@@ -1,7 +1,7 @@
 /**
  * Profile-page controller: connects the signed-in hiker?s profile, activity, and navigation actions to the profile template and app services.
  */
-import { Component, computed, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import {
@@ -10,7 +10,8 @@ import {
 } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
 import {
-  documentAttachOutline, moonOutline, person, speedometerOutline, sunnyOutline,
+  briefcaseOutline, diamondOutline, documentAttachOutline, lockClosedOutline, mapOutline, moonOutline, person,
+  speedometerOutline, star, sunnyOutline,
 } from 'ionicons/icons';
 import { UserService } from '../../services/user.service';
 import { NotificationService } from '../../services/notification.service';
@@ -22,6 +23,8 @@ import { UpcomingAdventure } from '../../models/user.model';
 import { WishlistService } from '../../services/wishlist.service';
 import { TrailService } from '../../services/trail.service';
 import { trailById } from '../explore/trail-lookup';
+import { SubscriptionService } from '../../services/subscription.service';
+import { CUSTOMER_SUBSCRIPTION_PLANS } from '../../models/subscription.model';
 
 @Component({
   selector: 'app-profile',
@@ -58,6 +61,20 @@ export class ProfilePage {
   /** "Owner" for a built-in account, "Admin" for a promoted hiker. */
   readonly adminLevel = computed(() => this.adminAuth.admin()?.level ?? '');
 
+  /** The hiker's TrailBound plan, for the "TrailBound Plans" row. */
+  readonly subscriptions = inject(SubscriptionService);
+
+  /** The small plan cards under the "TrailBound Plans" row. */
+  readonly planPreviews = CUSTOMER_SUBSCRIPTION_PLANS.map((p) => ({
+    id: p.id,
+    name: p.shortName,
+    price: p.pricePerMonth,
+    highlight: ({
+      basic: 'Prepare for Your Hike',
+      pro: 'Smart gear checklist',
+    } as Record<string, string>)[p.id] ?? 'Prepare for Your Hike',
+  }));
+
   constructor(
     public userService: UserService,
     public notificationService: NotificationService,
@@ -72,7 +89,10 @@ export class ProfilePage {
     private toastCtrl: ToastController,
   ) {
     // Silhouette for the default avatar (guests, or users without a photo)
-    addIcons({ person, moonOutline, sunnyOutline, documentAttachOutline, speedometerOutline });
+    addIcons({
+      person, moonOutline, sunnyOutline, documentAttachOutline, speedometerOutline, diamondOutline, star,
+      lockClosedOutline, mapOutline,
+    });
     Promise.all([this.userService.ready, this.adminAuth.ready]).then(() =>
       this.authReady.set(true),
     );
@@ -96,6 +116,16 @@ export class ProfilePage {
   /** Performs the go personal info operation for this feature and returns its result to the caller. */
   goPersonalInfo() {
     this.router.navigate(['/personal-info']);
+  }
+
+  /** TrailBound Plans (subscription). */
+  goSubscription() {
+    this.router.navigate(['/subscription']);
+  }
+
+  /** TrailBound Basic / Pro: saved itineraries (the page shows a lock without a plan). */
+  goItineraries() {
+    this.router.navigate(['/itineraries']);
   }
 
   /** Medical certificate upload. */

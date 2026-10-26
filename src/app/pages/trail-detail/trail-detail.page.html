@@ -68,6 +68,12 @@
     <p class="section-title">Summit weather</p>
     <app-trail-weather [trailId]="t.id" compact></app-trail-weather>
 
+    <!-- TrailBound Pro: re-checks the summit every 5 minutes -->
+    <app-weather-monitor [trail]="t"></app-weather-monitor>
+
+    <!-- MLP: difficulty level, gear checklist and first-aid tips -->
+    <app-prepare-hike [trail]="t"></app-prepare-hike>
+
     <!-- Editorial content from trail-stories.ts -->
     <ng-container *ngIf="story() as s">
       <p class="tagline">“{{ s.tagline }}”</p>
@@ -91,7 +97,7 @@
       </button>
 
       <button class="ghost-pill" (click)="startHike()">
-        <ion-icon name="walk-outline"></ion-icon>
+        <ion-icon [name]="navigationUnlocked() ? 'walk-outline' : 'lock-closed-outline'"></ion-icon>
         Start Hike
       </button>
     </div>

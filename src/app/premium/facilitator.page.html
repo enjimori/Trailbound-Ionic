@@ -1,0 +1,285 @@
+<!-- Facilitator workspace (TrailBound Facilitator). See facilitator.page.ts. -->
+<ion-content [fullscreen]="true">
+  <div class="fw-top">
+    <button class="fw-back" (click)="goBack()" aria-label="Go back"><ion-icon name="arrow-back-outline"></ion-icon></button>
+    <div class="fw-title">
+      <h1>Facilitator</h1>
+      <span>{{ unlocked() ? (savedName() || 'Your workspace') : 'Tools for running group hikes' }}</span>
+    </div>
+  </div>
+
+  <!-- ── Locked ───────────────────────────────────────────────────────── -->
+  <div class="fw-body" *ngIf="!unlocked()">
+    <app-locked-feature feature="facilitatorTools" title="Facilitator workspace"
+      text="Send each client their hike checklist and see who has completed it, plus a booking dashboard, capacity management, guide scheduling, customer and document tracking, and analytics.">
+      <div class="fw-kpis">
+        <div class="fw-kpi"><span class="v">3</span><span class="l">Upcoming trips</span></div>
+        <div class="fw-kpi"><span class="v">18</span><span class="l">Clients</span></div>
+        <div class="fw-kpi"><span class="v">12 / 15</span><span class="l">Checklists ready</span></div>
+      </div>
+    </app-locked-feature>
+  </div>
+
+  <ng-container *ngIf="unlocked()">
+    <div class="fw-seg">
+      <ion-segment mode="ios" [value]="tab()" (ionChange)="setTab($event.detail.value)">
+        <ion-segment-button mode="ios" value="overview"><ion-label>Overview</ion-label></ion-segment-button>
+        <ion-segment-button mode="ios" value="trips"><ion-label>Trips</ion-label></ion-segment-button>
+        <ion-segment-button mode="ios" value="clients"><ion-label>Clients</ion-label></ion-segment-button>
+        <ion-segment-button mode="ios" value="analytics"><ion-label>Analytics</ion-label></ion-segment-button>
+      </ion-segment>
+    </div>
+
+    <div class="fw-body">
+
+      <!-- ══ OVERVIEW — booking dashboard ═══════════════════════════════ -->
+      <ng-container *ngIf="tab() === 'overview'">
+        <div class="fw-empty" *ngIf="!clients().length && !trips().length">
+          <ion-icon name="briefcase-outline"></ion-icon>
+          <p>Add your clients and your first group trip to get started.</p>
+          <div class="fw-row">
+            <button class="fw-btn" (click)="setTab('clients'); addingClient.set(true)"><ion-icon name="person-add-outline"></ion-icon> Add a client</button>
+            <button class="fw-btn ghost" (click)="loadSample()">Load sample data</button>
+          </div>
+        </div>
+
+        <label class="fw-field">
+          <span>Business name (shown on checklists you send)</span>
+          <input type="text" maxlength="60" [(ngModel)]="businessDraft" (blur)="saveBusinessName()" placeholder="e.g. Summit Seekers PH" />
+        </label>
+
+        <div class="fw-kpis">
+          <div class="fw-kpi"><span class="v">{{ upcomingTrips().length }}</span><span class="l">Upcoming trips</span></div>
+          <div class="fw-kpi"><span class="v">{{ clients().length }}</span><span class="l">Clients</span></div>
+          <div class="fw-kpi"><span class="v">{{ seats().filled }} / {{ seats().cap }}</span><span class="l">Seats filled</span></div>
+          <div class="fw-kpi"><span class="v">{{ readiness().ready }} / {{ readiness().total }}</span><span class="l">Checklists ready</span></div>
+          <div class="fw-kpi"><span class="v">{{ docCompliance() }}%</span><span class="l">Documents verified</span></div>
+          <div class="fw-kpi"><span class="v">₱{{ expectedRevenue() | number }}</span><span class="l">Expected revenue</span></div>
+        </div>
+
+        <p class="fw-h"><ion-icon name="alert-circle-outline"></ion-icon> Needs attention</p>
+        <div class="fw-card">
+          <p class="fw-dim" *ngIf="!attention().length">Nothing right now — every upcoming trip has a guide, papers and checklists in order.</p>
+          <p class="fw-alert" *ngFor="let a of attention()" [class.warn]="a.level === 'warn'">{{ a.text }}</p>
+        </div>
+
+        <p class="fw-h"><ion-icon name="calendar-outline"></ion-icon> Next trips</p>
+        <p class="fw-dim" *ngIf="!upcomingTrips().length">No upcoming trips.</p>
+        <button class="fw-card fw-trip-mini" *ngFor="let t of upcomingTrips().slice(0, 3)" (click)="setTab('trips'); openTripId.set(t.id)">
+          <span class="n">{{ t.trailName }}</span>
+          <span class="d">{{ shortDate(t.date) }} · {{ guideName(t.guideId) }} · {{ t.status | titlecase }}</span>
+          <span class="fw-bar"><span [style.width.%]="pct(t.clientIds.length, t.capacity)"></span></span>
+          <span class="d">{{ t.clientIds.length }} / {{ t.capacity }} seats</span>
+        </button>
+
+        <p class="fw-h"><ion-icon name="document-text-outline"></ion-icon> Your TrailBound bookings</p>
+        <div class="fw-card">
+          <p class="fw-dim">{{ myBookings().pending }} pending · {{ myBookings().confirmed }} confirmed upcoming</p>
+          <div class="fw-booking" *ngFor="let b of myBookings().list">
+            <span>{{ b.trailName }} · {{ shortDate(b.date) }}</span>
+            <span class="fw-chip" [attr.data-s]="b.status">{{ b.status }}</span>
+          </div>
+          <button class="fw-link" (click)="go('/tabs/bookings')">Open Bookings</button>
+          <button class="fw-link" (click)="go('/tabs/explore')">Book a group hike</button>
+        </div>
+      </ng-container>
+
+      <!-- ══ TRIPS — capacity, guides, client checklists ═════════════════ -->
+      <ng-container *ngIf="tab() === 'trips'">
+        <div class="fw-row">
+          <button class="fw-btn" (click)="addingTrip.set(!addingTrip())"><ion-icon name="add-outline"></ion-icon> New trip</button>
+          <button class="fw-btn ghost" (click)="refresh()" [disabled]="refreshing()">
+            <ion-icon name="refresh-outline"></ion-icon> {{ refreshing() ? 'Checking…' : 'Refresh checklists' }}
+          </button>
+        </div>
+
+        <div class="fw-card" *ngIf="addingTrip()">
+          <label class="fw-field"><span>Trail *</span>
+            <select [(ngModel)]="newTrip.trailId">
+              <option value="" disabled>Choose a trail</option>
+              <option *ngFor="let t of trailOptions" [value]="t.id">{{ t.name }} ({{ t.difficulty }})</option>
+            </select>
+          </label>
+          <label class="fw-field"><span>Date *</span><input type="date" [(ngModel)]="newTrip.date" [min]="today" /></label>
+          <div class="fw-row">
+            <label class="fw-field"><span>Capacity (max 30)</span><input type="number" min="1" max="30" [(ngModel)]="newTrip.capacity" /></label>
+            <label class="fw-field"><span>Price per head (₱)</span><input type="number" min="0" [(ngModel)]="newTrip.pricePerHead" /></label>
+          </div>
+          <label class="fw-field"><span>Guide</span>
+            <select [(ngModel)]="newTrip.guideId">
+              <option value="">Assign later</option>
+              <option *ngFor="let g of guidesFor(newTrip.trailId)" [value]="g.id">{{ g.label }}</option>
+            </select>
+          </label>
+          <button class="fw-btn" [disabled]="!newTrip.trailId || !newTrip.date" (click)="createTrip()">Create trip</button>
+        </div>
+
+        <p class="fw-dim" *ngIf="!trips().length">No trips yet.</p>
+
+        <article class="fw-card fw-trip" *ngFor="let t of trips()" [class.dim]="t.status === 'cancelled' || t.status === 'completed'">
+          <button class="fw-trip-head" (click)="toggleTrip(t.id)">
+            <span class="n">{{ t.trailName }}</span>
+            <span class="d">{{ shortDate(t.date) }} · {{ t.clientIds.length }}/{{ t.capacity }} · {{ guideName(t.guideId) }}</span>
+            <span class="fw-chip" [attr.data-s]="t.status">{{ t.status }}</span>
+            <ion-icon name="chevron-down-outline" [class.up]="openTripId() === t.id"></ion-icon>
+          </button>
+
+          <div class="fw-trip-body" *ngIf="openTripId() === t.id">
+            <!-- Capacity -->
+            <div class="fw-cap">
+              <span class="fw-bar"><span [style.width.%]="pct(t.clientIds.length, t.capacity)" [class.full]="t.clientIds.length >= t.capacity"></span></span>
+              <div class="fw-stepper">
+                <button (click)="changeCapacity(t, -1)" aria-label="Lower capacity">−</button>
+                <span>{{ t.clientIds.length }} / {{ t.capacity }} seats</span>
+                <button (click)="changeCapacity(t, 1)" aria-label="Raise capacity">+</button>
+              </div>
+            </div>
+
+            <div class="fw-row">
+              <label class="fw-field"><span>Status</span>
+                <select [ngModel]="t.status" (ngModelChange)="setTripField(t, { status: $event })">
+                  <option *ngFor="let s of statuses" [value]="s">{{ s | titlecase }}</option>
+                </select>
+              </label>
+              <label class="fw-field"><span>Price per head (₱)</span>
+                <input type="number" min="0" [ngModel]="t.pricePerHead" (change)="setTripField(t, { pricePerHead: +$any($event.target).value || 0 })" />
+              </label>
+            </div>
+
+            <!-- Guide scheduling -->
+            <label class="fw-field"><span>Guide</span>
+              <select [ngModel]="t.guideId ?? ''" (ngModelChange)="setTripField(t, { guideId: $event || null })">
+                <option value="">Assign later</option>
+                <option *ngFor="let g of guidesFor(t.trailId)" [value]="g.id">{{ g.label }}</option>
+              </select>
+            </label>
+            <p class="fw-alert warn" *ngIf="guideProblem(t) as g">{{ g }}</p>
+
+            <!-- Clients + checklist -->
+            <p class="fw-sub">Clients and checklists</p>
+            <div class="fw-client-row" *ngFor="let id of t.clientIds">
+              <div class="who">
+                <b>{{ clientName(id) }}</b>
+                <span [class.ok]="checklistOf(t, id).completedAt">{{ checklistText(t, id) }}</span>
+              </div>
+              <button class="fw-mini" (click)="sendChecklist(t, id)" title="Send checklist"><ion-icon name="send-outline"></ion-icon></button>
+              <button class="fw-mini" [class.on]="checklistOf(t, id).completedAt" (click)="markReady(t, id)" title="Mark ready"><ion-icon name="checkmark-circle"></ion-icon></button>
+              <button class="fw-mini" (click)="removeClientFromTrip(t, id)" title="Remove from trip"><ion-icon name="trash-outline"></ion-icon></button>
+            </div>
+            <p class="fw-dim" *ngIf="!t.clientIds.length">No clients on this trip yet.</p>
+
+            <div class="fw-row fw-add" *ngIf="pickableClients(t).length">
+              <select [(ngModel)]="addPick[t.id]" [disabled]="t.clientIds.length >= t.capacity">
+                <option value="" selected>{{ t.clientIds.length >= t.capacity ? 'Trip is full' : 'Add a client…' }}</option>
+                <option *ngFor="let c of pickableClients(t)" [value]="c.id">{{ c.name }}</option>
+              </select>
+              <button class="fw-btn small" (click)="addClientToTrip(t)" [disabled]="!addPick[t.id] || t.clientIds.length >= t.capacity">Add</button>
+            </div>
+
+            <div class="fw-row fw-foot">
+              <button class="fw-link" (click)="bookOnTrailBound(t)">Book this trail on TrailBound</button>
+              <button class="fw-link danger" (click)="deleteTrip(t)">Delete trip</button>
+            </div>
+          </div>
+        </article>
+      </ng-container>
+
+      <!-- ══ CLIENTS — customers and documents ═══════════════════════════ -->
+      <ng-container *ngIf="tab() === 'clients'">
+        <div class="fw-row">
+          <input class="fw-search" type="search" placeholder="Search clients" [ngModel]="clientQuery()" (ngModelChange)="clientQuery.set($event)" />
+          <button class="fw-btn" (click)="addingClient.set(!addingClient())"><ion-icon name="person-add-outline"></ion-icon> Add</button>
+        </div>
+
+        <div class="fw-card" *ngIf="addingClient()">
+          <label class="fw-field"><span>Name *</span><input type="text" maxlength="60" [(ngModel)]="newClient.name" /></label>
+          <div class="fw-row">
+            <label class="fw-field"><span>Phone</span><input type="tel" maxlength="13" [(ngModel)]="newClient.phone" /></label>
+            <label class="fw-field"><span>Email</span><input type="email" maxlength="80" [(ngModel)]="newClient.email" /></label>
+          </div>
+          <label class="fw-field"><span>Emergency contact</span><input type="text" maxlength="80" [(ngModel)]="newClient.emergencyContact" placeholder="Name and number" /></label>
+          <label class="fw-field"><span>Tags (comma separated)</span><input type="text" maxlength="80" [(ngModel)]="newClient.tags" placeholder="e.g. Regular, Corporate" /></label>
+          <label class="fw-field"><span>Notes</span><textarea rows="2" maxlength="400" [(ngModel)]="newClient.notes"></textarea></label>
+          <button class="fw-btn" [disabled]="!newClient.name.trim()" (click)="createClient()">Save client</button>
+        </div>
+
+        <p class="fw-dim" *ngIf="!filteredClients().length">{{ clients().length ? 'No client matches that search.' : 'No clients yet.' }}</p>
+
+        <article class="fw-card fw-client" *ngFor="let c of filteredClients()">
+          <button class="fw-trip-head" (click)="toggleClient(c.id)">
+            <span class="n">{{ c.name }}</span>
+            <span class="d">{{ c.phone || c.email || 'No contact' }}<ng-container *ngFor="let tag of c.tags"> · {{ tag }}</ng-container></span>
+            <span class="fw-chip" [attr.data-s]="verifiedCount(c) === docTypes.length ? 'confirmed' : 'planned'">{{ verifiedCount(c) }}/{{ docTypes.length }} docs</span>
+            <ion-icon name="chevron-down-outline" [class.up]="openClientId() === c.id"></ion-icon>
+          </button>
+
+          <div class="fw-trip-body" *ngIf="openClientId() === c.id">
+            <p class="fw-dim">{{ c.email }}<ng-container *ngIf="c.email && c.phone"> · </ng-container>{{ c.phone }}</p>
+            <p class="fw-dim" *ngIf="c.emergencyContact">Emergency: {{ c.emergencyContact }}</p>
+
+            <p class="fw-sub">Documents</p>
+            <div class="fw-doc" *ngFor="let d of docTypes">
+              <span class="lbl">{{ d.label }}<small class="bad" *ngIf="expired(c, d.id)">Expired</small></span>
+              <select [ngModel]="c.docs[d.id].status" (ngModelChange)="setDoc(c, d.id, { status: $event })" [attr.aria-label]="d.label + ' status'">
+                <option value="missing">Missing</option>
+                <option value="submitted">Submitted</option>
+                <option value="verified">Verified</option>
+              </select>
+              <input *ngIf="d.expires" type="date" [ngModel]="c.docs[d.id].expires" (ngModelChange)="setDoc(c, d.id, { expires: $event })" [attr.aria-label]="d.label + ' expiry'" title="Expiry date" />
+            </div>
+
+            <p class="fw-sub">Trips</p>
+            <p class="fw-dim" *ngIf="!tripsFor(c).length">Not on any trip yet.</p>
+            <p class="fw-dim" *ngFor="let t of tripsFor(c)">{{ t.trailName }} · {{ shortDate(t.date) }} · {{ checklistText(t, c.id) }}</p>
+
+            <label class="fw-field"><span>Notes</span>
+              <textarea rows="2" maxlength="400" [ngModel]="c.notes" (blur)="saveClientNotes(c, $any($event.target).value)"></textarea>
+            </label>
+            <button class="fw-link danger" (click)="deleteClient(c)">Delete client</button>
+          </div>
+        </article>
+      </ng-container>
+
+      <!-- ══ ANALYTICS ═══════════════════════════════════════════════════ -->
+      <ng-container *ngIf="tab() === 'analytics'">
+        <div class="fw-kpis">
+          <div class="fw-kpi"><span class="v">{{ analytics().trips }}</span><span class="l">Trips</span></div>
+          <div class="fw-kpi"><span class="v">{{ analytics().served }}</span><span class="l">Clients served</span></div>
+          <div class="fw-kpi"><span class="v">{{ analytics().avgGroup }}</span><span class="l">Average group</span></div>
+          <div class="fw-kpi"><span class="v">{{ analytics().utilisation }}%</span><span class="l">Seats used</span></div>
+          <div class="fw-kpi"><span class="v">{{ analytics().checklistRate }}%</span><span class="l">Checklists ready</span></div>
+          <div class="fw-kpi"><span class="v">₱{{ analytics().revenue | number }}</span><span class="l">Revenue (all trips)</span></div>
+        </div>
+
+        <p class="fw-h"><ion-icon name="people-outline"></ion-icon> Hikers per month</p>
+        <div class="fw-card fw-cols">
+          <div class="col" *ngFor="let b of analytics().clientsByMonth">
+            <span class="val">{{ b.display }}</span>
+            <span class="stick"><span [style.height.%]="pct(b.value, analytics().maxClients)"></span></span>
+            <span class="lab">{{ b.label }}</span>
+          </div>
+        </div>
+
+        <p class="fw-h"><ion-icon name="bar-chart-outline"></ion-icon> Revenue per month</p>
+        <div class="fw-card fw-cols">
+          <div class="col" *ngFor="let b of analytics().revenueByMonth">
+            <span class="val">{{ b.value ? b.display : '' }}</span>
+            <span class="stick"><span [style.height.%]="pct(b.value, analytics().maxRevenue)"></span></span>
+            <span class="lab">{{ b.label }}</span>
+          </div>
+        </div>
+
+        <p class="fw-h"><ion-icon name="calendar-outline"></ion-icon> Top trails</p>
+        <div class="fw-card">
+          <p class="fw-dim" *ngIf="!analytics().topTrails.length">No trips yet.</p>
+          <div class="fw-hbar" *ngFor="let b of analytics().topTrails">
+            <span class="lab">{{ b.label }}</span>
+            <span class="fw-bar"><span [style.width.%]="pct(b.value, analytics().maxTrail)"></span></span>
+            <span class="val">{{ b.display }}</span>
+          </div>
+        </div>
+        <p class="fw-dim">Cancelled trips are left out. Revenue is price per head × clients on each trip.</p>
+      </ng-container>
+    </div>
+  </ng-container>
+</ion-content>

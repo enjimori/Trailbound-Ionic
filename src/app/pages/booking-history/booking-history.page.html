@@ -71,6 +71,11 @@
           </p>
         }
 
+        <!-- TrailBound Basic: weather forecast for the booked hike date -->
+        @if (tab() === 'upcoming' && r.status !== 'cancelled') {
+          <app-hike-date-forecast [trailId]="r.b.trailId" [date]="r.b.date"></app-hike-date-forecast>
+        }
+
         <div class="card-bottom">
           <div class="id-block">
             <span class="eyebrow">Booking ID</span>
@@ -259,6 +264,10 @@
                   Itinerary and timings can change with weather, trail conditions, and local guidance.
                   Your guide’s instructions take priority.
                 </p>
+                <!-- TrailBound Basic: save this plan to My Itineraries -->
+                <button type="button" class="act-btn" (click)="saveItinerary(r)">
+                  Save to My Itineraries <ion-icon name="arrow-forward"></ion-icon>
+                </button>
               </section>
             }
 
@@ -328,6 +337,18 @@
                         <span class="line">{{ m.qty }}&times; {{ m.name }}</span>
                       }
                     </dd>
+                  </div>
+                }
+                @if (r.b.merchDiscount) {
+                  <div class="row">
+                    <dt><ion-icon name="pricetag-outline"></ion-icon>Pro discount</dt>
+                    <dd>&minus;&#8369;{{ r.b.merchDiscount | number: '1.0-0' }} on merchandise</dd>
+                  </div>
+                }
+                @if (r.b.priority) {
+                  <div class="row">
+                    <dt><ion-icon name="flash-outline"></ion-icon>Priority</dt>
+                    <dd>Reviewed first (TrailBound Pro)</dd>
                   </div>
                 }
               </dl>

@@ -1,0 +1,67 @@
+<ion-content [fullscreen]="true">
+  <div class="sp-topbar">
+    <button class="sp-back" (click)="goBack()" aria-label="Go back">
+      <ion-icon name="arrow-back-outline"></ion-icon>
+    </button>
+    <h1 class="sp-page-title">TrailBound Plans</h1>
+  </div>
+
+  <div class="sp-body">
+    <p class="sp-intro">
+      Every plan includes <strong>Prepare for Your Hike</strong>: a gear checklist,
+      the trail's difficulty level and simple first-aid tips on each trail page.
+    </p>
+
+    <!-- Current plan -->
+    <div class="sp-current" *ngIf="current() as c">
+      <ion-icon name="diamond-outline"></ion-icon>
+      <div class="sp-current-text">
+        <span class="l">Your plan</span>
+        <span class="n">{{ c.plan.name }}</span>
+        <span class="s" *ngIf="c.status === 'active'">Renews {{ c.renewsAt | date: 'MMM d, y' }} · paid with {{ c.paymentMethod }}</span>
+        <span class="s warn" *ngIf="c.status === 'cancelled'">Cancelled · you keep it until {{ c.renewsAt | date: 'MMM d, y' }}</span>
+      </div>
+      <button class="sp-cancel" *ngIf="c.status === 'active'" (click)="confirmCancel()">Cancel</button>
+    </div>
+
+    <!-- Plans -->
+    <article class="sp-plan" *ngFor="let p of plans" [class.current]="isCurrent(p)">
+      <div class="sp-plan-head">
+        <div>
+          <h2>{{ p.name }}</h2>
+          <span class="sp-audience">{{ p.audience }}</span>
+        </div>
+        <div class="sp-price">
+          <span class="v">₱{{ p.pricePerMonth | number }}</span>
+          <span class="u">/month</span>
+        </div>
+      </div>
+
+      <ul class="sp-perks">
+        <li *ngFor="let perk of p.perks" [class.mlp]="perk.mlp">
+          <ion-icon [name]="perk.mlp ? 'star' : 'checkmark-outline'"></ion-icon>
+          <span>
+            <span class="mlp-tag" *ngIf="perk.mlp">Prepare for Your Hike</span>
+            {{ perk.text }}
+            <small class="sp-where" *ngIf="perk.where">{{ perk.where }}</small>
+          </span>
+        </li>
+      </ul>
+
+      <button
+        class="sp-choose"
+        [class.is-current]="isCurrent(p)"
+        [disabled]="isCurrent(p)"
+        (click)="choose(p)"
+      >
+        <ion-icon name="checkmark-circle" *ngIf="isCurrent(p)"></ion-icon>
+        {{ buttonLabel(p) }}
+      </button>
+    </article>
+
+    <p class="sp-fine">
+      Plans are billed monthly and don't renew automatically. Pay with Maya (Sandbox) or the
+      demo methods — this is a test environment, so no real money is collected.
+    </p>
+  </div>
+</ion-content>

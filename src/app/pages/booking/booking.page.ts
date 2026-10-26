@@ -35,6 +35,8 @@ import { UserService } from '../../services/user.service';
 import { trailById } from '../explore/trail-lookup';
 import { isClosed } from '../explore/trail-geo';
 import { permitFor } from '../explore/trail-permits';
+import { BudgetTrackerComponent } from '../../premium/budget-tracker.component';
+import { MerchDiscountNoteComponent, PriorityBannerComponent } from '../../premium/booking-perks.component';
 
 
 addIcons({
@@ -67,6 +69,7 @@ interface AckResult {
   styleUrls: ['./booking.page.scss'],
   imports: [
     CommonModule, FormsModule, IonContent, IonButton, IonIcon, IonDatetime, IonModal,
+    BudgetTrackerComponent, MerchDiscountNoteComponent, PriorityBannerComponent,
   ],
 })
 export class BookingPage implements OnInit {

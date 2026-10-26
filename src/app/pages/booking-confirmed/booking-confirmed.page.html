@@ -66,6 +66,11 @@
         <span>₱{{ m.lineTotal | number }}</span>
       </div>
 
+      <div class="bc-row" *ngIf="b.merchDiscount">
+        <span>Pro merchandise discount</span>
+        <span>−₱{{ b.merchDiscount | number }}</span>
+      </div>
+
       <div class="bc-row">
         <span>Paid with</span>
         <span>

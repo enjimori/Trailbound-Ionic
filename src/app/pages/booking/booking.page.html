@@ -42,6 +42,9 @@
 
   <div class="bk-body">
 
+    <!-- TrailBound Pro: priority booking on high-demand trails -->
+    <app-priority-banner [trail]="t"></app-priority-banner>
+
     <!-- ── Date ────────────────────────────────────────────────────────── -->
     <!-- The modal emits a date; onDateChange stores it in BookingPage.date. -->
     <p class="bk-title">Select Date<span class="req" aria-hidden="true">*</span></p>
@@ -241,6 +244,9 @@
     </div>
     <p class="bk-hint tight">Designs are location-specific and provided by guides.</p>
 
+    <!-- TrailBound Pro: merchandise discount -->
+    <app-merch-discount-note></app-merch-discount-note>
+
     <div class="bk-merch-grid">
       <div class="bk-merch" *ngFor="let m of merchItems()" [class.picked]="merchQty(m.id) > 0">
         <!-- Photo from src/assets/merch/ — the icon shows until one is added -->
@@ -278,6 +284,9 @@
       </div>
     </div>
 
+    <!-- TrailBound Basic: real-time budget tracker -->
+    <app-budget-tracker [quote]="quote()"></app-budget-tracker>
+
     <!-- ── Running total ───────────────────────────────────────────────── -->
     <!-- This breakdown is rendered from BookingService's computed quote. -->
     <div class="bk-summary" *ngIf="quote() as q">
@@ -302,6 +311,11 @@
       <div class="row" *ngFor="let l of q.merchLines">
         <span>{{ l.name }} × {{ l.qty }}</span>
         <span>₱{{ l.lineTotal | number }}</span>
+      </div>
+
+      <div class="row" *ngIf="q.merchDiscount">
+        <span>Pro merchandise discount</span>
+        <span>−₱{{ q.merchDiscount | number }}</span>
       </div>
 
       <div class="row" *ngIf="q.groupSurcharge > 0">
