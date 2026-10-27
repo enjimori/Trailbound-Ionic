@@ -1,7 +1,7 @@
 /**
  * Trail-weather component: presents the weather information supplied by its parent or weather service for the selected trail.
  */
-import { Component, Input, booleanAttribute, computed, effect, inject, signal } from '@angular/core';
+import { Component, Input, booleanAttribute, computed, effect, inject, signal, untracked } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { IonIcon } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
@@ -498,7 +498,9 @@ export class TrailWeatherComponent {
   constructor(public svc: TrailWeatherService) {
     effect(() => {
       const req = this.request();
-      if (req) this.svc.load(req, true);
+      // load() writes to signals inside the service, so run it untracked.
+      // The effect still re-runs whenever the request changes.
+      if (req) untracked(() => this.svc.load(req, true));
     });
   }
 

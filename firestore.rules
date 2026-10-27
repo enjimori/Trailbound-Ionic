@@ -502,6 +502,11 @@ service cloud.firestore {
       allow create, update, delete: if isAdmin();
     }
 
+    match /catalog_guides/{guideId} {
+      allow read: if signedIn();
+      allow create, update, delete: if isAdmin();
+    }
+
     /* ==========================================================
        HIKING DOCUMENTS — medical certificate
        certificates/{uid}_{type}       status, reviewer's note
