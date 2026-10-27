@@ -625,15 +625,6 @@ service cloud.firestore {
     }
 
     /* ==========================================================
-       ADMIN SUBSCRIPTIONS
-       Subscription and payment references are only visible to staff.
-       ========================================================== */
-
-    match /admin_subscriptions/{subscriptionId} {
-      allow read, write: if isAdmin();
-    }
-
-    /* ==========================================================
        SITE SETTINGS
        World-readable so public pages can render the site name an
        admin typed, without anyone signing in first.

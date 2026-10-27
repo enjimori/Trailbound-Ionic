@@ -1,10 +1,9 @@
 /**
  * ═══════════════════════════════════════════════════════════════════════════
- * SUBSCRIPTION PLANS — TrailBound Basic, Pro and Facilitator
+ * SUBSCRIPTION PLANS — TrailBound Basic, Pro and legacy Facilitator
  *
- * Customer checkout offers Basic and Pro. Facilitator remains in this catalog
- * for its admin-side product description and legacy data, but is purchased
- * through the admin subscription flow, not the hiker checkout.
+ * Customer checkout offers Basic and Pro. Facilitator is retained for legacy
+ * subscription data and is not offered through customer checkout.
  *
  * ★ = the MLP (Prepare for Your Hike). Each plan has its own version of it.
  * All prices are Philippine pesos per month, whole numbers.
@@ -102,8 +101,7 @@ export function planById(id: string | null | undefined): SubscriptionPlan | unde
 }
 
 /**
- * Which customer plans unlock which hiker feature. Admin Facilitator
- * entitlements are checked separately by AdminSubscriptionService.
+ * Which customer plans unlock which hiker feature.
  * Add a feature here, then check it with SubscriptionService.has('...').
  */
 export type Feature =
@@ -121,7 +119,7 @@ export type Feature =
   | 'priorityBooking'
   | 'tripTools'
   | 'merchDiscount'
-  // TrailBound Facilitator
+  // Facilitator
   | 'facilitatorTools';
 
 const BASIC_UP: PlanId[] = ['basic', 'pro'];

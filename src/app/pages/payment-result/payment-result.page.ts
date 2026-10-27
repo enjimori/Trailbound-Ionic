@@ -22,7 +22,6 @@ import { BookingService } from '../../services/booking.service';
 import { UserService } from '../../services/user.service';
 import { SubscriptionService } from '../../services/subscription.service';
 import { planById } from '../../models/subscription.model';
-import { AdminSubscriptionService } from '../admin/admin-subscription.service';
 
 /** What Maya-paid items are saved as (booking history, receipts, plan). */
 const MAYA_LABEL = 'Maya (Sandbox)';
@@ -128,7 +127,6 @@ export class PaymentResultPage implements OnInit {
   private readonly bookingService = inject(BookingService);
   private readonly userService = inject(UserService);
   private readonly subscriptions = inject(SubscriptionService);
-  private readonly adminSubscription = inject(AdminSubscriptionService);
   private readonly toastCtrl = inject(ToastController);
 
   readonly view = signal<View>({ state: 'working' });
@@ -165,15 +163,6 @@ export class PaymentResultPage implements OnInit {
     try {
       mayaStatus = await this.maya.paymentStatus(pending.checkoutId);
     } catch (e) {
-      if (pending.kind === 'adminSubscription') {
-        console.error('Could not verify the Maya sandbox admin subscription payment.', e);
-        this.view.set({
-          state: 'failed',
-          pending,
-          detail: 'TrailBound could not verify this payment with Maya. The subscription was not activated; retry after Maya is available.',
-        });
-        return;
-      }
       // Maya could not be reached. In the sandbox the success redirect is
       // accepted; a live app must confirm through Maya's webhooks instead.
       console.warn('Could not check the payment status with Maya; trusting the success redirect.', e);
@@ -207,9 +196,7 @@ export class PaymentResultPage implements OnInit {
     const p = v.state === 'cancelled' || v.state === 'failed' ? v.pending : null;
     await this.router.navigateByUrl('/tabs/home', { replaceUrl: true });
     if (!p) return;
-    if (p.kind === 'adminSubscription') {
-      await this.router.navigate(['/admin/subscription']);
-    } else if (p.kind === 'booking') {
+    if (p.kind === 'booking') {
       this.bookingService.setDraft(p.draft);
       await this.router.navigate(['/checkout']);
     } else if (p.kind === 'balance') {
@@ -243,13 +230,6 @@ export class PaymentResultPage implements OnInit {
           queryParams: recorded ? { demoBalancePaid: p.bookingId } : {},
           replaceUrl: true,
         });
-        return;
-      }
-
-      if (p.kind === 'adminSubscription') {
-        await this.adminSubscription.activate(p.ref);
-        await this.toast('TrailBound Facilitator is active for one month.');
-        await this.router.navigate(['/admin/subscription'], { replaceUrl: true });
         return;
       }
 

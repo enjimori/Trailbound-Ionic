@@ -20,7 +20,6 @@ import {
 import { AdminCertificate, AdminDataService } from '../admin-data.service';
 import { AdminAuthService } from '../admin-auth.service';
 import { AdminUiService } from '../admin-ui.service';
-import { AdminSubscriptionService } from '../admin-subscription.service';
 import { dayKey, fromDayKey, initials, matches, tintFor } from '../admin-utils';
 import {
   CERTIFICATE_KINDS, CertificateStatus, CertificateType, certificateKind,
@@ -33,7 +32,6 @@ type Filter = 'pending' | 'approved' | 'rejected' | 'all';
   standalone: true,
   imports: [DatePipe, FormsModule, IonIcon],
   template: `
-    @if (facilitatorSubscription.active()) {
     <div class="tba-head">
       <div>
         <h1>Certificates</h1>
@@ -172,19 +170,6 @@ type Filter = 'pending' | 'approved' | 'rejected' | 'all';
         </aside>
       </div>
     }
-    } @else {
-      <section class="tba-card" style="max-width: 720px">
-        <h1>Digital certification and document tracking</h1>
-        @if (subscriptionError()) {
-          <p class="error" role="alert">{{ subscriptionError() }}</p>
-        } @else if (!facilitatorSubscription.loaded()) {
-          <p class="muted">Checking the Facilitator subscription…</p>
-        } @else {
-          <p>This feature requires an active Admin Subscription.</p>
-          <button type="button" class="tba-btn primary" (click)="goToSubscription()">View Admin Subscription</button>
-        }
-      </section>
-    }
   `,
   styles: [`
     .flush { padding: 8px 8px 4px; }
@@ -234,8 +219,6 @@ export class AdminCertificatesPage implements OnDestroy {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly sanitizer = inject(DomSanitizer);
-  readonly facilitatorSubscription = inject(AdminSubscriptionService);
-  readonly subscriptionError = signal('');
 
   readonly kinds = CERTIFICATE_KINDS;
   readonly filters: { id: Filter; label: string }[] = [
@@ -320,12 +303,6 @@ export class AdminCertificatesPage implements OnDestroy {
       checkmarkCircleOutline, closeCircleOutline, closeOutline, documentAttachOutline, documentTextOutline,
       downloadOutline, medkitOutline, personOutline, searchOutline, trashOutline,
     });
-    void this.facilitatorSubscription.refresh().catch((e: unknown) => {
-      const code = (e as { code?: string } | null)?.code;
-      this.subscriptionError.set(code === 'permission-denied'
-        ? 'Firestore denied access to the subscription record. Publish the updated firestore.rules from this project, then reload this page.'
-        : e instanceof Error ? e.message : 'Could not check the subscription.');
-    });
     effect(() => {
       const p = this.params();
       if (!p) return;
@@ -345,10 +322,6 @@ export class AdminCertificatesPage implements OnDestroy {
       const c = this.selected();
       if (c && this.loadedFor !== c.id) untracked(() => void this.loadFile(c));
     }, { allowSignalWrites: true });
-  }
-
-  goToSubscription(): void {
-    void this.router.navigate(['/admin/subscription']);
   }
 
   /** Runs when the component is removed; releases resources owned by this component. */

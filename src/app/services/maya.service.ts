@@ -37,8 +37,7 @@ const PENDING_KEY = 'trailbound.mayaPending';
 export type MayaPurpose =
   | { kind: 'booking'; draft: BookingDraft }
   | { kind: 'balance'; bookingId: string }
-  | { kind: 'subscription'; planId: PlanId }
-  | { kind: 'adminSubscription' };
+  | { kind: 'subscription'; planId: PlanId };
 
 export type MayaPending = MayaPurpose & {
   /** Our reference, sent to Maya as requestReferenceNumber. */
