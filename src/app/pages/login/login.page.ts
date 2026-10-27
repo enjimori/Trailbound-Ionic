@@ -5,7 +5,9 @@ import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
-import { IonCheckbox, IonContent, IonInput, ToastController } from '@ionic/angular/standalone';
+import { IonCheckbox, IonContent, IonIcon, IonInput, ToastController } from '@ionic/angular/standalone';
+import { addIcons } from 'ionicons';
+import { eyeOffOutline, eyeOutline } from 'ionicons/icons';
 import { doc, getDoc } from 'firebase/firestore';
 import { UserService } from '../../services/user.service';
 import { AdminAuthService } from '../admin/admin-auth.service';
@@ -23,7 +25,7 @@ type SignedInAs = 'admin' | 'permit_office' | 'guide' | 'hiker';
   standalone: true,
   templateUrl: './login.page.html',
   styleUrls: ['./login.page.scss'],
-  imports: [CommonModule, ReactiveFormsModule, IonCheckbox, IonContent, IonInput],
+  imports: [CommonModule, ReactiveFormsModule, IonCheckbox, IonContent, IonIcon, IonInput],
 })
 export class LoginPage {
   private fb = inject(FormBuilder);
@@ -40,10 +42,12 @@ export class LoginPage {
   });
 
   loading = false;
+  showPassword = false;
   /** Result of the account check (wrong password, unknown account, etc.). */
   loginError = '';
 
   constructor() {
+    addIcons({ eyeOutline, eyeOffOutline });
     this.form.valueChanges.subscribe(() => (this.loginError = ''));
   }
 

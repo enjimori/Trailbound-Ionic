@@ -26,13 +26,23 @@
       <div class="field-group">
         <ion-input
           formControlName="password"
-          type="password"
+          [type]="showPassword ? 'text' : 'password'"
           [clearOnEdit]="false"
           autocomplete="current-password"
           placeholder="Password"
           class="login-input"
           fill="outline"
         >
+          <button
+            type="button"
+            slot="end"
+            class="password-toggle"
+            [attr.aria-label]="showPassword ? 'Hide password' : 'Show password'"
+            [attr.aria-pressed]="showPassword"
+            (click)="showPassword = !showPassword"
+          >
+            <ion-icon [name]="showPassword ? 'eye-off-outline' : 'eye-outline'"></ion-icon>
+          </button>
         </ion-input>
         <p class="err" *ngIf="err('password') as msg">{{ msg }}</p>
       </div>
